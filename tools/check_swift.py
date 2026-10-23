@@ -131,6 +131,21 @@ for path in files:
            re.search(r"\bif\s+let\s+\w+\s*\}", stripped):
             pass
 
+        # ⚠️ `guard ... else { someCall() }` 单行写法 —— 编译错误。
+        #    guard 的 else 块必须以 return / throw / break / continue / fatalError 结尾，
+        #    否则编译器报 "`guard` body must not fall through"。
+        #    这个坑真的踩过：`guard !p.isEmpty else { dismiss() }` 编译失败。
+        m = re.match(r"^guard\b.*?\belse\s*\{(.*)\}\s*$", stripped)
+        if m:
+            tail = m.group(1).strip().rstrip(";").strip()
+            last = re.split(r"[;\s]+", tail)[-1] if tail else ""
+            if last not in ("return", "throw", "break", "continue") and \
+               not last.startswith("fatalError") and \
+               not re.match(r"^(return|throw)\b", tail):
+                errors.append("%s:%d guard 的 else 块没有以 return/throw 结尾"
+                              "（会报 body must not fall through）: %s"
+                              % (rel, idx, stripped[:70]))
+
     # 4. 明显的未使用 import 不查（没意义），改查 import UIKit 必须在 iOS 上
     # 5. 检查文件非空
     if len(raw.strip()) == 0:

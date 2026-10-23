@@ -338,7 +338,13 @@ struct EditEventSheet: View {
     private func save() {
         guard original != nil, !saving else { return }
         let p = patch
-        guard !p.isEmpty else { dismiss() }
+        // ⚠️ guard 的 else 块必须以 return/throw 结束。
+        //    `else { dismiss() }` 编译不过 —— dismiss() 返回 Void，
+        //    编译器认为 else 块会「落下去」继续执行后面的代码。
+        guard !p.isEmpty else {
+            dismiss()
+            return
+        }
 
         // 重复日程：改哪一次的影响面差太多了，必须让用户自己选
         if isRecurring {

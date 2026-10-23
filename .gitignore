@@ -24,3 +24,7 @@ Package.resolved
 
 # 构建日志
 build-logs/
+
+# 本地临时目录（下载 CI 日志用）
+.ci/
+.tmpcheck*/
