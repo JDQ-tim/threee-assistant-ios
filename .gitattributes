@@ -1,0 +1,21 @@
+# 统一换行符——这一条非常关键。
+# Windows 下 git 默认会把 LF 转成 CRLF，而 macOS 上的 shell 脚本
+# 一旦变成 CRLF 就会报 "bad interpreter: /bin/bash^M"，编译脚本直接挂掉。
+* text=auto eol=lf
+
+# shell 脚本必须 LF
+*.sh     text eol=lf
+
+# Xcode 工程文件也是 LF
+*.pbxproj   text eol=lf
+*.xcscheme  text eol=lf
+*.plist     text eol=lf
+*.swift     text eol=lf
+*.yml       text eol=lf
+
+# 图片等二进制，别碰
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.pdf    binary
+*.zip    binary
