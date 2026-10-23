@@ -378,9 +378,107 @@ for rel, src in ALL_SRC.items():
                         % (rel, i + 1, name))
                 break
 
+# 7f. `some View` 的**计算属性**里有多个顶层表达式 —— 编译错误
+#
+# 踩过：WeatherLocationView 里
+#     private var editSection: some View {
+#         Section { ... }        // 第一个被丢掉
+#         if isAdmin { Section { ... } }
+#     }
+# 报两条看起来毫无关系的错：
+#   · result of 'Section<...>' initializer is unused
+#   · function declares an opaque return type, but has no return statements
+#
+# 注意：`var body: some View` **不受影响**，因为 body 隐式带 @ViewBuilder。
+# 所以这条只查「非 body 的、手写 some View 的属性」。
+for rel, src in ALL_SRC.items():
+    clean = strip_noise(src)
+    lines = clean.split("\n")
+
+    i = 0
+    while i < len(lines):
+        m = re.match(r"\s*(?:private\s+|internal\s+)?var\s+(\w+)\s*:\s*some\s+(\w+)\s*\{", lines[i])
+        if not m or m.group(1) == "body":
+            i += 1
+            continue
+        attr_name, proto = m.group(1), m.group(2)
+        # ⚠️ `{` 后面可能还跟着内容（`var x: some View {   VStack {`）。
+        #    要把它当成「属性体的第一行」，否则后面几行的深度会整体错位，
+        #    把体里的内容全当成顶层语句，误报成「多个表达式」。
+        tail = lines[i][m.end():].strip()
+        # 找属性体的结束（花括号配平）
+        depth = lines[i].count("{") - lines[i].count("}")
+        body_lines = []
+        if depth > 0 and tail:
+            body_lines.append(tail)
+        j = i + 1
+        while j < len(lines) and depth > 0:
+            depth += lines[j].count("{") - lines[j].count("}")
+            if depth > 0:
+                body_lines.append(lines[j])
+            j += 1
+        # 统计**深度为 0** 的语句起始行：直接写在属性体里的表达式
+        d = 0
+        top_stmts = []
+        for bl in body_lines:
+            stripped = bl.strip()
+            if d == 0 and stripped and not stripped.startswith("//"):
+                top_stmts.append(stripped)
+            d += bl.count("{") - bl.count("}")
+        # 顶层一条语句本来就是一个表达式时（如 `if` / `Group {`），没问题。
+        # 顶层出现**多处**「大写类型名开头的构造调用」才是问题。
+        exprs = [s for s in top_stmts
+                 if re.match(r"^[A-Z]\w*\s*[\{\(]", s)]
+        if len(exprs) > 1:
+            errors.append(
+                "%s:%d `var %s: some %s` 里有 %d 个顶层视图表达式"
+                "（some 只允许一个返回值，会报 opaque return type / unused result；"
+                "用 Group { } 包起来）"
+                % (rel, i + 1, attr_name, proto, len(exprs)))
+        i = max(j, i + 1)
+
+# 7g. 把 `let` 属性当 Binding 传进 TextField / Toggle —— 编译错误
+#
+# 踩过：CoursePeriod 四个字段都是 `let`，而节次编辑页写
+#     TextField("名称", text: row.label)     // row 是 Binding<CoursePeriod>
+# 报 cannot assign to property: 'label' is a 'let' constant。
+# 判据：全工程 `let X` 声明过的字段名 ∩ 出现在 Binding 位置。
+#
+# ⚠️ 只认**带缩进 4 格的成员声明**（`    let x: T`）。
+#    不加这个限制的话，`guard let start = dtstartUTC` 这种**局部变量**
+#    也会被收进来，于是无关文件里的 `xxx.start` 全部误报。
+#
+# ⚠️⚠️ 这条规则是**按名字**匹配的，天生会跨类型误报：
+#      `FieldBox.label`（let）和 `CoursePeriod.label`（var）同名，
+#      于是全工程任何 `TextField(text: x.label)` 都被判成错。
+#      本来想再加一层「按类型名追溯」，但那要靠 Swift 语法树，静态文本做不到。
+#
+#      最后的选择：**这条规则降级成「提示」，不算错误**。
+#      理由：它真正要挡的是「把模型字段定成 let 又想用 Binding 改」，
+#      这种错误云端一定会报、而且报得很清楚（cannot assign to property），
+#      本地漏掉它代价小；而误报会让整条检查线失去可信度 ——
+#      一旦开始习惯性忽略红字，其它真错误也会被一起忽略。
+let_fields = set()
+for rel, src in ALL_SRC.items():
+    for m in re.finditer(r"^\s{2,8}(?:private\s+|public\s+)?let\s+(\w+)\s*:\s*\S",
+                         strip_noise(src), re.M):
+        let_fields.add(m.group(1))
+
+for rel, src in ALL_SRC.items():
+    clean = strip_noise(src)
+    for idx, line in enumerate(clean.split("\n"), 1):
+        for m in re.finditer(
+                r"\b(TextField|SecureField|Toggle|Picker|Slider|Stepper)\s*\([^\n]*?"
+                r"\b(?:text|isOn|selection)\s*:\s*\w+\.(\w+)", line):
+            field = m.group(2)
+            if field in let_fields:
+                warns.append(
+                    "%s:%d `.%s` 可能是 let 属性，却又当 Binding 传进 %s"
+                    "（若它是模型字段，需声明成 var）"
+                    % (rel, idx, field, m.group(1)))
+
 print("=" * 60)
 print("Swift 源码粗检（无类型检查）")
-print("=" * 60)
 print("文件数: %d" % len(files))
 print("-" * 60)
 for e in errors:

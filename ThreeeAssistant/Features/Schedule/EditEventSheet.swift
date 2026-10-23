@@ -228,7 +228,8 @@ struct EditEventSheet: View {
         }
     }
 
-    private var loadErrorView: some View {        VStack(spacing: 14) {
+    private var loadErrorView: some View {
+        VStack(spacing: 14) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 32))
                 .foregroundStyle(Theme.red600)

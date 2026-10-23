@@ -135,47 +135,59 @@ struct WeatherLocationView: View {
         }
     }
 
+    /// ⚠️ 整个属性必须包在 `Group` 里 —— 下面有**两个** Section。
+    ///
+    /// `private var editSection: some View { ... }` 只有**一个**返回值。
+    /// 没有 `Group` 时，第二个 `Section` 会被当成一条独立语句，
+    /// 编译器于是报两件事：
+    ///   · `result of 'Section<...>' initializer is unused`（第一个被丢了）
+    ///   · `function declares an opaque return type, but has no return statements`
+    /// 这两条一起出现，症状看着很奇怪，根因就是「一个表达式位置放了两个值」。
+    /// 换成一个普通的 `var body` 不会触发（因为它是 @ViewBuilder），
+    /// 但这个属性不是 —— 它是手写的 `some View`。
     private var editSection: some View {
-        Section {
-            TextField("城市名，比如 泉州", text: $placeText)
-                .disabled(!isAdmin)
-            TextField("纬度", text: $latText)
-                .keyboardType(.numbersAndPunctuation)
-                .disabled(!isAdmin)
-            TextField("经度", text: $lonText)
-                .keyboardType(.numbersAndPunctuation)
-                .disabled(!isAdmin)
-        } header: {
-            Text("改")
-        } footer: {
-            if let hint = localHint {
-                Text(hint).foregroundStyle(.red)
-            } else if !isAdmin {
-                Text("只有管理员能改天气城市。")
-            } else {
-                Text("只改你动过的项：只换城市名就只填名字，只挪坐标就只改坐标。")
-            }
-        }
-
-        if isAdmin {
+        Group {
             Section {
-                Button {
-                    Task { await save() }
-                } label: {
-                    HStack {
-                        Spacer()
-                        if saving {
-                            ProgressView().controlSize(.small)
-                        } else {
-                            Text("保存")
-                        }
-                        Spacer()
-                    }
-                }
-                .disabled(!canSave)
+                TextField("城市名，比如 泉州", text: $placeText)
+                    .disabled(!isAdmin)
+                TextField("纬度", text: $latText)
+                    .keyboardType(.numbersAndPunctuation)
+                    .disabled(!isAdmin)
+                TextField("经度", text: $lonText)
+                    .keyboardType(.numbersAndPunctuation)
+                    .disabled(!isAdmin)
+            } header: {
+                Text("改")
             } footer: {
-                if !anyChanged {
-                    Text("还没有改动。")
+                if let hint = localHint {
+                    Text(hint).foregroundStyle(.red)
+                } else if !isAdmin {
+                    Text("只有管理员能改天气城市。")
+                } else {
+                    Text("只改你动过的项：只换城市名就只填名字，只挪坐标就只改坐标。")
+                }
+            }
+
+            if isAdmin {
+                Section {
+                    Button {
+                        Task { await save() }
+                    } label: {
+                        HStack {
+                            Spacer()
+                            if saving {
+                                ProgressView().controlSize(.small)
+                            } else {
+                                Text("保存")
+                            }
+                            Spacer()
+                        }
+                    }
+                    .disabled(!canSave)
+                } footer: {
+                    if !anyChanged {
+                        Text("还没有改动。")
+                    }
                 }
             }
         }

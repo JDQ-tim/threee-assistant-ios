@@ -675,6 +675,19 @@ typealias ReportReasonMap = [String: String]
 struct ModerationMetaDTO: Decodable {
     let reasons: ReportReasonMap
     let count: Int?
+
+    /// 手写解码，只取 `reasons` / `count`。
+    ///
+    /// ⚠️ **不要再加回自动合成的解码**。同一响应里还有 `words`
+    ///    （敏感词对象的数组），客户端一个字段都不用。
+    ///    自动合成的解码器会把可用键全绑进结构体 ——
+    ///    哪天服务端给 `words` 里某个对象加了个客户端不认识的必填形状，
+    ///    整份响应解析失败，表现就是「举报页拉不到原因清单」，
+    ///    而真正的原因在 `words` 那一块，跟举报毫无关系。
+    ///    只解自己用的两个键，坏的那块坏它自己的。
+    enum CodingKeys: String, CodingKey {
+        case reasons, count
+    }
 }
 
 /// `POST /api/reports` 的请求体。
@@ -1401,14 +1414,22 @@ struct InboxItemDTO: Codable, Identifiable, Hashable {
     var isPending: Bool { status == "pending" }
     var isSystem: Bool { kind == "system" }
 
-    /// 把 `remind_minutes_before` 那串 JSON 解成 [Int]。
+    /// 把 `remind_minutes_before` 那串 JSON 解成 [Int64]。
     ///
     /// 解不出来就返回空数组 —— 提醒时间坏了不该让整条日程显示不出来。
-    var reminderMinutes: [Int] {
+    ///
+    /// ⚠️ 返回 `Int64` 而不是 `Int`：这个数组唯一的用途是喂给
+    ///    `ReminderDTO(minutesBefore:)`，而那个字段是 `Int64`
+    ///    （服务端 `reminders.minutes_before` 是 INTEGER，Go 侧是 int64）。
+    ///    这里返回 `Int` 的话，调用点要写 `.map { Int64($0) }` —— 少写一次就报
+    ///    `cannot convert value of type 'Int' to expected argument type 'Int64'`，
+    ///    也就是这次云端编译抓到的那一条。
+    ///    直接在解码时就定成 Int64，类型从源头对齐，调用点不用再转换。
+    var reminderMinutes: [Int64] {
         guard let raw = remindMinutesBefore, let data = raw.data(using: .utf8) else {
             return []
         }
-        return (try? JSONDecoder().decode([Int].self, from: data)) ?? []
+        return (try? JSONDecoder().decode([Int64].self, from: data)) ?? []
     }
 
     /// 过期判定（展示层用）。
@@ -1650,13 +1671,20 @@ struct CalendarInvitePeekDTO: Decodable {
 /// 它决定网格有哪几行、每行对应几点。
 struct CoursePeriod: Codable, Identifiable, Hashable {
     /// 从 1 开始。服务端按它排序，也是网格的行号。
-    let index: Int
+    ///
+    /// ⚠️ 这四个字段必须是 `var` 而不是 `let`。
+    ///    节次编辑页（`CoursePeriodsEditorView`）用 `Binding<CoursePeriod>`
+    ///    直接改字段（`TextField("名称", text: row.label)`），
+    ///    `let` 属性拿不到可写的 Binding —— 编译期报
+    ///    `cannot assign to property: 'label' is a 'let' constant`。
+    ///    把它们当"只读模型"是很自然的直觉，但这里它同时是**编辑对象**。
+    var index: Int
     /// 显示名，比如「第1节」。服务端在 label 为空时会自动补成这个格式。
-    let label: String
+    var label: String
     /// `HH:MM`，**不是** epoch 秒。服务端用 `time.Parse("15:04", ...)` 校验，
     /// 格式不对直接 400，而且要求 `start < end`（按字符串比较，所以必须补零）。
-    let start: String
-    let end: String
+    var start: String
+    var end: String
 
     var id: Int { index }
 
