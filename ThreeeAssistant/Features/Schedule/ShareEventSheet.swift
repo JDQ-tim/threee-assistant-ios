@@ -33,8 +33,11 @@ struct ShareEventSheet: View {
     @State private var failure: String?
     @State private var sendingID: String?
     @State private var keyword = ""
-    /// 发成功之后给一句确认，别直接关窗 —— 用户看不到任何反馈会以为没发出去
-    @State private var sentTo: [String] = []
+    /// 已经发成功的人 —— 存 **user_id** 不存名字。
+    /// 存名字的话，两个同名的人会被误判成「已发给第一个」，第二个反而点不动。
+    @State private var sentIDs: [String] = []
+    /// 显示用的名字（只在提示条里用，允许同名）
+    @State private var sentNames: [String] = []
 
     private var filtered: [DirectoryUser] {
         let kw = keyword.trimmingCharacters(in: .whitespaces)
@@ -82,9 +85,9 @@ struct ShareEventSheet: View {
                 Text("要分享的日程")
             }
 
-            if !sentTo.isEmpty {
+            if !sentNames.isEmpty {
                 Section {
-                    Label("已发给 \(sentTo.joined(separator: "、"))", systemImage: "checkmark.circle.fill")
+                    Label("已发给 \(sentNames.joined(separator: "、"))", systemImage: "checkmark.circle.fill")
                         .font(.footnote)
                         .foregroundStyle(Theme.accent)
                 } footer: {
@@ -109,7 +112,7 @@ struct ShareEventSheet: View {
                             Spacer(minLength: 0)
                             if sendingID == u.id {
                                 ProgressView().scaleEffect(0.7)
-                            } else if sentTo.contains(u.name) {
+                            } else if sentIDs.contains(u.id) {
                                 Image(systemName: "checkmark")
                                     .foregroundStyle(Theme.accent)
                             } else {
@@ -175,8 +178,9 @@ struct ShareEventSheet: View {
                     reminders: reminders,
                     source: "calendar"
                 )
-                if !sentTo.contains(u.name) {
-                    sentTo.append(u.name)
+                if !sentIDs.contains(u.id) {
+                    sentIDs.append(u.id)
+                    sentNames.append(u.name)
                 }
             } catch {
                 failure = store.message(for: error)
