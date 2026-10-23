@@ -664,6 +664,16 @@ struct CoursePeriod: Codable, Identifiable, Hashable {
         label = try c.decodeIfPresent(String.self, forKey: .label)
             ?? "第\(index)节"
     }
+
+    /// 手写 init(from:) 之后编译器不再自动合成 encode(to:)，
+    /// 而 `CoursePeriodsBody` 要用它编码发给服务端，必须补上。
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(index, forKey: .index)
+        try c.encode(label, forKey: .label)
+        try c.encode(start, forKey: .start)
+        try c.encode(end, forKey: .end)
+    }
 }
 
 struct CoursePeriodsResponse: Decodable {
