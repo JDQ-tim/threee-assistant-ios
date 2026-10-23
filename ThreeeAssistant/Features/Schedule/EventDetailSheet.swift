@@ -21,6 +21,9 @@ struct EventDetailSheet: View {
     /// 改完要关掉详情页，否则详情页还显示着改之前的内容 —— 看起来像没保存成功
     @State private var edited = false
 
+    /// 分享给别人的弹窗
+    @State private var showShare = false
+
     /// 打开详情时拉一次原始数据。列表里只有展开后的实例，
     /// 重复规则、提醒、强提醒这些只有 `GET /api/events/{id}` 才有。
     @State private var full: APIEvent?
@@ -95,6 +98,29 @@ struct EventDetailSheet: View {
                         .foregroundStyle(Theme.textTertiary)
                         .padding(.top, 8)
 
+                    Button {
+                        showShare = true
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "paperplane")
+                            Text("分享给同学")
+                        }
+                        .font(.system(size: 15, weight: .medium))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 11)
+                        .background(Theme.surfaceAlt)
+                        .foregroundStyle(Theme.textPrimary)
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.corner, style: .continuous))
+                    }
+                    .disabled(busy)
+                    .padding(.top, 14)
+
+                    Text("会把这条日程的一份快照投到对方的收件箱，他要自己点「加入我的日历」才会出现在他的日历里。分享出去之后你再改这条，对方那份不会跟着变。")
+                        .font(.caption2)
+                        .foregroundStyle(Theme.textTertiary)
+                        .padding(.top, 8)
+                        .fixedSize(horizontal: false, vertical: true)
+
                     Button(role: .destructive) {
                         confirmDelete = true
                     } label: {
@@ -135,6 +161,11 @@ struct EventDetailSheet: View {
                 EditEventSheet(instance: item) {
                     edited = true
                 }
+            }
+            // 分享也是 sheet 套 sheet —— 同样要吃 iOS 的那个亏，所以也走全屏。
+            // 但它不需要在关闭后退出详情页：分享不改变这条日程本身。
+            .fullScreenCover(isPresented: $showShare) {
+                ShareEventSheet(instance: item, full: full)
             }
             .onChange(of: showEdit) { _, isShowing in
                 // 编辑页关掉之后，详情页的内容已经过期了：直接退出，
