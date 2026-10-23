@@ -1,0 +1,152 @@
+name: iOS Build
+
+# 触发条件：
+#  1. 手动点（Actions 页面 Run workflow）—— 最常用
+#  2. push 到 main/master
+#  3. 提 PR
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+  pull_request:
+
+# 同一分支重复触发时取消旧的，省钱
+concurrency:
+  group: ios-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Compile (Swift)
+    # macos-15 = Xcode 16.x / macOS 15；若没货会自动排队，可换 macos-14
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 显示工具链版本
+        run: |
+          echo "=== Xcode ==="
+          xcodebuild -version
+          echo ""
+          echo "=== 可用 SDK ==="
+          xcodebuild -showsdks | grep -i iphone || true
+          echo ""
+          echo "=== Swift ==="
+          swift --version
+          echo ""
+          echo "=== 工程里注册的 scheme ==="
+          xcodebuild -project ThreeeAssistant.xcodeproj -list || true
+
+      - name: 解析 Swift 包（如有）
+        run: |
+          if [ -f Package.swift ]; then
+            swift package resolve
+          else
+            echo "无 Package.swift，跳过"
+          fi
+
+      # 关键步骤：先生成模拟器架构的构建，不做代码签名。
+      # 这样即使没有苹果开发者账号也能验证「代码能否编译通过」。
+      - name: 编译（模拟器架构，不签名）
+        id: build
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          mkdir -p build-logs
+          xcodebuild \
+            -project ThreeeAssistant.xcodeproj \
+            -scheme ThreeeAssistant \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath ./DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build \
+            2>&1 | tee build-logs/full.log
+
+      - name: 提炼报错
+        if: always()
+        run: |
+          mkdir -p build-logs
+          # Swift 编译错误格式： /path/File.swift:12:34: error: message
+          grep -E ":[0-9]+:[0-9]+: (error|warning):" build-logs/full.log \
+            | sed -E 's|^.*/(ThreeeAssistant/[^:]+)|\1|' \
+            > build-logs/problems.txt || true
+
+          {
+            echo "# 编译结果"
+            echo ""
+            if [ -f build-logs/problems.txt ] && [ -s build-logs/problems.txt ]; then
+              echo "## 发现的问题（按文件:行:列）"
+              echo ""
+              echo '```'
+              cat build-logs/problems.txt
+              echo '```'
+              echo ""
+              echo "错误数：$(grep -c ': error:' build-logs/problems.txt || echo 0)"
+              echo "警告数：$(grep -c ': warning:' build-logs/problems.txt || echo 0)"
+            else
+              echo "没有解析到 Swift 语法错误。"
+            fi
+            echo ""
+            echo "## 结论"
+            if grep -q "BUILD SUCCEEDED" build-logs/full.log; then
+              echo "✅ **编译通过**"
+            else
+              echo "❌ **编译失败**，详见下方日志尾部"
+            fi
+          } > build-logs/SUMMARY.md
+
+          {
+            echo "===== 最后 220 行 ====="
+            tail -n 220 build-logs/full.log
+          } > build-logs/tail.txt
+
+          cat build-logs/SUMMARY.md
+
+      - name: 把报告贴到任务摘要
+        if: always()
+        run: |
+          if [ -f build-logs/SUMMARY.md ]; then
+            cat build-logs/SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -f build-logs/tail.txt ]; then
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            cat build-logs/tail.txt >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # 不管成功失败都把日志带走，方便下载回来看
+      - name: 上传构建日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: build-logs/
+          retention-days: 30
+
+      # 成功了就把 .app 也带走（模拟器版本，可直接拖进 Simulator）
+      - name: 上传构建产物
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ThreeeAssistant-simulator-app
+          path: DerivedData/Build/Products/Debug-iphonesimulator/*.app
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: 根据编译结果决定任务成败
+        if: always()
+        run: |
+          if grep -q "BUILD SUCCEEDED" build-logs/full.log 2>/dev/null; then
+            echo "✅ BUILD SUCCEEDED"
+            exit 0
+          fi
+          echo "❌ BUILD FAILED —— 请下载 build-logs 附件，或直接看本页的 Summary"
+          exit 1
