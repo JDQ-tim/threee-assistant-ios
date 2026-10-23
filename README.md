@@ -13,6 +13,29 @@ SwiftUI 原生实现，**iPhone 和 iPad 通用**。第一版只做日程这条�
 
 ---
 
+## ✅ 云端编译已验证通过
+
+2026-10-23 首次真实编译结果：
+
+| 项目 | 结果 |
+|---|---|
+| 仓库 | https://github.com/JDQ-tim/threee-assistant-ios |
+| 编译机器 | macOS 15 + Xcode 16.4 |
+| SDK | iPhoneSimulator 18.5 |
+| 结果 | **`** BUILD SUCCEEDED **`** |
+| 错误 | 0 |
+| 警告 | 0 |
+| 产物 | `ThreeeAssistant.app`（0.9 MB，Mach-O Universal） |
+
+也就是说 **1822 行 Swift 代码一行未改就编译通过了**，不需要"先修一堆错"。
+
+> 第一次失败的原因值得记下来：`project.pbxproj` 里「ThreeeAssistant」父组
+> 和「App」子组共用了同一个对象 ID。Xcode 遇到重复 ID **不会报错**，
+> 只会让路径解析错乱，表现为 `Assets.xcassets: No such file or directory`。
+> 这类问题极难排查，`tools/check_pbxproj.py` 现在会主动检测重复 ID。
+
+---
+
 ## 路线 A：用 GitHub 云端编译（推荐，不需要 Mac）
 
 ### 一次性准备（约 5 分钟）
