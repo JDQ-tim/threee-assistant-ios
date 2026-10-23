@@ -26,6 +26,10 @@ struct NewEventSheet: View {
     // 待办
     @State private var isTask = false
 
+    // 全天 / 强提醒
+    @State private var allDay = false
+    @State private var strong = false
+
     @State private var busy = false
     @State private var failure: String?
 
@@ -33,6 +37,9 @@ struct NewEventSheet: View {
     private var startDate: Date {
         Date(timeIntervalSince1970: TimeInterval(epochSeconds(date: day, time: time)))
     }
+
+    /// 全天和待办都是「没有时长」的语义，时长 Stepper 对两者都无意义
+    private var hidesDuration: Bool { allDay || isTask }
 
     var body: some View {
         NavigationStack {
@@ -73,11 +80,33 @@ struct NewEventSheet: View {
                                 .environment(\.locale, Locale(identifier: "zh_Hans_CN"))
                         }
 
-                        labelled("开始") {
-                            DatePicker("", selection: $time, displayedComponents: .hourAndMinute)
-                                .labelsHidden()
-                                .environment(\.locale, Locale(identifier: "zh_Hans_CN"))
+                        // 全天日程没有具体时刻 —— 藏起来比禁用好：
+                        // 灰掉的时间选择器会让人一直琢磨「为什么点不动」
+                        if !allDay {
+                            labelled("开始") {
+                                DatePicker("", selection: $time, displayedComponents: .hourAndMinute)
+                                    .labelsHidden()
+                                    .environment(\.locale, Locale(identifier: "zh_Hans_CN"))
+                            }
                         }
+                    }
+
+                    labelled("全天") {
+                        Toggle(isOn: $allDay) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("全天日程")
+                                    .font(.system(size: 15))
+                                    .foregroundStyle(Theme.textPrimary)
+                                Text(allDay ? "占满这一整天，不设具体时刻" : "打开后不设开始时刻和时长")
+                                    .font(.caption2)
+                                    .foregroundStyle(Theme.textTertiary)
+                            }
+                        }
+                        .tint(Theme.accent)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(Theme.surfaceAlt)
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.cornerSmall, style: .continuous))
                     }
 
                     labelled("时长") {
@@ -90,9 +119,9 @@ struct NewEventSheet: View {
                         .padding(.vertical, 8)
                         .background(Theme.surfaceAlt)
                         .clipShape(RoundedRectangle(cornerRadius: Theme.cornerSmall, style: .continuous))
-                        // 待办没有结束时间，改时长没有意义
-                        .disabled(isTask)
-                        .opacity(isTask ? 0.5 : 1)
+                        // 待办没有结束时间、全天由「天」决定，改时长都没有意义
+                        .disabled(hidesDuration)
+                        .opacity(hidesDuration ? 0.5 : 1)
                     }
 
                     labelled("重复") {
@@ -108,6 +137,24 @@ struct NewEventSheet: View {
                     }
 
                     reminderSection
+
+                    labelled("强提醒") {
+                        Toggle(isOn: $strong) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("到点响铃提醒")
+                                    .font(.system(size: 15))
+                                    .foregroundStyle(Theme.textPrimary)
+                                Text("按人存：共享日历上只影响你自己")
+                                    .font(.caption2)
+                                    .foregroundStyle(Theme.textTertiary)
+                            }
+                        }
+                        .tint(Theme.accent)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(Theme.surfaceAlt)
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.cornerSmall, style: .continuous))
+                    }
 
                     labelled("待办") {
                         Toggle(isOn: $isTask) {
@@ -215,7 +262,11 @@ struct NewEventSheet: View {
         busy = true
         failure = nil
 
-        let start = startDate
+        // 全天日程落在当天 00:00 —— 不然会存成一个 14:30 的「全天日程」，
+        // 别的客户端按整天显示时看不出来，但排序和「是否已过」的判断都会错。
+        let start: Date = allDay
+            ? Calendar.current.startOfDay(for: day)
+            : startDate
 
         let rrule = RepeatRule.build(
             kind: repeatKind,
@@ -237,10 +288,14 @@ struct NewEventSheet: View {
                     calendarID: calendarID,
                     title: trimmed,
                     start: start,
+                    // 时长由 createEvent 按 allDay 统一决定：
+                    // 全天 → 86400 秒，待办 → 0，其余用这里的分钟数
                     durationMinutes: isTask ? 0 : minutes,
                     rrule: rrule,
                     reminders: reminders,
-                    isTask: isTask
+                    isTask: isTask,
+                    allDay: allDay,
+                    strong: strong
                 )
                 dismiss()
             } catch {

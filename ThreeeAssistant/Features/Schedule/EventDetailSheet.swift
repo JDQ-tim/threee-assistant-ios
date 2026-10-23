@@ -88,7 +88,7 @@ struct EventDetailSheet: View {
                     } label: {
                         HStack {
                             if busy { ProgressView().tint(.white) }
-                            Text(busy ? "正在删除…" : "删除这条日程")
+                            Text(busy ? "正在删除…" : deleteButtonTitle)
                                 .font(.system(size: 16, weight: .semibold))
                         }
                         .frame(maxWidth: .infinity)
@@ -100,10 +100,11 @@ struct EventDetailSheet: View {
                     .disabled(busy)
                     .padding(.top, 10)
 
-                    Text("删除只影响这一次。如果它是重复日程中的一次，其它几次不受影响。")
+                    Text(deleteHintText)
                         .font(.caption2)
                         .foregroundStyle(Theme.textTertiary)
                         .padding(.top, 8)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(20)
             }
@@ -129,10 +130,21 @@ struct EventDetailSheet: View {
                 if !isShowing && edited { dismiss() }
             }
             .alert("确定删除？", isPresented: $confirmDelete) {
-                Button("删除", role: .destructive) { performDelete() }
+                if isRecurring {
+                    Button("删除这一次", role: .destructive) {
+                        performDelete(wholeSeries: false)
+                    }
+                    Button("删除整个系列", role: .destructive) {
+                        performDelete(wholeSeries: true)
+                    }
+                } else {
+                    Button("删除", role: .destructive) {
+                        performDelete(wholeSeries: false)
+                    }
+                }
                 Button("取消", role: .cancel) {}
             } message: {
-                Text("「\(item.title ?? "无标题")」将被删除，其它设备同步后也会消失。")
+                Text(confirmMessage)
             }
             .task { await loadFull() }
         }
@@ -180,17 +192,64 @@ struct EventDetailSheet: View {
         }
     }
 
-    private func performDelete() {
+    private func performDelete(wholeSeries: Bool) {
         busy = true
         failure = nil
         Task {
             do {
-                try await store.deleteEvent(eventID: item.eventID)
+                if wholeSeries {
+                    // DELETE /api/events/{id} —— 删整个系列
+                    try await store.deleteEvent(eventID: item.eventID)
+                } else {
+                    // DELETE /api/events/{id}/occurrence?key= —— 只删这一次。
+                    //
+                    // ⚠️ 对非重复日程来说这两条其实等价（只有一个实例），
+                    //    但走 occurrence 更精确：万一以后有人给单次日程
+                    //    也写了 override，删一次不会连带把整个事件抹掉。
+                    try await store.deleteOccurrence(
+                        eventID: item.eventID,
+                        occurrenceKey: item.occurrenceKey
+                    )
+                }
                 dismiss()
             } catch {
                 failure = store.message(for: error)
             }
             busy = false
         }
+    }
+
+    // MARK: - 删除的文案
+
+    /// 重复日程和单次日程的删除语义完全不同，按钮和说明都得跟着变。
+    ///
+    /// 之前这里的说明写着「删除只影响这一次」，但代码走的是删整个系列 ——
+    /// 文案和行为对不上，用户按提示操作会连带删掉后面所有次。
+    private var isRecurring: Bool {
+        // 先用本地缓存（列表里已经有），没有就看刚拉到的原始数据
+        if let r = store.repeatRuleByEventID[item.eventID], !r.isEmpty { return true }
+        if let ev = full { return ev.isRecurring }
+        return false
+    }
+
+    private var deleteButtonTitle: String {
+        isRecurring ? "删除这次日程" : "删除这条日程"
+    }
+
+    private var deleteHintText: String {
+        if isRecurring {
+            return "这是重复日程。可以在下一步选「只删这一次」或「删掉整个系列」。"
+        }
+        return "删除后其它设备同步时也会消失。"
+    }
+
+    private var confirmMessage: String {
+        let name = "「\(item.title ?? "无标题")」"
+        if isRecurring {
+            return name + "是重复日程。\n\n只删这一次："
+                + "\(item.start.monthDay) \(item.start.hhmm) 这条不再出现，其它几次照常。\n"
+                + "删掉整个系列：之后所有重复安排一起消失。"
+        }
+        return name + "将被删除，其它设备同步后也会消失。"
     }
 }

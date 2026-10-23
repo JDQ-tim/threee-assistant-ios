@@ -257,14 +257,34 @@ struct NewEventBody: Encodable {
     /// 空字符串 = 不重复。服务端按 `rrule == ""` 判单次。
     let rrule: String
     let isTask: Bool
+    /// 全天日程。
+    ///
+    /// ⚠️ 服务端这里用的不是指针而是 `boolToInt(req.AllDay != nil && *req.AllDay)`，
+    ///    所以**不传 = false**，是安全的。但既然这里是非可选 `Bool`，
+    ///    永远会被编出来，行为也一致。
+    ///
+    /// ⚠️ 全天日程的 `duration_sec` 服务端按"整天"理解，但存的是秒。
+    ///    传 0 也能建出来（表现是「全天但时长为零」），
+    ///    稳妥做法是传 86400（见 `SessionStore.createEvent`）。
+    let allDay: Bool
     let reminders: [ReminderDTO]
+    /// 强提醒。
+    ///
+    /// ⚠️ 这个字段**不在**服务端 `incomingMap` 里 —— 它不是共享字段，
+    ///    而是按 (event_id, user_id) 单独存进 `strong_reminders` 表的。
+    ///    同一张共享日历上，你能开强提醒而我不用开。
+    ///
+    /// ⚠️ POST 和 PUT 两条路径都要写（`event.go:292` / `event.go:423`）。
+    ///    只加 POST 会表现成「新建时能设、之后改不了」。
+    let strong: Bool
 
     enum CodingKeys: String, CodingKey {
-        case title, notes, location, tzid, rrule, reminders
+        case title, notes, location, tzid, rrule, reminders, strong
         case calendarID = "calendar_id"
         case startUTC = "dtstart_utc"
         case durationSec = "duration_sec"
         case isTask = "is_task"
+        case allDay = "all_day"
     }
 }
 
@@ -301,14 +321,26 @@ struct UpdateEventBody: Encodable {
     var isTask: Bool?
     /// 待办完成时间。发 0 表示"取消完成"（不是 nil —— nil 表示这个字段不改）。
     var doneAt: Int64?
+    /// 改成 / 改回全天日程。
+    ///
+    /// ⚠️ `all_day` **在**服务端 `incomingMap` 里（是共享字段，参与字段级合并），
+    ///    但 `overridePatch` 也认它 —— 所以「只改这一次」也能切全天。
+    var allDay: Bool?
+    /// 我自己的强提醒开关。
+    ///
+    /// ⚠️ 这里必须存在，否则就是源码注释里警告的那个坑：
+    ///    「只加 POST 的话会表现成『新建时能设、之后改不了』
+    ///      —— 用户点开关保存后没反应，且不报错」。
+    var strong: Bool?
 
     enum CodingKeys: String, CodingKey {
-        case title, notes, location, tzid, rrule, reminders
+        case title, notes, location, tzid, rrule, reminders, strong
         case calendarID = "calendar_id"
         case dtstartUTC = "dtstart_utc"
         case durationSec = "duration_sec"
         case isTask = "is_task"
         case doneAt = "done_at"
+        case allDay = "all_day"
     }
 
     /// 只编码**非 nil** 的字段。nil 的字段连键都不出现，
@@ -326,13 +358,19 @@ struct UpdateEventBody: Encodable {
         try c.encodeIfPresent(reminders, forKey: .reminders)
         try c.encodeIfPresent(isTask, forKey: .isTask)
         try c.encodeIfPresent(doneAt, forKey: .doneAt)
+        try c.encodeIfPresent(allDay, forKey: .allDay)
+        try c.encodeIfPresent(strong, forKey: .strong)
     }
 
-    /// 一个字段都没改时不要发请求（服务端会正常返回，但白跑一趟）
+    /// 一个字段都没改时不要发请求（服务端会正常返回，但白跑一趟）。
+    ///
+    /// ⚠️ 加了新字段一定要同步加到这里，否则「只改了全天」或「只改了强提醒」
+    ///    会被判成空补丁 —— 表现是保存按钮一直是灰的，用户以为界面卡了。
     var isEmpty: Bool {
         calendarID == nil && title == nil && notes == nil && location == nil
             && dtstartUTC == nil && durationSec == nil && tzid == nil
             && rrule == nil && reminders == nil && isTask == nil && doneAt == nil
+            && allDay == nil && strong == nil
     }
 }
 

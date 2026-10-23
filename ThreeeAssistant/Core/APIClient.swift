@@ -88,9 +88,16 @@ final class APIClient: NSObject, @unchecked Sendable {
         try await send("PUT", path, query: [], body: body)
     }
 
-    /// 删除类接口只关心成败，响应体（`{"ok":true}`）没有解析价值
-    func delete(_ path: String) async throws {
-        _ = try await sendRaw("DELETE", path, query: [], body: nil)
+    /// 删除类接口只关心成败，响应体（`{"ok":true}`）没有解析价值。
+    ///
+    /// `query` 默认空 —— 绝大多数删除（整条日程、日历）走路径参数就够。
+    /// 但**删重复日程里的某一次**是例外：服务端要的是
+    /// `DELETE /api/events/{id}/occurrence?key=<epoch秒>`，
+    /// 用 query 而不是请求体（见 `handleDeleteOccurrence` 里的
+    /// `r.URL.Query().Get("key")`）。DELETE 带 body 在部分代理上会被吃掉，
+    /// 服务端也没去读，所以这里只能走 query。
+    func delete(_ path: String, query: [URLQueryItem] = []) async throws {
+        _ = try await sendRaw("DELETE", path, query: query, body: nil)
     }
 
     /// 同样「不关心响应体」的 POST（登出用）

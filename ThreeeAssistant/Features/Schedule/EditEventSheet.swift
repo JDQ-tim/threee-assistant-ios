@@ -55,10 +55,19 @@ struct EditEventSheet: View {
 
     @State private var isTask = false
 
+    /// 全天日程
+    @State private var allDay = false
+
+    /// 强提醒（按人存，和系列/实例都无关）
+    @State private var strong = false
+
     @State private var loading = true
     @State private var saving = false
     @State private var failure: String?
     @State private var loadFailed = false
+
+    /// 全天和待办都是「没有具体时刻/时长」的语义
+    private var hidesDuration: Bool { allDay || isTask }
 
     /// 重复日程点保存后弹的"改哪一次"，nil 表示不弹
     @State private var pendingPatch: UpdateEventBody?
@@ -128,7 +137,18 @@ struct EditEventSheet: View {
             notes = instance.notes ?? ev.notes
             location = instance.location ?? ev.location
             calendarID = ev.calendarID
-            minutes = Int((instance.endUTC - instance.startUTC) / 60)
+
+            // ⚠️ 全天日程的时长是 86400 秒，算出来 minutes = 1440。
+            //    直接塞进 Stepper 会显示「1440 分钟」，而用户把全天关掉后
+            //    就变成「24 小时长」的普通日程 —— 看着还是全天，很怪。
+            //    全天时给一个常规默认值 60，关掉全天就用它。
+            let spanMinutes = Int((instance.endUTC - instance.startUTC) / 60)
+            let loadedAllDay = instance.allDay
+            if loadedAllDay {
+                minutes = 60
+            } else {
+                minutes = spanMinutes
+            }
 
             day = instance.start
             time = instance.start
@@ -143,6 +163,9 @@ struct EditEventSheet: View {
             reminderOffsets = Set(ev.reminders.map { Int($0.minutesBefore) })
             remindersOn = !ev.reminders.isEmpty
             isTask = ev.isTask
+            // 全天优先信实例的值：重复日程的某一次可能被单独改成了全天
+            allDay = instance.allDay
+            strong = ev.strong
         } catch {
             failure = store.message(for: error)
             loadFailed = true
@@ -279,11 +302,31 @@ struct EditEventSheet: View {
                             .labelsHidden()
                             .environment(\.locale, Locale(identifier: "zh_Hans_CN"))
                     }
-                    labelled("开始") {
-                        DatePicker("", selection: $time, displayedComponents: .hourAndMinute)
-                            .labelsHidden()
-                            .environment(\.locale, Locale(identifier: "zh_Hans_CN"))
+                    if !allDay {
+                        labelled("开始") {
+                            DatePicker("", selection: $time, displayedComponents: .hourAndMinute)
+                                .labelsHidden()
+                                .environment(\.locale, Locale(identifier: "zh_Hans_CN"))
+                        }
                     }
+                }
+
+                labelled("全天") {
+                    Toggle(isOn: $allDay) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("全天日程")
+                                .font(.system(size: 15))
+                                .foregroundStyle(Theme.textPrimary)
+                            Text(allDay ? "占满这一整天，不设具体时刻" : "打开后不设开始时刻和时长")
+                                .font(.caption2)
+                                .foregroundStyle(Theme.textTertiary)
+                        }
+                    }
+                    .tint(Theme.accent)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Theme.surfaceAlt)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.cornerSmall, style: .continuous))
                 }
 
                 labelled("时长") {
@@ -296,6 +339,8 @@ struct EditEventSheet: View {
                     .padding(.vertical, 8)
                     .background(Theme.surfaceAlt)
                     .clipShape(RoundedRectangle(cornerRadius: Theme.cornerSmall, style: .continuous))
+                    .disabled(hidesDuration)
+                    .opacity(hidesDuration ? 0.5 : 1)
                 }
 
                 labelled("地点") {
@@ -373,6 +418,24 @@ struct EditEventSheet: View {
                     }
                     .padding(.horizontal, 14)
                     .padding(.vertical, 12)
+                    .background(Theme.surfaceAlt)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.cornerSmall, style: .continuous))
+                }
+
+                labelled("强提醒") {
+                    Toggle(isOn: $strong) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("到点响铃提醒")
+                                .font(.system(size: 15))
+                                .foregroundStyle(Theme.textPrimary)
+                            Text("按人存：共享日历上只影响你自己")
+                                .font(.caption2)
+                                .foregroundStyle(Theme.textTertiary)
+                        }
+                    }
+                    .tint(Theme.accent)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
                     .background(Theme.surfaceAlt)
                     .clipShape(RoundedRectangle(cornerRadius: Theme.cornerSmall, style: .continuous))
                 }
@@ -482,15 +545,47 @@ struct EditEventSheet: View {
 
         // 时间：只有真的变了才发。拼出来的时间戳要和实例逐秒比对，
         // 否则「打开页面没动，但 picker 把秒归零」会造成假改动
-        let newEpoch = epochSeconds(date: day, time: time)
-        if newEpoch != instance.startUTC {
-            p.dtstartUTC = newEpoch
-            p.tzid = TimeZone.current.identifier
+        //
+        // ⚠️ 全天日程不比时刻。全天是「这一天」，具体几点几分没有意义，
+        //    而 DatePicker 在 time 未被使用时也不会变 ——
+        //    但用户如果先改了时间再打开全天，那个残留时刻会被当成改动提交。
+        if !allDay {
+            let newEpoch = epochSeconds(date: day, time: time)
+            if newEpoch != instance.startUTC {
+                p.dtstartUTC = newEpoch
+                p.tzid = TimeZone.current.identifier
+            }
+        } else if !instance.allDay {
+            // 从有时间改成全天：开始时刻按「当天 00:00」落库，
+            // 不然会留一个半截时刻（比如 14:30 的全天日程，看着就怪）
+            let midnight = epochSeconds(date: day, time: Calendar.current.startOfDay(for: day))
+            if midnight != instance.startUTC {
+                p.dtstartUTC = midnight
+                p.tzid = TimeZone.current.identifier
+            }
         }
 
-        let newDuration = Int64(max(0, minutes) * 60)
+        // 时长：
+        //
+        // ⚠️ 这里不能简单拿 minutes 算。全天日程的时长在服务端是 86400，
+        //    而表单里的 minutes 是「取消全天前残留的值」——
+        //    直接比会得出「改了时长」的假结论，把全天日程改回 60 秒。
+        //    所以先算出「这次保存后应该是什么时长」再和实例比。
+        let oldAllDay = instance.allDay
+        let newDuration: Int64 = allDay ? 86400 : Int64(max(0, minutes) * 60)
         if newDuration != instance.endUTC - instance.startUTC {
             p.durationSec = newDuration
+        }
+
+        // 全天开关本身：overridePatch 也认 all_day，所以「只改这一次」也能切
+        if allDay != oldAllDay {
+            p.allDay = allDay
+        }
+
+        // 强提醒：按人存，跟系列是否重复无关，永远走 PUT /api/events/{id}
+        // （updateOccurrence 会把 strong 清掉，见那边的注释）
+        if let ev = original, strong != ev.strong {
+            p.strong = strong
         }
 
         // 重复规则：只有**用户真的动了这一栏**才提交。
@@ -553,9 +648,23 @@ struct EditEventSheet: View {
     private func performSave(_ p: UpdateEventBody, wholeSeries: Bool) {
         saving = true
         failure = nil
+
+        // 强提醒是**按人**的，存在 strong_reminders 表里，不属于任何一个实例。
+        // 所以哪怕用户选的是「只改这一次」，强提醒也只能走整条日程的接口。
+        //
+        // ⚠️ 从 p 里挑出来单独发，剩下的再走 occurrence。
+        //    如果直接把 p 丢给 updateOccurrence，那边会 p.strong = nil
+        //    （它只保留 overridePatch 认的 7 个键），
+        //    用户点了开关保存后毫无反应 —— 正是源码注释里警告的那个坑。
+        let strongPatch = p.strong
+        var occurrencePatch = p
+        occurrencePatch.strong = nil
+
         Task {
             do {
-                if wholeSeries {
+                if wholeSeries || !isRecurring {
+                    // 「改整个系列」或本来就不重复：一条请求搞定
+                    // （p 里本来就带着 strong，不用额外处理）
                     let conflicts = try await store.updateEvent(id: instance.eventID, patch: p)
                     if !conflicts.isEmpty {
                         // 有冲突说明别人也改了同一条。服务端已经按字段合并好了，
@@ -567,11 +676,19 @@ struct EditEventSheet: View {
                         return
                     }
                 } else {
-                    try await store.updateOccurrence(
-                        eventID: instance.eventID,
-                        occurrenceKey: instance.occurrenceKey,
-                        patch: p
-                    )
+                    // 「只改这一次」：先改这一次的补丁，再单独处理强提醒
+                    if !occurrencePatch.isEmpty {
+                        try await store.updateOccurrence(
+                            eventID: instance.eventID,
+                            occurrenceKey: instance.occurrenceKey,
+                            patch: occurrencePatch
+                        )
+                    }
+                    if let s = strongPatch {
+                        var only = UpdateEventBody()
+                        only.strong = s
+                        _ = try await store.updateEvent(id: instance.eventID, patch: only)
+                    }
                 }
                 saving = false
                 onSaved?()

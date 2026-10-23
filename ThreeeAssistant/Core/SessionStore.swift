@@ -276,19 +276,30 @@ final class SessionStore {
         durationMinutes: Int,
         rrule: String? = nil,
         reminders: [ReminderDTO] = [],
-        isTask: Bool = false
+        isTask: Bool = false,
+        allDay: Bool = false,
+        strong: Bool = false
     ) async throws {
+        // 全天日程的时长由「天」决定，调用方传的分钟数不可信 ——
+        // 用户在新建页把「全天」打开时，时长 Stepper 是被禁用的，
+        // 那里面残留的 30 分钟会把日程存成「全天但只有半小时」。
+        let seconds: Int64 = allDay
+            ? 86400
+            : Int64(max(0, durationMinutes) * 60)
+
         let body = NewEventBody(
             calendarID: calendarID,
             title: title,
             notes: "",
             location: "",
             startUTC: Int64(start.timeIntervalSince1970.rounded()),
-            durationSec: Int64(max(0, durationMinutes) * 60),
+            durationSec: seconds,
             tzid: TimeZone.current.identifier,
             rrule: rrule ?? "",
             isTask: isTask,
-            reminders: reminders
+            allDay: allDay,
+            reminders: reminders,
+            strong: strong
         )
         let data = try JSONEncoder().encode(body)
         let created: CreatedEvent = try await APIClient.shared.post("/api/events", body: data)
@@ -321,8 +332,44 @@ final class SessionStore {
         )
     }
 
+    /// 删除整条日程 / 整个重复系列。
+    ///
+    /// 对重复日程来说这会**删掉所有次**（服务端 `deleteEventCore` 抬 seq +
+    /// `recomputeInstances`）。只想删某一次请用 `deleteOccurrence`。
     func deleteEvent(eventID: String) async throws {
         try await APIClient.shared.delete("/api/events/\(eventID)")
+        await refresh()
+    }
+
+    /// 只删重复日程里的**这一次**。
+    ///
+    /// ## 为什么不复用 deleteEvent
+    ///
+    /// 服务端是两个完全不同的接口：
+    /// - `DELETE /api/events/{id}` → 删系列（`deleteEventCore`）
+    /// - `DELETE /api/events/{id}/occurrence?key=<epoch秒>` → 只删一次
+    ///
+    /// ## 两个容易踩的点
+    ///
+    /// 1. `key` 走的是 **query 参数**，不是请求体。服务端读的是
+    ///    `r.URL.Query().Get("key")`（`handleDeleteOccurrence`），
+    ///    DELETE 带 body 在很多代理/网关会被直接丢掉。
+    /// 2. `key` 必须是这一次**原本的**开始时间（`occurrence_key`），
+    ///    不是改过之后的新时间。
+    ///
+    /// ## 服务端怎么实现「删一次」
+    ///
+    /// 它不是真的删行，而是往 `event_overrides` 写一条 `cancelled=1`，
+    /// 展开时 `if cancelled[k] { continue }` 直接跳过。
+    /// 所以：
+    /// - 删掉的那次**后续还能恢复**（再写一条 cancelled=0 即可）
+    /// - 但同一个系列里如果之后又改了整个系列的时间，
+    ///   被跳过的仍是**原来那个 key**，不会误伤别的次
+    func deleteOccurrence(eventID: String, occurrenceKey: Int64) async throws {
+        try await APIClient.shared.delete(
+            "/api/events/\(eventID)/occurrence",
+            query: [URLQueryItem(name: "key", value: String(occurrenceKey))]
+        )
         await refresh()
     }
 
@@ -393,6 +440,12 @@ final class SessionStore {
         p.rrule = nil
         p.reminders = nil
         p.isTask = nil
+        // ⚠️ `strong` 也要清掉 —— 强提醒是按人存的（strong_reminders 表），
+        //    跟「这一次」这个维度无关，override 补丁里没有它。
+        //    不清的话指令会静默失效：请求成功、开关没变。
+        p.strong = nil
+        // ⚠️ 但 `allDay` **必须保留** —— overridePatch 明确认 `all_day`。
+        //    以后往这里加过滤项时别顺手把它一起清了。
 
         let body = OccurrenceBody(occurrenceKey: occurrenceKey, patch: p)
         let data = try JSONEncoder().encode(body)
