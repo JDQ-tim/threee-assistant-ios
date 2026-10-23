@@ -50,7 +50,20 @@ struct RegisterView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        // ⚠️ 这一行不能省。
+        //
+        //     `@Environment(SessionStore.self) private var store` 拿到的是
+        //     **只读**引用，`$store.serverText` 会报 `cannot find '$store' in scope`。
+        //     想用 `$` 前缀拿 Binding，必须在 body 里再落一个 `@Bindable` 的局部变量。
+        //     LoginView 也是这么写的（那边一开始就写对了，这边漏了）。
+        //
+        //     注意它必须写在 `var body` **里面**：写成属性
+        //     `@Bindable private var store = store` 是不成立的 ——
+        //     `@Bindable` 要从已有的 Observable 实例初始化，
+        //     而属性初始化时 `store` 还没被注入。
+        @Bindable var store = store
+
+        return NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
 

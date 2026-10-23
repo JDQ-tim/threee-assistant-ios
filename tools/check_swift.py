@@ -477,6 +477,34 @@ for rel, src in ALL_SRC.items():
                     "（若它是模型字段，需声明成 var）"
                     % (rel, idx, field, m.group(1)))
 
+# 7h. `$store.xxx` 但作用域里没有 `@Bindable var store = store` —— 编译错误
+#
+# 踩过：RegisterView 写了 `@Environment(SessionStore.self) private var store`，
+# 然后 `TextField("...", text: $store.serverText)`。
+# 报 `cannot find '$store' in scope`。
+#
+# 原因：`@Environment` 注进来的是**只读**值，取不到投影（`$`）。
+# 想拿 Binding，必须在 `var body` **里**再落一个局部变量：
+#     @Bindable var store = store
+#
+# ⚠️ 不能写成属性 `@Bindable private var store = store`：
+#    `@Bindable` 要从已有实例初始化，而属性初始化时环境还没注入。
+#
+# 这条规则查得很死：只要文件里出现 `$store.`，就要求同文件里有
+# `@Bindable var store = store` 这一行。名字固定成 store 是刻意的 ——
+# 工程里 Observable 环境对象就叫这个，换名字等于换约定，届时规则要同步改。
+for rel, src in ALL_SRC.items():
+    clean = strip_noise(src)
+    if "$store." not in clean:
+        continue
+    if re.search(r"@Bindable\s+var\s+store\s*=\s*store\b", clean):
+        continue
+    errors.append(
+        "%s:%d 用了 `$store.xxx`，但文件里没有 `@Bindable var store = store` "
+        "（@Environment 注进来的是只读值，取不到 $ 投影；"
+        "在 var body 里加一行 `@Bindable var store = store`）"
+        % (rel, clean.index("$store.") and clean[:clean.index("$store.")].count("\n") + 1))
+
 print("=" * 60)
 print("Swift 源码粗检（无类型检查）")
 print("文件数: %d" % len(files))
