@@ -42,7 +42,8 @@
 		3F09C70E000000000000005C /* TeamDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86D5C997000000000000005B /* TeamDetailView.swift */; };
 		9CD7BA4E000000000000005E /* TeamListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87AE298B000000000000005D /* TeamListView.swift */; };
 		7BC736B60000000000000060 /* TierView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB7E78DE000000000000005F /* TierView.swift */; };
-		14A5319A0000000000000061 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E684DE92000000000000001A /* Assets.xcassets */; };
+		EBB571850000000000000062 /* WeatherLocationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FD0D5A90000000000000061 /* WeatherLocationView.swift */; };
+		14A5319A0000000000000063 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E684DE92000000000000001A /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -82,6 +83,7 @@
 		86D5C997000000000000005B /* TeamDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamDetailView.swift; sourceTree = "<group>"; };
 		87AE298B000000000000005D /* TeamListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamListView.swift; sourceTree = "<group>"; };
 		AB7E78DE000000000000005F /* TierView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TierView.swift; sourceTree = "<group>"; };
+		7FD0D5A90000000000000061 /* WeatherLocationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherLocationView.swift; sourceTree = "<group>"; };
 		0FE0F9C30000000000000019 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		E684DE92000000000000001A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = ThreeeAssistant/Resources/Assets.xcassets; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -191,6 +193,7 @@
 				86D5C997000000000000005B /* TeamDetailView.swift */,
 				87AE298B000000000000005D /* TeamListView.swift */,
 				AB7E78DE000000000000005F /* TierView.swift */,
+				7FD0D5A90000000000000061 /* WeatherLocationView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -288,7 +291,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				14A5319A0000000000000061 /* Assets.xcassets in Resources */,
+				14A5319A0000000000000063 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -334,6 +337,7 @@
 				3F09C70E000000000000005C /* TeamDetailView.swift in Sources */,
 				9CD7BA4E000000000000005E /* TeamListView.swift in Sources */,
 				7BC736B60000000000000060 /* TierView.swift in Sources */,
+				EBB571850000000000000062 /* WeatherLocationView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

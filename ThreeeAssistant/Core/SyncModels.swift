@@ -201,3 +201,39 @@ struct SyncPullOutcome {
     var isEmpty: Bool { calendars.isEmpty && events.isEmpty && !maintenance }
 }
 
+/// 整份快照（`GET /api/sync/snapshot`）。
+///
+/// ## 和增量拉的区别
+///
+/// 增量（`/api/sync/changes?since=`）发的是「按 seq 排的**变更流**」，
+/// 只带这段时间改过的东西，可能有 `has_more`、可能被 `maintenance` 打断。
+///
+/// 快照发的是「**这一刻的全部状态**」，一次给完，没有游标、没有分页。
+/// 用途只有一个：**本地状态不可信时重建**（换了设备、库被修过、
+/// 或者怀疑本地落了脏数据）。
+///
+/// ## 为什么不能拿它做日常同步
+///
+/// 它把 sync_log 里出现过的**所有**实体都撸一遍再按权限过滤
+/// （`loadEntities` 里 `SELECT entity, entity_id, MAX(seq) FROM sync_log GROUP BY ...`）。
+/// 一个用了两年的库，这个响应会很大。日常该走增量。
+///
+/// ## 一个容易看错的地方
+///
+/// `last_seq` 是**拉这一份时的库水位**。快照拉完之后应该把客户端游标设成它 ——
+/// 但前提是这份快照是完整落地的。中途失败就不要设，否则会漏掉中间那段变更。
+struct SyncSnapshotResponse: Decodable {
+    let calendars: [CalendarDTO]?
+    let events: [APIEvent]?
+    let instances: [ScheduleInstance]?
+    let lastSeq: Int64?
+    /// 服务端用户名单。快照顺带下发，省一次 `/api/users`。
+    /// **只有 name + id**，不含任何权限信息。
+    let users: [APIUser]?
+
+    enum CodingKeys: String, CodingKey {
+        case calendars, events, instances, users
+        case lastSeq = "last_seq"
+    }
+}
+

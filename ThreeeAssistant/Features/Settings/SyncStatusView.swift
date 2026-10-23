@@ -101,8 +101,15 @@ struct SyncStatusView: View {
                     Label("清掉游标，下次整份重拉", systemImage: "arrow.clockwise.circle")
                 }
                 .disabled(busy)
+
+                Button {
+                    Task { await rebuildFromSnapshot() }
+                } label: {
+                    Label("用服务端快照重建", systemImage: "tray.and.arrow.down")
+                }
+                .disabled(busy)
             } footer: {
-                Text("「整份重拉」只是丢掉本机的读取位置，不动服务端任何数据，也不丢你自己已经推上去的改动。适合「有的东西明明删了却还在」这种本地残渣。")
+                Text("「整份重拉」只是丢掉本机的读取位置，不动服务端任何数据，也不丢你自己已经推上去的改动。适合「有的东西明明删了却还在」这种本地残渣。\n\n「用服务端快照重建」是一次性把服务端当前的全部状态取回来当基准 —— 比整份重拉更彻底，因为不受增量分页影响。日常同步不需要它，只在本地状态明显不对、或者服务端提示库被修过时用。")
             }
 
             if let msg = lastMessage {
@@ -150,6 +157,30 @@ struct SyncStatusView: View {
         do {
             let out = try await store.pullChanges()
             lastMessage = "游标已清零并重拉一次：\(out.calendars.count) 张日历、\(out.events.count) 条日程。"
+        } catch {
+            failure = store.message(for: error)
+        }
+        busy = false
+    }
+
+    /// 用整份快照重建。
+    ///
+    /// 和上面「整份重拉」的区别，写在按钮的 footer 里了。这里补一句不写进 UI 的：
+    ///
+    /// 快照接口会把 sync_log 里出现过的**所有**实体撸一遍再按权限过滤
+    /// （`loadEntities`），库用得越久响应越大 —— 所以它放在最后，
+    /// 不摆在「日常该点」的位置。
+    ///
+    /// 成功后游标会被设成服务端水位（`last_seq`）。这是对的：
+    /// 快照那一刻的状态已经全在我手上了，下次从这儿往后增量即可。
+    private func rebuildFromSnapshot() async {
+        guard !busy else { return }
+        busy = true
+        failure = nil
+        lastMessage = nil
+        do {
+            let stats = try await store.pullSnapshot()
+            lastMessage = "已按服务端快照重建：\(stats.calendars) 张日历、\(stats.events) 条日程，游标设为 \(stats.seq)。"
         } catch {
             failure = store.message(for: error)
         }

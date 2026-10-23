@@ -123,10 +123,14 @@ for path in files:
     # 3. `if let x {` 这种 Swift 5.7+ 简写 —— 工程 SWIFT_VERSION=5.0，属于风险
     for idx, line in enumerate(raw.splitlines(), 1):
         stripped = line.strip()
+        # Swift 5.7 的 `if let x {` / `if let x, cond {` 简写。
+        # 工程 SWIFT_VERSION = 5.0，一律不能用，必须写 `if let v = x`。
+        # 三种形式都要抓：单独的 `{`、逗号接条件的、逗号接 `,` 的。
         if re.match(r"^(if|guard)\s+let\s+(\w+)\s*\{", stripped) or \
+           re.match(r"^(if|guard)\s+let\s+(\w+)\s*,", stripped) or \
            re.search(r",\s*let\s+(\w+)\s*\{", stripped):
-            warns.append("%s:%d 用了 `if/guard let x {` 简写（需 Swift 5.7+）: %s"
-                         % (rel, idx, stripped[:70]))
+            warns.append("%s:%d 用了 `if/guard let x {` 简写（需 Swift 5.7+，"
+                         "工程是 5.0）: %s" % (rel, idx, stripped[:70]))
         if re.match(r"^if\s+(let\s+)?\w+(\?|\.isEmpty)?\s*\{", stripped) is None and \
            re.search(r"\bif\s+let\s+\w+\s*\}", stripped):
             pass

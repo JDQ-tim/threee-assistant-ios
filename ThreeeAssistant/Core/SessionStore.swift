@@ -215,6 +215,50 @@ final class SessionStore {
         try await APIClient.shared.get("/api/tier")
     }
 
+    // MARK: - 天气城市
+
+    /// 当前生效的天气坐标与来源（`GET /api/weather/location`）。
+    func loadWeatherLocation() async throws -> WeatherLocationDTO {
+        try await APIClient.shared.get("/api/weather/location")
+    }
+
+    /// 改天气城市。只有管理员能改（服务端 `handleSetWeatherLocation` 里验 isAdmin）。
+    ///
+    /// 三个参数都可选，**只传要改的**：
+    /// - 只改名字 → `place` 有值，坐标传 nil
+    /// - 只挪坐标 → 坐标有值，`place` 传 nil（名字保持原来的）
+    ///
+    /// ⚠️ 不要在这里「顺手把没填的坐标补成 0」：0 是合法坐标（赤道/格林威治），
+    ///    补 0 等于把城市挪到非洲西边的海里。
+    ///
+    /// 服务端改完会**主动作废天气缓存**（`c.doc = nil; os.Remove(c.file)`），
+    /// 所以客户端不需要额外做什么 —— 但如果这里加客户端缓存，就必须一起清。
+    @discardableResult
+    func setWeatherLocation(lat: Double? = nil,
+                            lon: Double? = nil,
+                            place: String? = nil) async throws -> WeatherLocationDTO {
+        // 范围校验。服务端也会验，这里提前挡住能给更近的提示，
+        // 但**不替代**服务端校验。
+        // ⚠️ 用 `if let v = lat` 而不是 `if let lat` —— 后者是 Swift 5.7 的简写，
+        //    工程是 SWIFT_VERSION = 5.0。
+        if let v = lat, v < -90 || v > 90 {
+            throw APIError.server(400, "纬度要在 -90 ~ 90 之间")
+        }
+        if let v = lon, v < -180 || v > 180 {
+            throw APIError.server(400, "经度要在 -180 ~ 180 之间")
+        }
+        // 一个字段都不改就发请求是纯浪费，而且服务端会回「成功了但什么都没变」
+        guard lat != nil || lon != nil || place != nil else {
+            throw APIError.server(400, "没有要修改的内容")
+        }
+
+        let trimmedPlace = place?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let data = try JSONEncoder().encode(
+            SetWeatherLocationBody(lat: lat, lon: lon, place: trimmedPlace)
+        )
+        return try await APIClient.shared.put("/api/weather/location", body: data)
+    }
+
     // MARK: - 数据同步
 
     func refresh() async {
@@ -706,6 +750,46 @@ final class SessionStore {
     /// 忽略游标，强制全量。用户手动「重新同步」时用。
     func resetSyncCursor() {
         syncCursor = 0
+    }
+
+    /// 拉一份**整份快照**并用它重建本地状态（`GET /api/sync/snapshot`）。
+    ///
+    /// ## 什么时候才该用它
+    ///
+    /// 只在「本地状态已经不可信」时用：
+    /// - 服务端回 `maintenance: true`（库被整修过）
+    /// - 用户换了设备、或者手动点了「清掉游标、整份重拉」
+    /// - 界面上出现了明显不对的数据（指向已删日历的残渣）
+    ///
+    /// **日常同步不要用它。** 它会把 sync_log 里出现过的所有实体撸一遍，
+    /// 库用得越久响应越大；增量接口只发改过的。
+    ///
+    /// ## 顺序很关键
+    ///
+    /// 先拿到完整快照、再写游标。反过来写的话，一旦快照请求失败，
+    /// 游标已经在水位上了，中间那段变更**永远补不回来**。
+    ///
+    /// 返回值里带 `calendars`/`events` 的条数，方便状态页如实汇报。
+    @discardableResult
+    func pullSnapshot() async throws -> (calendars: Int, events: Int, seq: Int64) {
+        let res: SyncSnapshotResponse = try await APIClient.shared.get("/api/sync/snapshot")
+
+        // 快照是「权威的当前状态」，所以直接覆盖本地，不做合并。
+        // 合并在这里毫无意义：快照已经包含了全部，合并只会把本地残留留下来。
+        //
+        // ⚠️ 但**不发** `store.calendars = res.calendars` 之后就完事：
+        //    视图上的 `instances` 是按周/月范围拉的，快照带的是全量实例，
+        //    直接塞进去会让周视图显示整个库的日程。所以这里只记水位，
+        //    真正的界面数据仍然走 refresh()（它带着正确的范围换算）。
+
+        // 游标最后写 —— 见上面的「顺序很关键」
+        if let last = res.lastSeq {
+            syncCursor = last
+        }
+
+        await refresh()
+
+        return (res.calendars?.count ?? 0, res.events?.count ?? 0, res.lastSeq ?? 0)
     }
 
     // MARK: - 日历邀请码

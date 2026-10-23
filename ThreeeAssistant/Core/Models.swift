@@ -97,6 +97,61 @@ struct EntitlementsDTO: Decodable, Hashable {
     }
 }
 
+/// 天气城市（`GET` / `PUT /api/weather/location`）。
+///
+/// ## 为什么这里要写「来源」
+///
+/// 坐标有两个来源：服务启动参数（`-lat/-lon`）和应用内设置（存进 app_settings）。
+/// 两者并存时**应用内设置优先**。用户看到「当前是泉州，来源：启动参数」时
+/// 才知道改这里有没有用 —— 如果来源是启动参数而他改了，改完就是「应用内设置」，
+/// 值也变了，不至于一头雾水。
+///
+/// ## 坐标是 Double，不是 Int
+///
+/// 服务端按 4 位小数存（`FormatFloat(..., 'f', 4, 64)`），
+/// 用 Int 会把手写的坐标抹成整数。
+struct WeatherLocationDTO: Decodable, Hashable {
+    let lat: Double
+    let lon: Double
+    /// 地名。可能为空（只配了坐标没配名字）
+    let place: String
+    /// 只是给人看的一句话来源：「应用内设置」/「启动参数」
+    let source: String
+
+    /// 坐标的显示形式。4 位小数和服务端存的精度一致。
+    var coordinateText: String {
+        String(format: "%.4f, %.4f", lat, lon)
+    }
+}
+
+/// 改天气城市的请求体。
+///
+/// ⚠️ 三个字段都是 **Optional**，而且必须保持 Optional。
+///    服务端用 `*float64` / `*string` 接，为的是区分「没传」和「传了 0」——
+///    经度 0（格林尼治）和纬度 0（赤道）都是合法坐标，拿 0 当「没传」是错的。
+///    所以客户端也只能「只传用户真改了的字段」。
+struct SetWeatherLocationBody: Encodable {
+    let lat: Double?
+    let lon: Double?
+    let place: String?
+
+    /// 编码时把 nil 字段整个省掉（而不是写成 null）。
+    /// 默认的 Codable 会把 nil 编成 `null`，服务端解码成 `*T` 时得到 nil 指针，
+    /// 语义上等价 —— 但显式省略更贴近服务端预期，也少一层解释成本。
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        // ⚠️ 这里必须写 `if let v = lat`，不能用 `if let lat {` 简写 ——
+        //    工程 SWIFT_VERSION = 5.0，简写是 5.7 才有的语法糖。
+        if let v = lat { try c.encode(v, forKey: .lat) }
+        if let v = lon { try c.encode(v, forKey: .lon) }
+        if let v = place { try c.encode(v, forKey: .place) }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case lat, lon, place
+    }
+}
+
 /// 一部日历。
 ///
 /// ⚠️ 不能叫 `Calendar` —— 会和 Foundation.Calendar 撞名，
