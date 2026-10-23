@@ -21,9 +21,18 @@ on:
   pull_request:
 
 # 同一分支重复触发时取消旧的，省钱
+#
+# ⚠️ 但推送一多，这个设置就变成了"永远跑不完"的主因：
+#    每次 push 都把上一次**排了半天队**的 run 取消掉，等于队永远白排。
+#    所以改成**只有手动触发时**才取消旧的；push 触发的运行不互相打断，
+#    先拿到机器的那个就跑完。
+#
+#    （如果哪天觉得不该排队那么多次，就少推几次 —— 本地
+#      tools/check_swift.py + find_isolation_issues.py 已经能挡住
+#      绝大多数机械性错误，不必每改一行就推。）
 concurrency:
-  group: ios-build-${{ github.ref }}
-  cancel-in-progress: true
+  group: ios-build-${{ github.ref }}-${{ github.event_name }}-${{ github.run_id }}
+  cancel-in-progress: false
 
 jobs:
   build:
