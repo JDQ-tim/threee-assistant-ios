@@ -33,6 +33,18 @@ struct SettingsView: View {
                             .textSelection(.enabled)
                     }
                     .padding(.vertical, 2)
+
+                    NavigationLink {
+                        SyncStatusView()
+                    } label: {
+                        HStack {
+                            Text("同步")
+                            Spacer(minLength: 0)
+                            Text(store.syncCursor > 0 ? "游标 \(store.syncCursor)" : "未同步")
+                                .font(.caption)
+                                .foregroundStyle(Theme.textTertiary)
+                        }
+                    }
                 }
 
                 Section("数据") {

@@ -37,9 +37,10 @@
 		C2154D2C0000000000000052 /* CoursePeriodsEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40166B670000000000000051 /* CoursePeriodsEditorView.swift */; };
 		275E6E700000000000000054 /* InboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7087701D0000000000000053 /* InboxView.swift */; };
 		5C5533820000000000000056 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCDE70B10000000000000055 /* SettingsView.swift */; };
-		3F09C70E0000000000000058 /* TeamDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86D5C9970000000000000057 /* TeamDetailView.swift */; };
-		9CD7BA4E000000000000005A /* TeamListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87AE298B0000000000000059 /* TeamListView.swift */; };
-		14A5319A000000000000005B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E684DE92000000000000001A /* Assets.xcassets */; };
+		B6E864F40000000000000058 /* SyncStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89A020800000000000000057 /* SyncStatusView.swift */; };
+		3F09C70E000000000000005A /* TeamDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86D5C9970000000000000059 /* TeamDetailView.swift */; };
+		9CD7BA4E000000000000005C /* TeamListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87AE298B000000000000005B /* TeamListView.swift */; };
+		14A5319A000000000000005D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E684DE92000000000000001A /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -74,8 +75,9 @@
 		40166B670000000000000051 /* CoursePeriodsEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoursePeriodsEditorView.swift; sourceTree = "<group>"; };
 		7087701D0000000000000053 /* InboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxView.swift; sourceTree = "<group>"; };
 		BCDE70B10000000000000055 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		86D5C9970000000000000057 /* TeamDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamDetailView.swift; sourceTree = "<group>"; };
-		87AE298B0000000000000059 /* TeamListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamListView.swift; sourceTree = "<group>"; };
+		89A020800000000000000057 /* SyncStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncStatusView.swift; sourceTree = "<group>"; };
+		86D5C9970000000000000059 /* TeamDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamDetailView.swift; sourceTree = "<group>"; };
+		87AE298B000000000000005B /* TeamListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamListView.swift; sourceTree = "<group>"; };
 		0FE0F9C30000000000000019 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		E684DE92000000000000001A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = ThreeeAssistant/Resources/Assets.xcassets; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -180,8 +182,9 @@
 				40166B670000000000000051 /* CoursePeriodsEditorView.swift */,
 				7087701D0000000000000053 /* InboxView.swift */,
 				BCDE70B10000000000000055 /* SettingsView.swift */,
-				86D5C9970000000000000057 /* TeamDetailView.swift */,
-				87AE298B0000000000000059 /* TeamListView.swift */,
+				89A020800000000000000057 /* SyncStatusView.swift */,
+				86D5C9970000000000000059 /* TeamDetailView.swift */,
+				87AE298B000000000000005B /* TeamListView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -279,7 +282,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				14A5319A000000000000005B /* Assets.xcassets in Resources */,
+				14A5319A000000000000005D /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -320,8 +323,9 @@
 				C2154D2C0000000000000052 /* CoursePeriodsEditorView.swift in Sources */,
 				275E6E700000000000000054 /* InboxView.swift in Sources */,
 				5C5533820000000000000056 /* SettingsView.swift in Sources */,
-				3F09C70E0000000000000058 /* TeamDetailView.swift in Sources */,
-				9CD7BA4E000000000000005A /* TeamListView.swift in Sources */,
+				B6E864F40000000000000058 /* SyncStatusView.swift in Sources */,
+				3F09C70E000000000000005A /* TeamDetailView.swift in Sources */,
+				9CD7BA4E000000000000005C /* TeamListView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
