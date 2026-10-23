@@ -18,8 +18,8 @@ struct NewEventSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
 
-                    if let failure {
-                        ErrorBanner(message: failure)
+                    if let msg = failure {
+                        ErrorBanner(message: msg)
                     }
 
                     labelled("标题") {

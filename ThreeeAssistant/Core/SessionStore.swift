@@ -61,6 +61,9 @@ final class SessionStore {
 
     // MARK: - 启动
 
+    /// ⚠️ 标 `@MainActor` 是因为整个类都是主线程隔离的；
+    ///    Swift 6 的并发检查下，从 `@State` 初始化时就是主线程，不会冲突。
+    @MainActor
     init() {
         restore()
     }
@@ -122,9 +125,8 @@ final class SessionStore {
     /// 只清本地登录态。服务端的 token 记录顺手作废，
     /// 失败也无所谓 —— 它本来就只是个失效的凭证。
     func logout() async {
-        if token != nil {
-            let _: EmptyOK? = try? await APIClient.shared.post("/api/auth/logout", body: nil)
-        }
+        // 用 try? 吞掉一切失败：登出必须无条件成功，不能因为网络断了就退不出去
+        _ = try? await APIClient.shared.postRaw("/api/auth/logout", body: nil)
         token = nil
         user = nil
         calendars = []
@@ -230,6 +232,3 @@ final class SessionStore {
         return error.localizedDescription
     }
 }
-
-/// 只为「不关心返回体」的 POST 准备（比如登出）
-struct EmptyOK: Decodable {}

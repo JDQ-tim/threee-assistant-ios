@@ -5,9 +5,12 @@ import Security
 ///
 /// 为什么不放 UserDefaults：那是明文 plist，越狱设备或备份文件里能直接读到。
 /// 令牌等同于密码 —— 拿到它就能读写这个账号的全部日程。
+///
+/// ⚠️ 这里是 `nonisolated` 的纯同步工具：会被 `@MainActor` 的 SessionStore 调用，
+///    但 Keychain 的 SecItem* 系列 API 自带线程安全，不需要也不应该绑到主线程。
 enum Keychain {
 
-    private static let service = "cn.threees.assistant.ios"
+    static let service = "cn.threees.assistant.ios"
 
     static func save(_ value: String, for key: String) {
         guard let data = value.data(using: .utf8) else { return }

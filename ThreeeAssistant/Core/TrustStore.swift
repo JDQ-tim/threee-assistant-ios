@@ -15,9 +15,17 @@ import Security
 /// 记下来，以后每次都比对。指纹对不上就断开，让用户自己决定要不要重新信任。
 ///
 /// 这比「接受一切」安全得多，又不用逼用户去装描述文件。
+///
+/// ⚠️ 这个类型会被 `URLSessionDelegate` 的**后台线程**调用（证书校验回调），
+///    同时也会被主线程的设置页调用。UserDefaults 本身线程安全，
+///    但「读-改-写」的 map 组合操作不是，所以统一用 `lock` 串行化。
 enum TrustStore {
 
     private static let defaultsKey = "threees.trustedHosts"
+
+    /// 保护 `map` 的读改写；UserDefaults 自身的读写是线程安全的，
+    /// 这里锁的是「取出字典→改一项→写回」这个复合操作
+    private static let lock = NSLock()
 
     /// host → SHA256(证书 DER)
     private static var map: [String: String] {
@@ -26,16 +34,22 @@ enum TrustStore {
     }
 
     static func fingerprint(for host: String) -> String? {
-        map[host.lowercased()]
+        lock.lock()
+        defer { lock.unlock() }
+        return map[host.lowercased()]
     }
 
     static func remember(_ fingerprint: String, for host: String) {
+        lock.lock()
+        defer { lock.unlock() }
         var m = map
         m[host.lowercased()] = fingerprint
         map = m
     }
 
     static func forget(_ host: String) {
+        lock.lock()
+        defer { lock.unlock() }
         var m = map
         m.removeValue(forKey: host.lowercased())
         map = m
@@ -43,10 +57,16 @@ enum TrustStore {
 
     /// 「设置」里的那个按钮：一次清掉全部
     static func forgetAll() {
+        lock.lock()
+        defer { lock.unlock() }
         UserDefaults.standard.removeObject(forKey: defaultsKey)
     }
 
-    static var isEmpty: Bool { map.isEmpty }
+    static var isEmpty: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return map.isEmpty
+    }
 
     static func sha256(of data: Data) -> String {
         SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()

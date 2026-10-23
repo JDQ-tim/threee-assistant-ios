@@ -40,8 +40,8 @@ struct EventDetailSheet: View {
                     }
                     .padding(.bottom, 18)
 
-                    if let failure {
-                        ErrorBanner(message: failure)
+                    if let msg = failure {
+                        ErrorBanner(message: msg)
                             .padding(.bottom, 14)
                     }
 

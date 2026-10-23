@@ -16,8 +16,20 @@ final class APIClient: NSObject, @unchecked Sendable {
 
     static let shared = APIClient()
 
-    private var baseURL: URL?
-    private var token: String?
+    /// `baseURL` 和 `token` 会被主线程写（登录、登出）、被网络回调的后台线程读。
+    /// `@unchecked Sendable` 等于向编译器承诺「我自己保证线程安全」，
+    /// 所以这里必须自己加锁——否则这个承诺是假的。
+    private let stateLock = NSLock()
+    private var _baseURL: URL?
+    private var _token: String?
+
+    private var baseURL: URL? {
+        get { stateLock.lock(); defer { stateLock.unlock() }; return _baseURL }
+    }
+
+    private var token: String? {
+        get { stateLock.lock(); defer { stateLock.unlock() }; return _token }
+    }
 
     private lazy var session: URLSession = {
         let cfg = URLSessionConfiguration.default
@@ -31,12 +43,16 @@ final class APIClient: NSObject, @unchecked Sendable {
     // MARK: - 配置
 
     func configure(baseURL: URL, token: String?) {
-        self.baseURL = baseURL
-        self.token = token
+        stateLock.lock()
+        _baseURL = baseURL
+        _token = token
+        stateLock.unlock()
     }
 
     func setToken(_ token: String?) {
-        self.token = token
+        stateLock.lock()
+        _token = token
+        stateLock.unlock()
     }
 
     /// 把用户输入的一行字变成一个能用的地址。
@@ -77,6 +93,12 @@ final class APIClient: NSObject, @unchecked Sendable {
         _ = try await sendRaw("DELETE", path, query: [], body: nil)
     }
 
+    /// 同样「不关心响应体」的 POST（登出用）
+    @discardableResult
+    func postRaw(_ path: String, body: Data?) async throws -> Data {
+        try await sendRaw("POST", path, query: [], body: body)
+    }
+
     private func send<T: Decodable>(
         _ method: String,
         _ path: String,
@@ -115,8 +137,8 @@ final class APIClient: NSObject, @unchecked Sendable {
         if let t = token, !t.isEmpty {
             req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
         }
-        if let body {
-            req.httpBody = body
+        if let bodyData = body {
+            req.httpBody = bodyData
             req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         }
 
