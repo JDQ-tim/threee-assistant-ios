@@ -6,6 +6,16 @@ name: iOS Build
 #  3. 提 PR
 on:
   workflow_dispatch:
+    inputs:
+      builds-on:
+        description: '用哪台 macOS runner（排不上队就换一个）'
+        required: false
+        default: macos-14
+        type: choice
+        options:
+          - macos-14
+          - macos-15
+          - macos-13
   push:
     branches: [main, master]
   pull_request:
@@ -18,9 +28,20 @@ concurrency:
 jobs:
   build:
     name: Compile (Swift)
-    # macos-15 = Xcode 16.x / macOS 15；若没货会自动排队，可换 macos-14
-    runs-on: macos-15
-    timeout-minutes: 30
+    # ============================================================
+    #  为什么是 macos-14 而不是 macos-15
+    #  ------------------------------------------------------------
+    #  这个仓库是 **public**。GitHub 给公开仓库的 macOS runner 是共享池，
+    #  macos-15 镜像新、要的人多，经常一整天排不上队（表现为一直 queued）。
+    #  macos-14 池子更大、更容易拿到机器。
+    #
+    #  想手动换版本：Actions 页面 → Run workflow → 选 builds-on。
+    # ============================================================
+    # ⚠️ `inputs.builds-on` 只有手动触发时才有值，
+    #    push 触发时它是空的，靠 `|| 'macos-14'` 兜底。
+    #    （GitHub 对未定义的 inputs 求值成空串，不会报错。）
+    runs-on: ${{ inputs.builds-on || 'macos-14' }}
+    timeout-minutes: 40
 
     steps:
       - name: 检出代码
@@ -28,6 +49,7 @@ jobs:
 
       - name: 显示工具链版本
         run: |
+          echo "runner: $RUNNER_OS / $ImageOS"
           echo "=== Xcode ==="
           xcodebuild -version
           echo ""
