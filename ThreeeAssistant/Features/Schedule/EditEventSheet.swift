@@ -667,10 +667,14 @@ struct EditEventSheet: View {
                     // （p 里本来就带着 strong，不用额外处理）
                     let conflicts = try await store.updateEvent(id: instance.eventID, patch: p)
                     if !conflicts.isEmpty {
-                        // 有冲突说明别人也改了同一条。服务端已经按字段合并好了，
-                        // 这里只提示一声，不当成失败 —— 拒绝保存会让用户白改一遍
-                        failure = "已保存。注意：这条日程在其它设备上也刚被修改过，"
-                            + "服务端已按字段合并，请刷新确认结果。"
+                        // 有冲突说明别人也改了同一条的同一个字段。
+                        //
+                        // 服务端不会静默覆盖：它把对方的值留在库里、把你的值
+                        // 记进 conflicts 表等你决定（见 sync.go 的 handleResolveConflict）。
+                        // 所以这里不能只说「已保存」——那只描述了"字段合并"这一半，
+                        // 用户会以为自己的修改生效了，实际它正躺在「我的 → 修改冲突」里。
+                        failure = "已保存，但有 \(conflicts.count) 个字段和别人的修改撞了。"
+                            + "服务端保留了双方的值，请到「我的 → 修改冲突」里选择用哪个。"
                         saving = false
                         onSaved?()
                         return

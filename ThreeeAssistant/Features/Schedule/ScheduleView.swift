@@ -13,6 +13,9 @@ struct ScheduleView: View {
     @State private var toast: String?
     @State private var toastTask: Task<Void, Never>?
 
+    /// 列表右滑要删的那一条。非 nil 时弹确认。
+    @State private var pendingDelete: ScheduleInstance?
+
     private var isRegular: Bool { sizeClass == .regular }
 
     var body: some View {
@@ -80,6 +83,23 @@ struct ScheduleView: View {
             }
             .sheet(isPresented: $showSettings) {
                 SettingsView()
+            }
+            // 列表右滑删除的确认。
+            //
+            // ⚠️ 这里对重复日程**只给「删这一次」一个选项**，不提供「删整个系列」：
+            //    滑动删除是个"轻"动作（虽然关了全滑），
+            //    在这么轻的入口上放一个能抹掉几十条日程的操作太危险。
+            //    想删整个系列去详情页，那里有完整说明和二次文案。
+            .alert("删除这条日程？", isPresented: Binding(
+                get: { pendingDelete != nil },
+                set: { if !$0 { pendingDelete = nil } }
+            ), presenting: pendingDelete) { item in
+                Button("删除", role: .destructive) {
+                    performDelete(item)
+                }
+                Button("取消", role: .cancel) { pendingDelete = nil }
+            } message: { item in
+                Text(deleteMessage(for: item))
             }
             .overlay(alignment: .bottom) {
                 if let t = toast {
@@ -232,7 +252,7 @@ struct ScheduleView: View {
 
     @ViewBuilder
     private func rowButton(_ item: ScheduleInstance) -> some View {
-        let row = Button {
+        Button {
             detail = item
         } label: {
             EventRowView(
@@ -242,11 +262,10 @@ struct ScheduleView: View {
             )
         }
         .buttonStyle(.plain)
-
-        // 只有待办才给勾选滑动。日程滑出「完成」是没有意义的动作，
+        // 左侧：只有待办才给勾选。日程滑出「完成」没有意义，
         // 给了反而让人误以为能把一节课标记成"做完"。
-        if item.isTask {
-            row.swipeActions(edge: .leading, allowsFullSwipe: true) {
+        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+            if item.isTask {
                 Button {
                     toggleDone(item)
                 } label: {
@@ -255,13 +274,56 @@ struct ScheduleView: View {
                 }
                 .tint(item.isDone ? Theme.textSecondary : Theme.teal600)
             }
-        } else {
-            row
+        }
+        // 右侧：删除。`allowsFullSwipe: false` 是刻意的 ——
+        // 全滑删除在日程列表上太危险，重复日程一不小心就带走整个系列。
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button(role: .destructive) {
+                pendingDelete = item
+            } label: {
+                Label("删除", systemImage: "trash")
+            }
         }
     }
 
-    private func toggleDone(_ item: ScheduleInstance) {
+    /// 滑删的确认文案。
+    ///
+    /// 重复日程必须说清楚「只删这一次」—— 否则用户滑掉一次，
+    /// 转头发现后面所有次都还在，会觉得删除坏了；
+    /// 反过来如果真删了整个系列又不明说，那是更严重的意外。
+    private func deleteMessage(for item: ScheduleInstance) -> String {
+        let name = "「\(item.title ?? "无标题")」"
+        let recurring = !(store.repeatRuleByEventID[item.eventID] ?? "").isEmpty
+        if recurring {
+            return name + " 是重复日程。这里只会删掉 "
+                + item.start.monthDay + " " + item.start.hhmm + " 这一次，"
+                + "其它几次不受影响。\n\n想删掉整个系列，请打开这条日程后在详情页操作。"
+        }
+        return name + " 将被删除，其它设备同步后也会消失。"
+    }
+
+    private func performDelete(_ item: ScheduleInstance) {
+        pendingDelete = nil
         Task {
+            do {
+                // 始终走「只删这一次」：单次日程用这个接口也完全正确
+                // （它只有一个实例），而重复日程正是我们要的行为。
+                try await store.deleteOccurrence(
+                    eventID: item.eventID,
+                    occurrenceKey: item.occurrenceKey
+                )
+            } catch {
+                toast = store.message(for: error)
+                toastTask?.cancel()
+                toastTask = Task {
+                    try? await Task.sleep(for: .seconds(3))
+                    if !Task.isCancelled { toast = nil }
+                }
+            }
+        }
+    }
+
+    private func toggleDone(_ item: ScheduleInstance) {        Task {
             do {
                 try await store.setDone(item, done: !item.isDone)
             } catch {
