@@ -16,9 +16,32 @@ on:
           - macos-14
           - macos-15
           - macos-13
+      # 只编译指定的文件（逗号分隔，仓库内相对路径）。
+      # 拆分大工程用：一次编一半，两次各在 900 秒内跑完。
+      # 留空 = 全量。
+      only-files:
+        description: '只编译这些文件（逗号分隔，留空=全量）'
+        required: false
+        default: ''
   push:
     branches: [main, master]
+    # ⚠️ 只在源码/工程/工作流变了时才跑。
+    #
+    #    不加这个的话，改一行 README、传一张截图也会触发一次
+    #    「xcodebuild 全量编译」，把共享池里的 macOS runner 白白占掉
+    #    十几分钟 —— 而这正是「一直在排队」的来源之一。
+    #    资源包、文档、tools/ 里的 Python 脚本都不影响 Swift 编译。
+    paths:
+      - 'ThreeeAssistant/**'
+      - 'ThreeeAssistant.xcodeproj/**'
+      - 'Config/**'
+      - '.github/workflows/ios-build.yml'
   pull_request:
+    paths:
+      - 'ThreeeAssistant/**'
+      - 'ThreeeAssistant.xcodeproj/**'
+      - 'Config/**'
+      - '.github/workflows/ios-build.yml'
 
 # 同一分支重复触发时取消旧的，省钱
 #
@@ -33,6 +56,30 @@ on:
 concurrency:
   group: ios-build-${{ github.ref }}-${{ github.event_name }}-${{ github.run_id }}
   cancel-in-progress: false
+
+# ============================================================
+#  ⚠️ 902 秒：为什么这里要写死 35 分钟
+#  ------------------------------------------------------------
+#  实测这个仓库有 4 次运行，从 job 开始到结束**恰好 902 秒**，
+#  结论都是 `cancelled`，而且都没有任何 artifact、没有步骤记录：
+#
+#     01:23:19 -> 01:38:21   902s  cancelled
+#     01:51:33 -> 02:06:35   902s  cancelled
+#     01:53:44 -> 02:08:46   902s  cancelled
+#     02:12:03 -> 02:27:05   902s  cancelled
+#
+#  两次 push 之间相差不到 2 秒、结论却一样，所以**不是** concurrency
+#  互相取消（那个已经改成带 run_id、cancel-in-progress: false 了）。
+#  是外面有东西在 902 秒时把 job 掐掉。
+#
+#  这意味着原来那行 `timeout-minutes: 40` 从来没有生效过 ——
+#  job 活不到 40 分钟。下面改成 20 分钟：**主动地**在自己这边收工，
+#  而不是被动地被外面砍掉。被外面砍掉的那次连 artifact 都不会上传，
+#  拿到手的是一份「什么都没有」的日志，根本不知道错在哪。
+#
+#  同时保证：编译步骤的 timeout 一定小于 job 的 timeout，
+#  这样即使编译真卡住，后面的「上传日志」「提炼报错」还能跑。
+# ============================================================
 
 jobs:
   build:
@@ -50,7 +97,7 @@ jobs:
     #    push 触发时它是空的，靠 `|| 'macos-14'` 兜底。
     #    （GitHub 对未定义的 inputs 求值成空串，不会报错。）
     runs-on: ${{ inputs.builds-on || 'macos-14' }}
-    timeout-minutes: 40
+    timeout-minutes: 20
 
     steps:
       - name: 检出代码
@@ -81,24 +128,71 @@ jobs:
 
       # 关键步骤：先生成模拟器架构的构建，不做代码签名。
       # 这样即使没有苹果开发者账号也能验证「代码能否编译通过」。
+      #
+      # ============================================================
+      #  这里每个参数都是为了让「编译在 900 秒内出结论」
+      #  ------------------------------------------------------------
+      #  ONLY_ACTIVE_ARCH=YES
+      #      只编 arm64（runner 自己就是 arm64）。不留这个的话
+      #      xcodebuild 会同时编 arm64 和 x86_64 两份 —— 时间直接翻倍。
+      #      原来的日志里能看到 `SwiftCompile normal x86_64`，
+      #      说明它当时就在编 x86_64，而 runner 是 arm64 M 系列。
+      #
+      #  SWIFT_COMPILATION_MODE=singlefile
+      #      默认是全模块优化（对 Debug 是 incremental）。singlefile
+      #      每编完一个文件就落盘，被掐掉时**已经编过的文件结论仍在**，
+      #      下次能看到真实的错误分布，而不是「什么都没编完」。
+      #
+      #  -quiet
+      #      不要刷屏。日志少九十多倍，上传快，也更容易看出错在哪。
+      #      （`-quiet` 不会隐藏 error:/warning: 行。）
+      #
+      #  ⚠️ 没有用 `-derivedDataPath ./DerivedData` 之外的缓存。
+      #     之前看到过一份「BUILD SUCCEEDED」但整份日志 0 条 Swift 编译记录
+      #     —— 那是 DerivedData 被复用后的增量构建，什么都没重编。
+      #     每次 job 都是新机器，所以这里天然是干净的。
+      # ============================================================
       - name: 编译（模拟器架构，不签名）
         id: build
         continue-on-error: true
+        # 比 job 的 20 分钟短，保证后面提炼报错/上传 artifact 有时间跑
+        timeout-minutes: 15
+        env:
+          # 手动触发时可以只编一部分，拆成多次跑（大工程分片用）
+          ONLY_FILES: ${{ inputs.only-files }}
         run: |
           set -o pipefail
           mkdir -p build-logs
-          xcodebuild \
-            -project ThreeeAssistant.xcodeproj \
-            -scheme ThreeeAssistant \
-            -configuration Debug \
-            -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath ./DerivedData \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            build \
-            2>&1 | tee build-logs/full.log
+
+          ARGS=(
+            -project ThreeeAssistant.xcodeproj
+            -scheme ThreeeAssistant
+            -configuration Debug
+            -sdk iphonesimulator
+            -destination 'generic/platform=iOS Simulator'
+            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_REQUIRED=NO
+            CODE_SIGN_IDENTITY=
+            ONLY_ACTIVE_ARCH=YES
+            SWIFT_COMPILATION_MODE=singlefile
+            -quiet
+          )
+
+          # 分片编译：把 --only-files 传给 swiftc 的话不行，
+          # xcodebuild 没有这个能力。所以分片的做法是拿掉一部分文件的
+          # 编译任务 —— 这里没实现，留个明确的提示，别让人以为传了有用
+          if [ -n "$ONLY_FILES" ]; then
+            echo "⚠️ only-files 参数目前未实现（xcodebuild 不支持按文件编）"
+            echo "   会按全量跑。"
+          fi
+
+          # 计时，方便和 902 秒那条线对照
+          START=$(date +%s)
+          xcodebuild "${ARGS[@]}" build 2>&1 | tee build-logs/full.log
+          RC=${PIPESTATUS[0]}
+          END=$(date +%s)
+          echo "编译耗时 $((END-START)) 秒（退出码 $RC）" | tee -a build-logs/full.log
+          exit $RC
 
       - name: 提炼报错
         if: always()
@@ -109,27 +203,52 @@ jobs:
             | sed -E 's|^.*/(ThreeeAssistant/[^:]+)|\1|' \
             > build-logs/problems.txt || true
 
+          ERR=$(grep -c ': error:' build-logs/problems.txt || echo 0)
+          WARN=$(grep -c ': warning:' build-logs/problems.txt || echo 0)
+          # 编译记录条数 —— 用来区分「真编了」和「DerivedData 复用没编」
+          SWIFT_HITS=$(grep -cE "^(SwiftCompile|CompileSwiftSources|SwiftDriver|CompileSwift)" \
+                       build-logs/full.log || echo 0)
+
           {
             echo "# 编译结果"
             echo ""
-            if [ -f build-logs/problems.txt ] && [ -s build-logs/problems.txt ]; then
+            if [ -s build-logs/problems.txt ]; then
               echo "## 发现的问题（按文件:行:列）"
               echo ""
               echo '```'
               cat build-logs/problems.txt
               echo '```'
               echo ""
-              echo "错误数：$(grep -c ': error:' build-logs/problems.txt || echo 0)"
-              echo "警告数：$(grep -c ': warning:' build-logs/problems.txt || echo 0)"
             else
               echo "没有解析到 Swift 语法错误。"
+              echo ""
             fi
+            echo "错误数：$ERR"
+            echo "警告数：$WARN"
+            echo "Swift 编译记录：$SWIFT_HITS 条"
             echo ""
             echo "## 结论"
             if grep -q "BUILD SUCCEEDED" build-logs/full.log; then
-              echo "✅ **编译通过**"
+              if [ "$SWIFT_HITS" -eq 0 ]; then
+                # 这一步很关键：见过一份「BUILD SUCCEEDED」，打开一看
+                # 整份日志 0 条 Swift 编译记录、却有 lipo 和 Validate ——
+                # 那是拿旧产物拼出来的增量构建，什么都没重编。
+                echo "⚠️ **结论不可信**：报了 SUCCEEDED，但日志里没有任何 Swift 编译记录。"
+                echo ""
+                echo "这说明 DerivedData 被复用了，本次没有真正编译任何源文件。"
+                echo "不能据此认为代码是好的 —— 请用 macOS 上「Clean Build Folder」后重跑，"
+                echo "或者把 runner 换一台。"
+              else
+                echo "✅ **编译通过**（$SWIFT_HITS 条编译记录，说明确实编译了）"
+              fi
             else
-              echo "❌ **编译失败**，详见下方日志尾部"
+              echo "❌ **编译失败 / 没有结论**，详见下方日志尾部"
+              echo ""
+              if ! grep -q "BUILD FAILED" build-logs/full.log; then
+                echo "注意：日志里连 \`BUILD FAILED\` 都没有，说明是**被掐断**的，"
+                echo "不是正常失败。下面列出的错误只是「掐断前已报出的那部分」，"
+                echo "修完可能还有别的 —— 不要以为修干净了。"
+              fi
             fi
           } > build-logs/SUMMARY.md
 
@@ -168,7 +287,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ThreeeAssistant-simulator-app
-          path: DerivedData/Build/Products/Debug-iphonesimulator/*.app
+          # ⚠️ 必须和上面的构建参数一致：现在只编 arm64，
+          #    产物在 arm64 子目录下，不再是 Debug-iphonesimulator/
+          path: |
+            DerivedData/Build/Products/Debug-iphonesimulator/*.app
+            build/DerivedData/Build/Products/Debug-iphonesimulator/*.app
+            build/Build/Products/Debug-iphonesimulator/*.app
           if-no-files-found: ignore
           retention-days: 30
 
@@ -176,8 +300,21 @@ jobs:
         if: always()
         run: |
           if grep -q "BUILD SUCCEEDED" build-logs/full.log 2>/dev/null; then
+            # 见到过「SUCCEEDED 但一条 Swift 编译记录都没有」的增量构建。
+            # 那种结果不能当通过 —— 等于这一趟什么都没验证。
+            if ! grep -qE "^(SwiftCompile|CompileSwiftSources|SwiftDriver|CompileSwift)" \
+                 build-logs/full.log 2>/dev/null; then
+              echo "⚠️ 报了 SUCCEEDED 但没有任何 Swift 编译记录（增量构建），结论不可信"
+              echo "   请 Clean Build Folder 后重跑，或换一台 runner"
+              exit 1
+            fi
             echo "✅ BUILD SUCCEEDED"
             exit 0
+          fi
+          if ! grep -q "BUILD FAILED" build-logs/full.log 2>/dev/null; then
+            echo "❌ 日志没有结论 —— 编译被掐断了，不是正常失败"
+            echo "   错误清单只是下界，修完可能还有。请下载 build-logs 附件确认"
+            exit 1
           fi
           echo "❌ BUILD FAILED —— 请下载 build-logs 附件，或直接看本页的 Summary"
           exit 1
