@@ -948,6 +948,183 @@ struct ShareCalendarToTeamBody: Encodable {
     }
 }
 
+// MARK: - 收件箱
+
+/// 一条投递到「我」的收件箱条目。
+///
+/// ## 收件箱是唯一一个「以用户为中心」的实体
+///
+/// 它的可见性判定是 `user_id == 自己`，**不是**日历权限。
+/// 源码 `inbox.go:17` 说得很直接：「本文件里不出现任何 calendarRole /
+/// canRead / canWrite —— 出现即错」。
+///
+/// 为什么：`origin_calendar_id` 指向的是**发件人**的日历。
+/// 拿日历权限去过滤，只会把「发件人能发出去」和「我能收得到」搞反。
+///
+/// ## 三条 kind
+///
+/// - `share`   —— 有人把一条日程快照分享给我，等我接受/忽略
+/// - `capture` —— 本机抓取同步上来的（只能投给自己，不能给别人塞东西）
+/// - `system`  —— **服务端自己发**的通知（如「你的举报已处理」）。
+///                客户端永远推不出这个 kind（`pushInboxItem` 会把不认识的
+///                归一成 capture），所以它一定来自服务端。展示层遇到它
+///                只显示文案，不给「接受/忽略」按钮 —— 系统通知没有「接不接受」。
+struct InboxItemDTO: Codable, Identifiable, Hashable {
+    let id: String
+    let userID: String
+    let kind: String
+    let status: String
+    let source: String?
+    /// 发件人。**服务端写入，不信请求里的值**（否则可以伪造发件人）
+    let fromUserID: String?
+    let fromName: String?
+    /// 快照来自哪张日历（发件人的）。收件人看到的是快照，不依赖源日历权限。
+    let originCalendarID: String?
+    let title: String?
+    let notes: String?
+    let location: String?
+    let allDay: Bool?
+    let dtstartUTC: Int64?
+    let durationSec: Int64?
+    /// ⚠️ 库里是 **JSON 字符串**（`"[30,60]"`），不是数组。
+    /// Go 那边字段类型本身就是 `string`（`models.go:159`）。
+    let remindMinutesBefore: String?
+    /// 抓取通道的原文摘要
+    let sourceExcerpt: String?
+    let confidence: String?
+    /// 接受之后落成的那条 event 的 id
+    let acceptedEventID: String?
+    let createdAt: Int64
+    let decidedAt: Int64?
+    let seq: Int64?
+
+    enum CodingKeys: String, CodingKey {
+        case id, kind, status, source, title, notes, location, confidence, seq
+        case userID = "user_id"
+        case fromUserID = "from_user_id"
+        case fromName = "from_name"
+        case originCalendarID = "origin_calendar_id"
+        case allDay = "all_day"
+        case dtstartUTC = "dtstart_utc"
+        case durationSec = "duration_sec"
+        case remindMinutesBefore = "remind_minutes_before"
+        case sourceExcerpt = "source_excerpt"
+        case acceptedEventID = "accepted_event_id"
+        case createdAt = "created_at"
+        case decidedAt = "decided_at"
+    }
+
+    var isPending: Bool { status == "pending" }
+    var isSystem: Bool { kind == "system" }
+
+    /// 把 `remind_minutes_before` 那串 JSON 解成 [Int]。
+    ///
+    /// 解不出来就返回空数组 —— 提醒时间坏了不该让整条日程显示不出来。
+    var reminderMinutes: [Int] {
+        guard let raw = remindMinutesBefore, let data = raw.data(using: .utf8) else {
+            return []
+        }
+        return (try? JSONDecoder().decode([Int].self, from: data)) ?? []
+    }
+
+    /// 过期判定（展示层用）。
+    ///
+    /// 源码（`inbox.go:404`）：「**过期不改 status**（读操作不许写库，也免得引入定时任务）。
+    /// 过期由各端展示层判（`dtstart_utc + duration_sec < now - 24h` 且 pending）」。
+    /// 过期的条目不占未读数、不进提醒链。
+    var isStale: Bool {
+        guard isPending else { return false }
+        guard let start = dtstartUTC, let dur = durationSec else { return false }
+        return start + dur < Int64(Date.now.timeIntervalSince1970) - 86400
+    }
+
+    var displayTitle: String {
+        let t = (title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !t.isEmpty { return t }
+        let ex = (sourceExcerpt ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return ex.isEmpty ? "（无标题）" : ex
+    }
+}
+
+struct InboxListResponse: Decodable {
+    let items: [InboxItemDTO]
+    let count: Int?
+}
+
+/// `POST /api/inbox` 的请求体。
+///
+/// ## 两条通道的权限完全不同
+///
+/// - `share`：发件人必须对 `origin_calendar_id` **有读权限**，
+///   且必须给 `to_user_id`（收件人得真实存在，否则会出现没人能看到的幽灵条目）
+/// - `capture`：`to_user_id` 必须等于自己，或干脆不传（服务端会填成自己）
+struct NewInboxItemBody: Encodable {
+    let kind: String
+    let source: String
+    let toUserID: String
+    let originCalendarID: String
+    let title: String
+    let notes: String
+    let location: String
+    let allDay: Bool
+    let dtstartUTC: Int64
+    let durationSec: Int64
+    let remindMinutesBefore: [Int64]
+    let sourceExcerpt: String
+    let confidence: String
+
+    enum CodingKeys: String, CodingKey {
+        case kind, source, title, notes, location, confidence
+        case toUserID = "to_user_id"
+        case originCalendarID = "origin_calendar_id"
+        case allDay = "all_day"
+        case dtstartUTC = "dtstart_utc"
+        case durationSec = "duration_sec"
+        case remindMinutesBefore = "remind_minutes_before"
+        case sourceExcerpt = "source_excerpt"
+    }
+}
+
+/// `POST /api/inbox/{id}/decision`。
+///
+/// `action` 只认 `accepted` / `dismissed`（**不是** accept/dismiss）。
+/// `eventID` 只在 accepted 时有用：服务端**不造事件**，
+/// 客户端要先用 `POST /api/events` 建成功，再把 id 一起提交过来改状态。
+struct InboxDecisionBody: Encodable {
+    let action: String
+    let eventID: String
+
+    enum CodingKeys: String, CodingKey {
+        case action
+        case eventID = "event_id"
+    }
+}
+
+/// `POST /api/inbox/batch` —— 一次事务，全有或全无。
+///
+/// 服务端上限 200 条（`inboxMaxBatch`）。超了直接 400。
+struct InboxBatchBody: Encodable {
+    let ids: [String]
+    let action: String
+    let eventID: String
+
+    enum CodingKeys: String, CodingKey {
+        case ids, action
+        case eventID = "event_id"
+    }
+}
+
+/// 决策/批量的响应。
+///
+/// `changed` / `unchanged` 是幂等判定的结果：本来就是这个状态、
+/// 或者归属不对、或者已经是终态的，都会落到 `unchanged` 里。
+struct InboxDecideResponse: Decodable {
+    let ok: Bool?
+    let changed: [String]?
+    let unchanged: [String]?
+    let seq: Int64?
+}
+
 // MARK: - 课程表
 
 /// 一节课的「钟点」。

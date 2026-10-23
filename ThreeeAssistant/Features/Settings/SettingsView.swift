@@ -12,6 +12,8 @@ struct SettingsView: View {
     /// 真遇到冲突时根本找不到地方处理。
     @State private var pendingConflicts = 0
     @State private var teamCount = 0
+    /// 待处理收件箱条数（不含过期和系统通知）
+    @State private var inboxCount = 0
 
     var body: some View {
         NavigationStack {
@@ -47,6 +49,27 @@ struct SettingsView: View {
                                 Text("\(teamCount)")
                                     .font(.caption)
                                     .foregroundStyle(Theme.textSecondary)
+                            }
+                        }
+                    }
+                    NavigationLink {
+                        InboxView()
+                    } label: {
+                        HStack {
+                            Text("收件箱")
+                            Spacer(minLength: 0)
+                            if inboxCount > 0 {
+                                Text("\(inboxCount)")
+                                    .font(.caption.weight(.semibold))
+                                    .padding(.horizontal, 7)
+                                    .padding(.vertical, 2)
+                                    .background(Theme.accent)
+                                    .foregroundStyle(.white)
+                                    .clipShape(Capsule())
+                            } else {
+                                Text("无")
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.textTertiary)
                             }
                         }
                     }
@@ -129,6 +152,7 @@ struct SettingsView: View {
             .task {
                 await loadConflictCount()
                 await loadTeamCount()
+                await loadInboxCount()
             }
         }
     }
@@ -146,5 +170,15 @@ struct SettingsView: View {
     private func loadTeamCount() async {
         let list = (try? await store.loadTeams()) ?? []
         teamCount = list.count
+    }
+
+    /// 待处理收件箱条数。
+    ///
+    /// 这里传 `status: "pending"` 只拉待处理的，再本地剔掉过期和系统通知 ——
+    /// 服务端不会改过期条目的 status（读操作不写库），不剔掉的话
+    /// 角标上会挂着一个永远消不掉的数字。
+    private func loadInboxCount() async {
+        let list = (try? await store.loadInbox(status: "pending")) ?? []
+        inboxCount = list.filter { $0.isPending && !$0.isStale && !$0.isSystem }.count
     }
 }

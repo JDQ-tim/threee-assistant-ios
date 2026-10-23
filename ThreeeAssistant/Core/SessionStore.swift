@@ -528,6 +528,140 @@ final class SessionStore {
         await refresh()
     }
 
+    // MARK: - 收件箱
+
+    /// 拉收件箱。
+    ///
+    /// `status` 默认是 `pending`（服务端在没传时也按 pending 处理）。
+    /// 传 `"all"` 可以拿到全部 —— 服务端对 `""` 和 `"all"` 都不加 status 条件。
+    ///
+    /// ⚠️ 服务端**不会**因为过期去改 status（读操作不写库）。
+    ///    过期判定在客户端做：见 `InboxItemDTO.isStale`。
+    ///    过期的条目要自己从「未读数」里排除，否则角标会一直挂着一个永远消不掉的数字。
+    func loadInbox(status: String = "pending", limit: Int = 200) async throws -> [InboxItemDTO] {
+        let capped = max(1, min(limit, 500))
+        let res: InboxListResponse = try await APIClient.shared.get(
+            "/api/inbox",
+            query: [
+                URLQueryItem(name: "status", value: status),
+                URLQueryItem(name: "limit", value: String(capped))
+            ]
+        )
+        return res.items
+    }
+
+    /// 把一条日程（或一份抓取结果）投递到某人或自己的收件箱。
+    ///
+    /// ## 两条通道
+    ///
+    /// - `toUserID` 非空、且不是自己 → `share`：我对源日历要有读权限
+    /// - `toUserID` 为空或等于自己 → `capture`：投给自己
+    ///
+    /// 这里**不替调用方猜 kind**：猜出来的结果会绕开服务端那条
+    /// 「capture 只能投给自己」的闸门。所以由调用方明确给出。
+    func sendInboxItem(
+        kind: String,
+        toUserID: String,
+        originCalendarID: String,
+        title: String,
+        notes: String = "",
+        location: String = "",
+        allDay: Bool = false,
+        startUTC: Int64,
+        durationSec: Int64,
+        reminders: [Int] = [],
+        source: String = "",
+        sourceExcerpt: String = "",
+        confidence: String = ""
+    ) async throws {
+        guard kind == "share" || kind == "capture" else {
+            throw APIError.server(400, "收件箱条目的类型只能是分享或抓取")
+        }
+        // 服务端：标题和原文摘要不能都为空 —— 否则收件箱里会出现一行空白
+        guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                || !sourceExcerpt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw APIError.server(400, "标题和原文摘要不能都为空")
+        }
+        // 客户端先挡一下「用 capture 给别人塞东西」，省一次往返。
+        // 真正的闸门在服务端（403「capture 只能投给自己」）。
+        if kind == "capture", !toUserID.isEmpty, toUserID != (user?.id ?? "") {
+            throw APIError.server(403, "抓取通道只能投给自己")
+        }
+
+        let body = NewInboxItemBody(
+            kind: kind,
+            source: source,
+            toUserID: toUserID,
+            originCalendarID: originCalendarID,
+            title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+            notes: notes.trimmingCharacters(in: .whitespacesAndNewlines),
+            location: location.trimmingCharacters(in: .whitespacesAndNewlines),
+            allDay: allDay,
+            dtstartUTC: startUTC,
+            durationSec: durationSec,
+            remindMinutesBefore: reminders.map { Int64($0) },
+            sourceExcerpt: sourceExcerpt,
+            confidence: confidence
+        )
+        let data = try JSONEncoder().encode(body)
+        _ = try await APIClient.shared.postRaw("/api/inbox", body: data)
+    }
+
+    /// 接受或忽略一条。
+    ///
+    /// ## 接受要先建 event
+    ///
+    /// 服务端**不提供**「从收件箱造事件」的接口（源码注释：「否则就多出第二条
+    /// 写事件的路径」）。所以接受的完整流程是：
+    /// 1. 调用方用 `createEvent` 建一条日程
+    /// 2. 把拿到的 event id 传进 `eventID`
+    ///
+    /// 本方法只负责第 2 步。`action` 只认 `"accepted"` / `"dismissed"`。
+    ///
+    /// ⚠️ **幂等且单向**：pending → 终态。已经 accepted 的再提交 dismissed
+    ///    会被服务端归到 `unchanged` 里（防止误撤回已经落库的行程）。
+    @discardableResult
+    func decideInboxItem(id: String, action: String, eventID: String = "") async throws -> Bool {
+        guard action == "accepted" || action == "dismissed" else {
+            throw APIError.server(400, "只能选择接受或忽略")
+        }
+        let data = try JSONEncoder().encode(
+            InboxDecisionBody(action: action, eventID: eventID)
+        )
+        let res: InboxDecideResponse = try await APIClient.shared.post(
+            "/api/inbox/\(id)/decision", body: data
+        )
+        // changed 里有这一条才算真的改了；落在 unchanged 说明它本来就是这个状态
+        return (res.changed ?? []).contains(id)
+    }
+
+    /// 批量决策。服务端一次事务全有或全无，上限 200 条。
+    @discardableResult
+    func decideInboxItems(ids: [String], action: String) async throws -> [String] {
+        guard !ids.isEmpty else { return [] }
+        guard ids.count <= 200 else {
+            throw APIError.server(400, "一次最多处理 200 条")
+        }
+        guard action == "accepted" || action == "dismissed" else {
+            throw APIError.server(400, "只能选择接受或忽略")
+        }
+        let data = try JSONEncoder().encode(
+            InboxBatchBody(ids: ids, action: action, eventID: "")
+        )
+        let res: InboxDecideResponse = try await APIClient.shared.post(
+            "/api/inbox/batch", body: data
+        )
+        return res.changed ?? []
+    }
+
+    /// 撤回/丢弃一条**未决**的条目。
+    ///
+    /// 两种身份都允许：收件人丢弃、发件人撤回。都只能在 pending 时。
+    /// 已 accepted 的服务端 409 —— 那条已经在收件人日历里成了 event。
+    func deleteInboxItem(id: String) async throws {
+        try await APIClient.shared.delete("/api/inbox/\(id)")
+    }
+
     // MARK: - 团队
 
     /// 我加入的团队。
