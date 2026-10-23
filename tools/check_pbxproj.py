@@ -43,8 +43,18 @@ if in_str:
     errors.append("存在未闭合的字符串")
 
 # 2. 所有 24 位十六进制 ID 定义 vs 引用
-defined = set(re.findall(r"^\t\t([0-9A-F]{24}) ", src, re.M))
+defined_list = re.findall(r"^\t\t([0-9A-F]{24}) ", src, re.M)
+defined = set(defined_list)
 referenced = set(re.findall(r"\b([0-9A-F]{24})\b", src))
+
+# 2b. ⚠️ 重复 ID 检测 —— 这是最容易漏、后果最诡异的一类错误。
+#     两个不同对象用同一个 ID 时 Xcode 不报错，只会让路径解析错乱，
+#     表现为「Assets.xcassets: No such file or directory」这种莫名其妙的失败。
+from collections import Counter as _Counter
+_dup = {i: n for i, n in _Counter(defined_list).items() if n > 1}
+for i, n in _dup.items():
+    errors.append("对象 ID 重复 %d 次: %s（Xcode 不会报错，但会解析错乱）" % (n, i))
+
 # rootObject 也算引用
 dangling = referenced - defined
 if dangling:

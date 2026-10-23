@@ -24,20 +24,34 @@ swift_files.sort()
 
 # ---------- 稳定 ID 生成 ----------
 _used = {}
+_counter = [0]
+
 
 def oid(*key):
+    """生成 Xcode 对象 ID。
+
+    ⚠️ 不要用哈希！之前用 md5 前 24 位，`appgroup` 和父组的键撞了同一个 ID，
+       而 Xcode 遇到两个对象同 ID 时**不会报错**，只会让路径解析错乱，
+       表现为「Assets.xcassets: No such file or directory」这种极难排查的症状。
+       这里改成「自增序号 + 哈希前缀」，序号保证绝对唯一，可读性也更好。
+    """
     raw = "|".join(key)
-    h = hashlib.md5(raw.encode("utf-8")).hexdigest().upper()[:24]
-    # 加前缀确保是纯字母数字且唯一
-    cand = h
-    if cand in _used and _used[cand] != raw:
-        raise RuntimeError("ID collision " + cand)
-    _used[cand] = raw
+    if raw in _used:
+        return _used[raw]["id"]
+    _counter[0] += 1
+    # 前 8 位取哈希（便于人眼辨认来源），后 16 位是自增序号（保证唯一）
+    prefix = hashlib.md5(raw.encode("utf-8")).hexdigest().upper()[:8]
+    cand = "%s%016X" % (prefix, _counter[0])
+    _used[raw] = {"id": cand}
     return cand
 
 PROJECT = oid("project")
 MAIN_GROUP = oid("maingroup")
 PRODUCTS_GROUP = oid("productsgroup")
+# ⚠️ 必须和 APP_GROUP 分开！曾经这两个共用一个变量，
+#    导致「ThreeeAssistant」父组和「App」子组拿到同一个对象 ID，
+#    Xcode 不报错，但路径解析全乱（Assets.xcassets 找不到）。
+ROOT_SRC_GROUP = oid("rootsrcgroup")
 APP_GROUP = oid("appgroup")
 CORE_GROUP = oid("coregroup")
 DESIGN_GROUP = oid("designgroup")
@@ -119,7 +133,7 @@ w("\t\t%s /* ThreeeAssistant.app */ = {isa = PBXFileReference; explicitFileType 
 for ref_id, name, rel in file_refs:
     w("\t\t%s /* %s */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = %s; sourceTree = \"<group>\"; };" % (ref_id, name, name))
 w("\t\t%s /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = \"<group>\"; };" % INFO_PLIST_REF)
-w("\t\t%s /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = \"<group>\"; };" % ASSETS_REF)
+w("\t\t%s /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = ThreeeAssistant/Resources/Assets.xcassets; sourceTree = SOURCE_ROOT; };" % ASSETS_REF)
 w("/* End PBXFileReference section */")
 w("")
 
@@ -138,14 +152,14 @@ w("/* Begin PBXGroup section */")
 w("\t\t%s = {" % MAIN_GROUP)
 w("\t\t\tisa = PBXGroup;")
 w("\t\t\tchildren = (")
-w("\t\t\t\t%s /* ThreeeAssistant */," % APP_GROUP)
+w("\t\t\t\t%s /* ThreeeAssistant */," % ROOT_SRC_GROUP)
 w("\t\t\t\t%s /* Config */," % CONFIG_GROUP)
 w("\t\t\t\t%s /* Products */," % PRODUCTS_GROUP)
 w("\t\t\t);")
 w("\t\t\tsourceTree = \"<group>\";")
 w("\t\t};")
 
-w("\t\t%s /* ThreeeAssistant */ = {" % APP_GROUP)
+w("\t\t%s /* ThreeeAssistant */ = {" % ROOT_SRC_GROUP)
 w("\t\t\tisa = PBXGroup;")
 w("\t\t\tchildren = (")
 for g in (APP_GROUP, CORE_GROUP, DESIGN_GROUP, FEATURES_GROUP, RESOURCES_GROUP):
@@ -396,6 +410,25 @@ w("}")
 out_path = os.path.join(ROOT, "ThreeeAssistant.xcodeproj", "project.pbxproj")
 with open(out_path, "w", encoding="utf-8", newline="\n") as f:
     f.write("\n".join(L) + "\n")
+
+# ---- 自动同步 scheme 里的 target ID ----
+# ⚠️ scheme 的 BlueprintIdentifier 是硬编码的 target 对象 ID。
+#    每次重生成 pbxproj，这个 ID 都可能变，不同步的话 GitHub Actions 上
+#    `xcodebuild -scheme` 会找不到 target —— 而报错信息完全不指向这里。
+scheme_path = os.path.join(
+    ROOT, "ThreeeAssistant.xcodeproj", "xcshareddata", "xcschemes", "ThreeeAssistant.xcscheme"
+)
+if os.path.exists(scheme_path):
+    import re as _re
+    sc = open(scheme_path, encoding="utf-8").read()
+    new_sc, n_sub = _re.subn(
+        r'(BlueprintIdentifier = ")[0-9A-F]{24}(")',
+        lambda m: m.group(1) + TARGET + m.group(2),
+        sc,
+    )
+    if n_sub:
+        open(scheme_path, "w", encoding="utf-8", newline="\n").write(new_sc)
+    print("scheme synced: %d 处 BlueprintIdentifier -> %s" % (n_sub, TARGET))
 
 print("OK -> %s" % out_path)
 print("swift files: %d" % len(swift_files))

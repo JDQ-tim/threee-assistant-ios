@@ -7,47 +7,47 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		28A273DA7DAA954BD3512A7E /* ThreeeAssistantApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4210DADBA674D06284F01AA2 /* ThreeeAssistantApp.swift */; };
-		C053D1C3EF3F4E503EE11717 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0106BF5B7AB3A3D327A65C26 /* APIClient.swift */; };
-		28C88058ACC2455C1255BB9F /* APIError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8296382027411BEB47618D0B /* APIError.swift */; };
-		853486BB03AB5B04F90CDB40 /* DateHelp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EFE8623FE66ADF581262ADB /* DateHelp.swift */; };
-		D2A123BFFC12BE96951F8A55 /* Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 961C0C8B98BBBAE8A454FBFE /* Keychain.swift */; };
-		324F344E74149A072A582DC9 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42C5B85409AF1BFEA4D19DE9 /* Models.swift */; };
-		92DB4548F5A5B15B8AE2D10F /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF6E84788385F7415614D30B /* SessionStore.swift */; };
-		76C18D095EF4D856707C4BF6 /* TrustStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE7AA57E20D96CDD273E988 /* TrustStore.swift */; };
-		496D98A0CEC751165C85E5A4 /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100DF3A77CE72811D7E4537E /* Components.swift */; };
-		EB5FCC7C6D646450BEDD0963 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64BD9E91BC1228A19A29C4DE /* Theme.swift */; };
-		1115C788C6AAEB6E38E46588 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F722AD9A5DFF18C70769E5BF /* LoginView.swift */; };
-		DCC0E71CBDB6F4C22E5C8464 /* EventDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D882FD3560FAD4761E21F75 /* EventDetailSheet.swift */; };
-		DFDC7BACD22A4124EB8A64A8 /* NewEventSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99F7D5242724D6382F6C50F8 /* NewEventSheet.swift */; };
-		1FDDB8B4FDD5C902674BE382 /* ScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 348F838B58F9133786CB80CD /* ScheduleView.swift */; };
-		5C5533823CE0B8DE7122EC4D /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCDE70B10FA0BD331E2DA922 /* SettingsView.swift */; };
-		14A5319A7B3EB36C3F065668 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E684DE925FA7B4069B5F1673 /* Assets.xcassets */; };
+		28A273DA000000000000001C /* ThreeeAssistantApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4210DADB000000000000001B /* ThreeeAssistantApp.swift */; };
+		C053D1C3000000000000001E /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0106BF5B000000000000001D /* APIClient.swift */; };
+		28C880580000000000000020 /* APIError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82963820000000000000001F /* APIError.swift */; };
+		853486BB0000000000000022 /* DateHelp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EFE86230000000000000021 /* DateHelp.swift */; };
+		D2A123BF0000000000000024 /* Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 961C0C8B0000000000000023 /* Keychain.swift */; };
+		324F344E0000000000000026 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42C5B8540000000000000025 /* Models.swift */; };
+		92DB45480000000000000028 /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF6E84780000000000000027 /* SessionStore.swift */; };
+		76C18D09000000000000002A /* TrustStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE7AA570000000000000029 /* TrustStore.swift */; };
+		496D98A0000000000000002C /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100DF3A7000000000000002B /* Components.swift */; };
+		EB5FCC7C000000000000002E /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64BD9E91000000000000002D /* Theme.swift */; };
+		1115C7880000000000000030 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F722AD9A000000000000002F /* LoginView.swift */; };
+		DCC0E71C0000000000000032 /* EventDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D882FD30000000000000031 /* EventDetailSheet.swift */; };
+		DFDC7BAC0000000000000034 /* NewEventSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99F7D5240000000000000033 /* NewEventSheet.swift */; };
+		1FDDB8B40000000000000036 /* ScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 348F838B0000000000000035 /* ScheduleView.swift */; };
+		5C5533820000000000000038 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCDE70B10000000000000037 /* SettingsView.swift */; };
+		14A5319A0000000000000039 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E684DE92000000000000001A /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		D91517BFBDECE389497A425B /* ThreeeAssistant.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ThreeeAssistant.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		4210DADBA674D06284F01AA2 /* ThreeeAssistantApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreeeAssistantApp.swift; sourceTree = "<group>"; };
-		0106BF5B7AB3A3D327A65C26 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
-		8296382027411BEB47618D0B /* APIError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIError.swift; sourceTree = "<group>"; };
-		0EFE8623FE66ADF581262ADB /* DateHelp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateHelp.swift; sourceTree = "<group>"; };
-		961C0C8B98BBBAE8A454FBFE /* Keychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keychain.swift; sourceTree = "<group>"; };
-		42C5B85409AF1BFEA4D19DE9 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
-		BF6E84788385F7415614D30B /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
-		ECE7AA57E20D96CDD273E988 /* TrustStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrustStore.swift; sourceTree = "<group>"; };
-		100DF3A77CE72811D7E4537E /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
-		64BD9E91BC1228A19A29C4DE /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
-		F722AD9A5DFF18C70769E5BF /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
-		6D882FD3560FAD4761E21F75 /* EventDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventDetailSheet.swift; sourceTree = "<group>"; };
-		99F7D5242724D6382F6C50F8 /* NewEventSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewEventSheet.swift; sourceTree = "<group>"; };
-		348F838B58F9133786CB80CD /* ScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleView.swift; sourceTree = "<group>"; };
-		BCDE70B10FA0BD331E2DA922 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		0FE0F9C3DC7EFFB066573FBA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		E684DE925FA7B4069B5F1673 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		D91517BF000000000000000F /* ThreeeAssistant.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ThreeeAssistant.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4210DADB000000000000001B /* ThreeeAssistantApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreeeAssistantApp.swift; sourceTree = "<group>"; };
+		0106BF5B000000000000001D /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		82963820000000000000001F /* APIError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIError.swift; sourceTree = "<group>"; };
+		0EFE86230000000000000021 /* DateHelp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateHelp.swift; sourceTree = "<group>"; };
+		961C0C8B0000000000000023 /* Keychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keychain.swift; sourceTree = "<group>"; };
+		42C5B8540000000000000025 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		BF6E84780000000000000027 /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
+		ECE7AA570000000000000029 /* TrustStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrustStore.swift; sourceTree = "<group>"; };
+		100DF3A7000000000000002B /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
+		64BD9E91000000000000002D /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		F722AD9A000000000000002F /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		6D882FD30000000000000031 /* EventDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventDetailSheet.swift; sourceTree = "<group>"; };
+		99F7D5240000000000000033 /* NewEventSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewEventSheet.swift; sourceTree = "<group>"; };
+		348F838B0000000000000035 /* ScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleView.swift; sourceTree = "<group>"; };
+		BCDE70B10000000000000037 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		0FE0F9C30000000000000019 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		E684DE92000000000000001A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = ThreeeAssistant/Resources/Assets.xcassets; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		059DB2086B49B680F85B3555 /* Frameworks */ = {
+		059DB2080000000000000011 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -57,114 +57,114 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		2B731CEFC6751AAE0EC69B98 = {
+		2B731CEF0000000000000002 = {
 			isa = PBXGroup;
 			children = (
-				20F4BD606C0F6D1645AE4919 /* ThreeeAssistant */,
-				5386A2EAF0036C0154CF9012 /* Config */,
-				0A2C978E52A76F0AA9F68BB5 /* Products */,
+				08B7C80A0000000000000004 /* ThreeeAssistant */,
+				5386A2EA000000000000000D /* Config */,
+				0A2C978E0000000000000003 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		20F4BD606C0F6D1645AE4919 /* ThreeeAssistant */ = {
+		08B7C80A0000000000000004 /* ThreeeAssistant */ = {
 			isa = PBXGroup;
 			children = (
-				20F4BD606C0F6D1645AE4919 /* App */,
-				6181C844C135BE67318DCF39 /* Core */,
-				BD4D8E11977B2A41BE6FA993 /* Design */,
-				1B710AF24B42B694779F96E8 /* Features */,
-				1570381873ADB508D23DCCC4 /* Resources */,
+				20F4BD600000000000000005 /* App */,
+				6181C8440000000000000006 /* Core */,
+				BD4D8E110000000000000007 /* Design */,
+				1B710AF20000000000000008 /* Features */,
+				15703818000000000000000C /* Resources */,
 			);
 			path = ThreeeAssistant;
 			sourceTree = "<group>";
 		};
-		20F4BD606C0F6D1645AE4919 /* App */ = {
+		20F4BD600000000000000005 /* App */ = {
 			isa = PBXGroup;
 			children = (
-				4210DADBA674D06284F01AA2 /* ThreeeAssistantApp.swift */,
+				4210DADB000000000000001B /* ThreeeAssistantApp.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
 		};
-		6181C844C135BE67318DCF39 /* Core */ = {
+		6181C8440000000000000006 /* Core */ = {
 			isa = PBXGroup;
 			children = (
-				0106BF5B7AB3A3D327A65C26 /* APIClient.swift */,
-				8296382027411BEB47618D0B /* APIError.swift */,
-				0EFE8623FE66ADF581262ADB /* DateHelp.swift */,
-				961C0C8B98BBBAE8A454FBFE /* Keychain.swift */,
-				42C5B85409AF1BFEA4D19DE9 /* Models.swift */,
-				BF6E84788385F7415614D30B /* SessionStore.swift */,
-				ECE7AA57E20D96CDD273E988 /* TrustStore.swift */,
+				0106BF5B000000000000001D /* APIClient.swift */,
+				82963820000000000000001F /* APIError.swift */,
+				0EFE86230000000000000021 /* DateHelp.swift */,
+				961C0C8B0000000000000023 /* Keychain.swift */,
+				42C5B8540000000000000025 /* Models.swift */,
+				BF6E84780000000000000027 /* SessionStore.swift */,
+				ECE7AA570000000000000029 /* TrustStore.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
 		};
-		BD4D8E11977B2A41BE6FA993 /* Design */ = {
+		BD4D8E110000000000000007 /* Design */ = {
 			isa = PBXGroup;
 			children = (
-				100DF3A77CE72811D7E4537E /* Components.swift */,
-				64BD9E91BC1228A19A29C4DE /* Theme.swift */,
+				100DF3A7000000000000002B /* Components.swift */,
+				64BD9E91000000000000002D /* Theme.swift */,
 			);
 			path = Design;
 			sourceTree = "<group>";
 		};
-		71150363AB37573A1F6CD4BC /* Login */ = {
+		711503630000000000000009 /* Login */ = {
 			isa = PBXGroup;
 			children = (
-				F722AD9A5DFF18C70769E5BF /* LoginView.swift */,
+				F722AD9A000000000000002F /* LoginView.swift */,
 			);
 			path = Login;
 			sourceTree = "<group>";
 		};
-		4DF8A0D0885550A8D70BFE51 /* Schedule */ = {
+		4DF8A0D0000000000000000A /* Schedule */ = {
 			isa = PBXGroup;
 			children = (
-				6D882FD3560FAD4761E21F75 /* EventDetailSheet.swift */,
-				99F7D5242724D6382F6C50F8 /* NewEventSheet.swift */,
-				348F838B58F9133786CB80CD /* ScheduleView.swift */,
+				6D882FD30000000000000031 /* EventDetailSheet.swift */,
+				99F7D5240000000000000033 /* NewEventSheet.swift */,
+				348F838B0000000000000035 /* ScheduleView.swift */,
 			);
 			path = Schedule;
 			sourceTree = "<group>";
 		};
-		940B1924B8C57400B485672A /* Settings */ = {
+		940B1924000000000000000B /* Settings */ = {
 			isa = PBXGroup;
 			children = (
-				BCDE70B10FA0BD331E2DA922 /* SettingsView.swift */,
+				BCDE70B10000000000000037 /* SettingsView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
 		};
-		1B710AF24B42B694779F96E8 /* Features */ = {
+		1B710AF20000000000000008 /* Features */ = {
 			isa = PBXGroup;
 			children = (
-				71150363AB37573A1F6CD4BC /* Login */,
-				4DF8A0D0885550A8D70BFE51 /* Schedule */,
-				940B1924B8C57400B485672A /* Settings */,
+				711503630000000000000009 /* Login */,
+				4DF8A0D0000000000000000A /* Schedule */,
+				940B1924000000000000000B /* Settings */,
 			);
 			path = Features;
 			sourceTree = "<group>";
 		};
-		1570381873ADB508D23DCCC4 /* Resources */ = {
+		15703818000000000000000C /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				E684DE925FA7B4069B5F1673 /* Assets.xcassets */,
+				E684DE92000000000000001A /* Assets.xcassets */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
 		};
-		5386A2EAF0036C0154CF9012 /* Config */ = {
+		5386A2EA000000000000000D /* Config */ = {
 			isa = PBXGroup;
 			children = (
-				0FE0F9C3DC7EFFB066573FBA /* Info.plist */,
+				0FE0F9C30000000000000019 /* Info.plist */,
 			);
 			path = Config;
 			sourceTree = "<group>";
 		};
-		0A2C978E52A76F0AA9F68BB5 /* Products */ = {
+		0A2C978E0000000000000003 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				D91517BFBDECE389497A425B /* ThreeeAssistant.app */,
+				D91517BF000000000000000F /* ThreeeAssistant.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -172,13 +172,13 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		42AEFBAE01D2DFD981F7DA7D /* ThreeeAssistant */ = {
+		42AEFBAE000000000000000E /* ThreeeAssistant */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 84BD75DECF42B745CB4F39AA /* Build configuration list for PBXNativeTarget "ThreeeAssistant" */;
+			buildConfigurationList = 84BD75DE0000000000000014 /* Build configuration list for PBXNativeTarget "ThreeeAssistant" */;
 			buildPhases = (
-				FCA229C23F166EBB0BA5029E /* Sources */,
-				059DB2086B49B680F85B3555 /* Frameworks */,
-				B9C6EB6F79FC54535ACB3053 /* Resources */,
+				FCA229C20000000000000010 /* Sources */,
+				059DB2080000000000000011 /* Frameworks */,
+				B9C6EB6F0000000000000012 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -186,25 +186,25 @@
 			);
 			name = ThreeeAssistant;
 			productName = ThreeeAssistant;
-			productReference = D91517BFBDECE389497A425B /* ThreeeAssistant.app */;
+			productReference = D91517BF000000000000000F /* ThreeeAssistant.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		46F86FAA6BBF9AC94A7E4595 /* Project object */ = {
+		46F86FAA0000000000000001 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1500;
 				LastUpgradeCheck = 1500;
 				TargetAttributes = {
-					42AEFBAE01D2DFD981F7DA7D = {
+					42AEFBAE000000000000000E = {
 						CreatedOnToolsVersion = 15.0;
 					};
 				};
 			};
-			buildConfigurationList = C33C66E28B3501D071CFB88C /* Build configuration list for PBXProject "ThreeeAssistant" */;
+			buildConfigurationList = C33C66E20000000000000013 /* Build configuration list for PBXProject "ThreeeAssistant" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = "zh-Hans";
 			hasScannedForEncodings = 0;
@@ -213,54 +213,54 @@
 				Base,
 				"zh-Hans",
 			);
-			mainGroup = 2B731CEFC6751AAE0EC69B98;
-			productRefGroup = 0A2C978E52A76F0AA9F68BB5 /* Products */;
+			mainGroup = 2B731CEF0000000000000002;
+			productRefGroup = 0A2C978E0000000000000003 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				42AEFBAE01D2DFD981F7DA7D /* ThreeeAssistant */,
+				42AEFBAE000000000000000E /* ThreeeAssistant */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		B9C6EB6F79FC54535ACB3053 /* Resources */ = {
+		B9C6EB6F0000000000000012 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				14A5319A7B3EB36C3F065668 /* Assets.xcassets in Resources */,
+				14A5319A0000000000000039 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		FCA229C23F166EBB0BA5029E /* Sources */ = {
+		FCA229C20000000000000010 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				28A273DA7DAA954BD3512A7E /* ThreeeAssistantApp.swift in Sources */,
-				C053D1C3EF3F4E503EE11717 /* APIClient.swift in Sources */,
-				28C88058ACC2455C1255BB9F /* APIError.swift in Sources */,
-				853486BB03AB5B04F90CDB40 /* DateHelp.swift in Sources */,
-				D2A123BFFC12BE96951F8A55 /* Keychain.swift in Sources */,
-				324F344E74149A072A582DC9 /* Models.swift in Sources */,
-				92DB4548F5A5B15B8AE2D10F /* SessionStore.swift in Sources */,
-				76C18D095EF4D856707C4BF6 /* TrustStore.swift in Sources */,
-				496D98A0CEC751165C85E5A4 /* Components.swift in Sources */,
-				EB5FCC7C6D646450BEDD0963 /* Theme.swift in Sources */,
-				1115C788C6AAEB6E38E46588 /* LoginView.swift in Sources */,
-				DCC0E71CBDB6F4C22E5C8464 /* EventDetailSheet.swift in Sources */,
-				DFDC7BACD22A4124EB8A64A8 /* NewEventSheet.swift in Sources */,
-				1FDDB8B4FDD5C902674BE382 /* ScheduleView.swift in Sources */,
-				5C5533823CE0B8DE7122EC4D /* SettingsView.swift in Sources */,
+				28A273DA000000000000001C /* ThreeeAssistantApp.swift in Sources */,
+				C053D1C3000000000000001E /* APIClient.swift in Sources */,
+				28C880580000000000000020 /* APIError.swift in Sources */,
+				853486BB0000000000000022 /* DateHelp.swift in Sources */,
+				D2A123BF0000000000000024 /* Keychain.swift in Sources */,
+				324F344E0000000000000026 /* Models.swift in Sources */,
+				92DB45480000000000000028 /* SessionStore.swift in Sources */,
+				76C18D09000000000000002A /* TrustStore.swift in Sources */,
+				496D98A0000000000000002C /* Components.swift in Sources */,
+				EB5FCC7C000000000000002E /* Theme.swift in Sources */,
+				1115C7880000000000000030 /* LoginView.swift in Sources */,
+				DCC0E71C0000000000000032 /* EventDetailSheet.swift in Sources */,
+				DFDC7BAC0000000000000034 /* NewEventSheet.swift in Sources */,
+				1FDDB8B40000000000000036 /* ScheduleView.swift in Sources */,
+				5C5533820000000000000038 /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		6F0B85FC643AF9C218F627EA /* Debug */ = {
+		6F0B85FC0000000000000015 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -287,7 +287,7 @@
 			};
 			name = Debug;
 		};
-		1B05A9D10F61E514E88AF240 /* Release */ = {
+		1B05A9D10000000000000016 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -308,7 +308,7 @@
 			};
 			name = Release;
 		};
-		E67DED621DA82404399DCDC1 /* Debug */ = {
+		E67DED620000000000000017 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -332,7 +332,7 @@
 			};
 			name = Debug;
 		};
-		8951287761002419191396D2 /* Release */ = {
+		895128770000000000000018 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -359,25 +359,25 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		C33C66E28B3501D071CFB88C /* Build configuration list for PBXProject "ThreeeAssistant" */ = {
+		C33C66E20000000000000013 /* Build configuration list for PBXProject "ThreeeAssistant" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				6F0B85FC643AF9C218F627EA /* Debug */,
-				1B05A9D10F61E514E88AF240 /* Release */,
+				6F0B85FC0000000000000015 /* Debug */,
+				1B05A9D10000000000000016 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		84BD75DECF42B745CB4F39AA /* Build configuration list for PBXNativeTarget "ThreeeAssistant" */ = {
+		84BD75DE0000000000000014 /* Build configuration list for PBXNativeTarget "ThreeeAssistant" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				E67DED621DA82404399DCDC1 /* Debug */,
-				8951287761002419191396D2 /* Release */,
+				E67DED620000000000000017 /* Debug */,
+				895128770000000000000018 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = 46F86FAA6BBF9AC94A7E4595 /* Project object */;
+	rootObject = 46F86FAA0000000000000001 /* Project object */;
 }
