@@ -400,6 +400,47 @@ struct OccurrenceBody: Encodable {
     }
 }
 
+/// `POST /api/events/{id}/snooze` 的请求体。
+///
+/// ## 为什么要存到服务端而不是只改本地闹钟
+///
+/// 源码注释（`event.go:668`）写得很直白：
+/// 「if it stayed local, snoozing on the phone would still let the desktop ring」
+/// —— 手机上点了「稍后提醒」，如果只改本地，电脑还会按原时间响。
+/// 所以服务端专门有 `snoozes` 表，按 (event_id, occurrence_key, user_id) 存。
+///
+/// ## 一个硬约束
+///
+/// `minutes <= 0` 服务端直接 400（`if err := readJSON(...); err != nil || req.Minutes <= 0`）。
+/// 所以「取消稍后提醒」不能靠传 0 分钟，必须调 `DELETE /api/events/{id}/snooze`。
+struct SnoozeBody: Encodable {
+    /// 这一次原本的开始时间（epoch 秒）。
+    /// 单次日程也要传 —— 服务端会原样存，不校验它是否真的是一次展开。
+    let occurrenceKey: Int64
+    /// 延后多少分钟。必须 > 0。
+    let minutes: Int64
+    /// 哪台设备发起的。服务端只记录、不据此过滤，但排查"哪台设备没响"时有用。
+    let deviceID: String
+
+    enum CodingKeys: String, CodingKey {
+        case minutes
+        case occurrenceKey = "occurrence_key"
+        case deviceID = "device_id"
+    }
+}
+
+/// `POST /api/events/{id}/snooze` 的响应：`{"ok":true,"remind_at_utc":<epoch秒>}`。
+///
+/// 服务端**回传算好的提醒时刻**，客户端应该用这个值而不是自己 `now + minutes*60`：
+/// 两端的时钟可能差几十秒，而闹钟差几十秒就是「明明设了却提前响了」。
+struct SnoozeResponse: Decodable {
+    let remindAtUTC: Int64?
+
+    enum CodingKeys: String, CodingKey {
+        case remindAtUTC = "remind_at_utc"
+    }
+}
+
 /// `PUT /api/events/{id}` 的响应。
 ///
 /// ⚠️ 不是空对象！服务端返回 `{"event": {...}, "conflicts": [...]}`。
@@ -414,6 +455,80 @@ struct UpdateEventResponse: Decodable {
 struct FieldConflict: Decodable, Hashable {
     let field: String?
     let reason: String?
+}
+
+// MARK: - 冲突（完整形态）
+
+/// `GET /api/conflicts` 里的一条冲突。
+///
+/// ## ⚠️ 服务端不会把别人的冲突推给你，但**表里是全放一起的**
+///
+/// `conflicts` 表只有 `entity_id`，没有 `user_id`（见 `sync.go:1206` 的 SQL）。
+/// 所以 `conflictsFor` 会逐条回查所属日历的权限再过滤 —— 这个过滤
+/// **只在服务端做**。客户端拿到什么就显示什么，不要自己缓存后
+/// 换个账号还继续显示（登出时 `SessionStore` 会清空这些）。
+///
+/// ## `server_value` / `client_value` 是什么形态
+///
+/// 服务端存的是 **JSON 片段**，不是原始字符串。比如字段 `title` 的
+/// server_value 是 `"\"高数\""`（带引号），`duration_sec` 是 `3600`。
+/// 解析时 `JSONDecoder` 能直接吃掉这层包装，但要按字段类型区分对待 ——
+/// 见 `displayValue(_:)`。
+struct ConflictDTO: Decodable, Identifiable, Hashable {
+    let id: String
+    /// `"event"` 或 `"calendar"`
+    let entity: String
+    let entityID: String
+    /// 出冲突的**单个字段名**，和 API 的 json tag 一致（`title` / `notes` …）
+    let field: String
+    let baseSeq: Int64
+    let serverValue: String?
+    let clientValue: String?
+    let clientDevice: String
+    let createdAt: Int64
+    let resolvedAt: Int64?
+    let resolution: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, entity, field, resolution
+        case entityID = "entity_id"
+        case baseSeq = "base_seq"
+        case serverValue = "server_value"
+        case clientValue = "client_value"
+        case clientDevice = "client_device"
+        case createdAt = "created_at"
+        case resolvedAt = "resolved_at"
+    }
+
+    var isResolved: Bool { resolvedAt != nil }
+}
+
+struct ConflictsResponse: Decodable {
+    let conflicts: [ConflictDTO]
+}
+
+/// `POST /api/conflicts/{id}/resolve` 的请求体。
+///
+/// ## 三个取值，服务端只认这三个
+///
+/// - `keep_mine`   —— 用我的版本覆盖
+/// - `keep_server` —— 保留服务端的，什么都不写
+/// - `keep_both`   —— **复制一条日程**，把两个版本都留下来
+///
+/// 源码注释（`sync.go:1280`）特意解释了为什么 `keep_both` 是一等公民：
+/// 「blindly picking a winner loses data in the common family case of
+///   two people booking the same slot」——
+/// 一家两口都不小心订了同一时段，二选一必然丢一个人的记录。
+struct ResolveConflictBody: Encodable {
+    let resolution: String
+
+    static let keepMine = "keep_mine"
+    static let keepServer = "keep_server"
+    static let keepBoth = "keep_both"
+
+    static func valid(_ s: String) -> Bool {
+        s == keepMine || s == keepServer || s == keepBoth
+    }
 }
 
 /// 一条**原始**日程（不是展开后的实例）。

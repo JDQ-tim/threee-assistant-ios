@@ -458,6 +458,79 @@ final class SessionStore {
         await refresh()
     }
 
+    // MARK: - 冲突
+
+    /// 拉冲突列表。
+    ///
+    /// `includeResolved` 对应服务端的 `?all=1`：默认只返回未解决的。
+    ///
+    /// ⚠️ 这里有**外键级**的坑：`conflicts` 表没有 user_id，
+    ///    服务端在返回前会逐条回查日历权限做过滤。所以不要把这个列表
+    ///    在本地持久化后跨账号复用 —— 换了人登录，那些条目本不该被看见。
+    func loadConflicts(includeResolved: Bool = false) async throws -> [ConflictDTO] {
+        let query: [URLQueryItem] = includeResolved
+            ? [URLQueryItem(name: "all", value: "1")]
+            : []
+        let res: ConflictsResponse = try await APIClient.shared.get(
+            "/api/conflicts", query: query
+        )
+        return res.conflicts
+    }
+
+    /// 解决一条冲突。
+    ///
+    /// `resolution` 只能是 `ResolveConflictBody` 里那三个常量之一，
+    /// 服务端对别的值直接 400（`resolution 必须是 keep_mine / keep_server / keep_both`）。
+    func resolveConflict(id: String, resolution: String) async throws {
+        guard ResolveConflictBody.valid(resolution) else {
+            throw APIError.server(400, "无法识别的处理方式：\(resolution)")
+        }
+        let data = try JSONEncoder().encode(ResolveConflictBody(resolution: resolution))
+        _ = try await APIClient.shared.postRaw(
+            "/api/conflicts/\(id)/resolve", body: data
+        )
+        // 冲突解决完，服务端可能复制了新日程或改了字段，列表必须重拉
+        await refresh()
+    }
+
+    // MARK: - 稍后提醒
+
+    /// 把这一次的提醒往后推 `minutes` 分钟。
+    ///
+    /// 返回服务端算好的提醒时刻（epoch 秒），nil 表示服务端没回这个字段
+    /// —— 调用方应该退回用 `Date() + minutes*60` 自己算。
+    ///
+    /// ⚠️ `minutes` 必须 > 0。服务端 `if req.Minutes <= 0 { 400 }`，
+    ///    所以「取消」走 `clearSnooze` 而不是传 0。
+    @discardableResult
+    func snooze(
+        eventID: String,
+        occurrenceKey: Int64,
+        minutes: Int,
+        deviceID: String = "ios"
+    ) async throws -> Int64? {
+        guard minutes > 0 else { throw APIError.server(400, "稍后提醒的时长必须大于 0") }
+
+        let body = SnoozeBody(
+            occurrenceKey: occurrenceKey,
+            minutes: Int64(minutes),
+            deviceID: deviceID
+        )
+        let data = try JSONEncoder().encode(body)
+        let res: SnoozeResponse = try await APIClient.shared.post(
+            "/api/events/\(eventID)/snooze", body: data
+        )
+        return res.remindAtUTC
+    }
+
+    /// 取消这条日程上**我自己**的所有稍后提醒。
+    ///
+    /// 服务端按 (event_id, user_id) 清理，不会动别人的 ——
+    /// 共享日历上你取消了稍后提醒，别人该响还是响。
+    func clearSnooze(eventID: String) async throws {
+        try await APIClient.shared.delete("/api/events/\(eventID)/snooze")
+    }
+
     // MARK: - 日历
 
     private struct CalendarEnvelope: Decodable {

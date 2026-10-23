@@ -8,6 +8,10 @@ struct SettingsView: View {
     @State private var confirmingForget = false
     @State private var busy = false
 
+    /// 待处理冲突数。0 时入口仍然显示 —— 藏起来会让人以为这个功能不存在，
+    /// 真遇到冲突时根本找不到地方处理。
+    @State private var pendingConflicts = 0
+
     var body: some View {
         NavigationStack {
             List {
@@ -32,8 +36,34 @@ struct SettingsView: View {
                     NavigationLink("我的日历（\(store.calendars.count)）") {
                         CalendarsView()
                     }
+                    NavigationLink {
+                        ConflictsView()
+                    } label: {
+                        HStack {
+                            Text("修改冲突")
+                            Spacer(minLength: 0)
+                            if pendingConflicts > 0 {
+                                // 有冲突时要显眼：这是「我明明改了却没生效」的根源，
+                                // 不点进去永远不会自己消失
+                                Text("\(pendingConflicts)")
+                                    .font(.caption.weight(.semibold))
+                                    .padding(.horizontal, 7)
+                                    .padding(.vertical, 2)
+                                    .background(Theme.red600)
+                                    .foregroundStyle(.white)
+                                    .clipShape(Capsule())
+                            } else {
+                                Text("无")
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.textTertiary)
+                            }
+                        }
+                    }
                     Button("重新同步") {
-                        Task { await store.refresh() }
+                        Task {
+                            await store.refresh()
+                            await loadConflictCount()
+                        }
                     }
                 }
 
@@ -82,6 +112,16 @@ struct SettingsView: View {
             } message: {
                 Text("下次连接任意服务器时都会重新记录一次证书指纹。")
             }
+            .task { await loadConflictCount() }
         }
+    }
+
+    /// 待处理冲突数。
+    ///
+    /// 失败时静默保持 0：这是个「附加信息」，
+    /// 为了它在设置页弹错误横幅，比少显示一个数字更烦人。
+    private func loadConflictCount() async {
+        let list = (try? await store.loadConflicts()) ?? []
+        pendingConflicts = list.count
     }
 }

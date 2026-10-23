@@ -12,6 +12,11 @@ struct EventDetailSheet: View {
     @State private var busy = false
     @State private var failure: String?
 
+    /// 稍后提醒正在发请求
+    @State private var snoozing = false
+    /// 已经推到的时刻。非 nil 时显示「已延后到 …」并给一个撤销入口
+    @State private var snoozedUntil: Int64?
+
     @State private var showEdit = false
     /// 改完要关掉详情页，否则详情页还显示着改之前的内容 —— 看起来像没保存成功
     @State private var edited = false
@@ -69,6 +74,8 @@ struct EventDetailSheet: View {
                     infoRow("地点", item.location?.isEmpty == false ? item.location! : "—")
                     infoRow("备注", item.notes?.isEmpty == false ? item.notes! : "—")
 
+                    snoozeSection
+
                     Button {
                         showEdit = true
                     } label: {
@@ -82,6 +89,11 @@ struct EventDetailSheet: View {
                     }
                     .disabled(busy)
                     .padding(.top, 22)
+
+                    Text("修改会同步到其它设备。")
+                        .font(.caption2)
+                        .foregroundStyle(Theme.textTertiary)
+                        .padding(.top, 8)
 
                     Button(role: .destructive) {
                         confirmDelete = true
@@ -150,8 +162,132 @@ struct EventDetailSheet: View {
         }
     }
 
-    /// 拉一次原始日程，补齐实例里没有的字段。
+    // MARK: - 稍后提醒
+
+    /// 快捷档位（分钟）。源码服务端对 `minutes` 没有上限，但 UI 上给太多选择等于没选择。
+    private static let snoozeChoices = [5, 10, 30, 60]
+
+    /// 只有「还没开始、也没结束」的日程才值得推后提醒。
     ///
+    /// 已经过去的日程再推后毫无意义 —— 提醒早就不存在了，
+    /// 服务端照样会写一条 snooze 记录，但那是个永远不会响的孤儿。
+    private var canSnooze: Bool {
+        item.endUTC > Int64(Date().timeIntervalSince1970)
+    }
+
+    @ViewBuilder
+    private var snoozeSection: some View {
+        if canSnooze {
+            VStack(alignment: .leading, spacing: 9) {
+                HStack(spacing: 6) {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textTertiary)
+                    Text(snoozedUntil == nil ? "稍后提醒" : "已延后提醒")
+                        .font(.system(size: 12.5))
+                        .foregroundStyle(Theme.textSecondary)
+                    Spacer(minLength: 0)
+                }
+                .padding(.leading, 2)
+
+                if let until = snoozedUntil {
+                    // 已推后：给出确切时刻 + 撤销
+                    HStack(spacing: 10) {
+                        Text(Date(timeIntervalSince1970: TimeInterval(until)).monthDay
+                             + " " + Date(timeIntervalSince1970: TimeInterval(until)).hhmm)
+                            .font(.system(size: 14.5, weight: .semibold))
+                            .foregroundStyle(Theme.textPrimary)
+                        Spacer(minLength: 0)
+                        Button {
+                            clearSnooze()
+                        } label: {
+                            Text("撤销")
+                                .font(.system(size: 12.5, weight: .semibold))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Theme.surfaceAlt)
+                                .foregroundStyle(Theme.textSecondary)
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(snoozing)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Theme.surfaceAlt)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.cornerSmall, style: .continuous))
+                } else {
+                    FlowRow(spacing: 8) {
+                        ForEach(Self.snoozeChoices, id: \.self) { m in
+                            Button {
+                                doSnooze(minutes: m)
+                            } label: {
+                                Text(m >= 60 ? "\(m / 60) 小时后" : "\(m) 分钟后")
+                                    .font(.system(size: 12.5, weight: .medium))
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 7)
+                                    .background(Theme.surfaceAlt)
+                                    .foregroundStyle(Theme.textPrimary)
+                                    .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(snoozing)
+                        }
+                        if snoozing {
+                            ProgressView()
+                                .scaleEffect(0.7)
+                        }
+                    }
+                }
+
+                Text("延后是存在服务端的：手机推后了，电脑也不会再按原时间响。")
+                    .font(.caption2)
+                    .foregroundStyle(Theme.textTertiary)
+                    .padding(.leading, 2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.top, 16)
+        }
+    }
+
+    private func doSnooze(minutes: Int) {
+        guard !snoozing else { return }
+        snoozing = true
+        failure = nil
+        Task {
+            do {
+                let until = try await store.snooze(
+                    eventID: item.eventID,
+                    occurrenceKey: item.occurrenceKey,
+                    minutes: minutes
+                )
+                // 服务端回了确切时刻就用它 —— 两端时钟可能差几十秒，
+                // 自己按 now + minutes 算会导致「明明设了 10 分钟却提前响」
+                snoozedUntil = until
+                    ?? Int64(Date().timeIntervalSince1970) + Int64(minutes * 60)
+            } catch {
+                failure = store.message(for: error)
+            }
+            snoozing = false
+        }
+    }
+
+    private func clearSnooze() {
+        guard !snoozing else { return }
+        snoozing = true
+        failure = nil
+        Task {
+            do {
+                try await store.clearSnooze(eventID: item.eventID)
+                snoozedUntil = nil
+            } catch {
+                failure = store.message(for: error)
+            }
+            snoozing = false
+        }
+    }
+
+    /// 拉一次原始日程，补齐实例里没有的字段。
     /// 失败不提示：这是「补充信息」，拉不到只是少显示两行，
     /// 不该让用户看到一个「读取失败」的页面 —— 他点的是一次正常的详情查看。
     private func loadFull() async {

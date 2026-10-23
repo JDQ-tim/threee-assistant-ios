@@ -26,8 +26,9 @@
 		5BED0201000000000000003C /* RepeatRuleEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6936430B000000000000003B /* RepeatRuleEditor.swift */; };
 		1FDDB8B4000000000000003E /* ScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 348F838B000000000000003D /* ScheduleView.swift */; };
 		3B2F09DB0000000000000040 /* CalendarsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90C535C9000000000000003F /* CalendarsView.swift */; };
-		5C5533820000000000000042 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCDE70B10000000000000041 /* SettingsView.swift */; };
-		14A5319A0000000000000043 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E684DE92000000000000001A /* Assets.xcassets */; };
+		4A06B0CB0000000000000042 /* ConflictsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C7FA7D00000000000000041 /* ConflictsView.swift */; };
+		5C5533820000000000000044 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCDE70B10000000000000043 /* SettingsView.swift */; };
+		14A5319A0000000000000045 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E684DE92000000000000001A /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -51,7 +52,8 @@
 		6936430B000000000000003B /* RepeatRuleEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepeatRuleEditor.swift; sourceTree = "<group>"; };
 		348F838B000000000000003D /* ScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleView.swift; sourceTree = "<group>"; };
 		90C535C9000000000000003F /* CalendarsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarsView.swift; sourceTree = "<group>"; };
-		BCDE70B10000000000000041 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		4C7FA7D00000000000000041 /* ConflictsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConflictsView.swift; sourceTree = "<group>"; };
+		BCDE70B10000000000000043 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		0FE0F9C30000000000000019 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		E684DE92000000000000001A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = ThreeeAssistant/Resources/Assets.xcassets; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -145,7 +147,8 @@
 			isa = PBXGroup;
 			children = (
 				90C535C9000000000000003F /* CalendarsView.swift */,
-				BCDE70B10000000000000041 /* SettingsView.swift */,
+				4C7FA7D00000000000000041 /* ConflictsView.swift */,
+				BCDE70B10000000000000043 /* SettingsView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -243,7 +246,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				14A5319A0000000000000043 /* Assets.xcassets in Resources */,
+				14A5319A0000000000000045 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -273,7 +276,8 @@
 				5BED0201000000000000003C /* RepeatRuleEditor.swift in Sources */,
 				1FDDB8B4000000000000003E /* ScheduleView.swift in Sources */,
 				3B2F09DB0000000000000040 /* CalendarsView.swift in Sources */,
-				5C5533820000000000000042 /* SettingsView.swift in Sources */,
+				4A06B0CB0000000000000042 /* ConflictsView.swift in Sources */,
+				5C5533820000000000000044 /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
