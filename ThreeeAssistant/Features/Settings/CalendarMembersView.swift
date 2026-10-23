@@ -146,8 +146,13 @@ struct CalendarMembersView: View {
                     } label: {
                         Label("共享给团队", systemImage: "person.3")
                     }
+                    NavigationLink {
+                        CalendarInvitesView(calendarID: calendarID)
+                    } label: {
+                        Label("邀请码", systemImage: "ticket")
+                    }
                 } footer: {
-                    Text("共享给团队后，团队里所有人都能看到这张日历。新成员用团队邀请码加入就自动可见，不用再一个个加。")
+                    Text("共享给团队：团队里所有人都能看到这张日历，新成员用团队码加入就自动可见。邀请码：发一张码给某个人，他自己加进来。")
                 }
             }
 

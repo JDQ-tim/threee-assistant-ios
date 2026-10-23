@@ -1125,6 +1125,132 @@ struct InboxDecideResponse: Decodable {
     let seq: Int64?
 }
 
+// MARK: - 日历邀请码
+
+/// 一张**绑定日历**的邀请码。
+///
+/// ## 为什么不能用全站邀请码代替
+///
+/// 源码（`invite.go:16`）：「`GET /api/invite` 那个是全站级注册凭证 ——
+/// 谁能拿到，谁就能往这个部署里注册账号。下放给任意成员，等于『任何成员都能
+/// 往部署里放人』」。所以日历邀请必须**绑死目标日历 + 预授权角色**，
+/// 并且带有效期、可撤销、可看使用情况。
+///
+/// ## 和团队邀请码（`fst_`）的区别
+///
+/// | | 日历邀请 `fsi_` | 团队邀请 `fst_` |
+/// |---|---|---|
+/// | 目标 | 一张具体日历 | 一支团队 |
+/// | 默认次数 | **1 次** | **不限** |
+/// | 次数上限 | 100 | 无（但团队人数上限 500）|
+/// | 角色 | editor / viewer | admin / member |
+/// | 用途 | 把一个人拉进一张日历 | 把一个班拉进一个组织 |
+///
+/// 前缀不同不是风格问题：`handlePeekInvite` 会先检查 `fsi_` 前缀再查库，
+/// 拿错前缀的码永远查不到。
+struct CalendarInviteDTO: Codable, Identifiable, Hashable {
+    let id: String
+    let code: String
+    let kind: String?
+    let calendarID: String
+    let role: String
+    let createdBy: String
+    let expiresAt: Int64
+    let maxUses: Int64
+    let usedCount: Int64
+    let revokedAt: Int64
+    let createdAt: Int64
+    let expired: Bool?
+    let revoked: Bool?
+    let exhausted: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case id, code, kind, role, expired, revoked, exhausted
+        case calendarID = "calendar_id"
+        case createdBy = "created_by"
+        case expiresAt = "expires_at"
+        case maxUses = "max_uses"
+        case usedCount = "used_count"
+        case revokedAt = "revoked_at"
+        case createdAt = "created_at"
+    }
+
+    var usable: Bool {
+        !(expired ?? false) && !(revoked ?? false) && !(exhausted ?? false)
+    }
+
+    /// 显示顺序和服务端判定一致：撤销 > 过期 > 用尽
+    var statusText: String {
+        if revoked ?? false { return "已撤销" }
+        if expired ?? false { return "已过期" }
+        if exhausted ?? false { return "已用尽" }
+        return "已用 \(usedCount)/\(maxUses) 次"
+    }
+
+    var roleLabel: String {
+        switch role {
+        case "editor": return "可编辑"
+        case "viewer": return "只读"
+        default: return role
+        }
+    }
+}
+
+struct CalendarInvitesResponse: Decodable {
+    let invites: [CalendarInviteDTO]
+}
+
+struct CalendarInviteEnvelopeDTO: Decodable {
+    let invite: CalendarInviteDTO
+}
+
+/// `POST /api/calendars/{id}/invites` 的请求体。
+///
+/// ⚠️ `role` 只认 `editor` / `viewer`。传 admin/owner 服务端**直接 400**，
+/// 不静默降级 —— 源码（`invite.go:44`）：「静默降级为 editor 是错的：
+/// 邀请人以为自己给的是 admin，事后发现不是，而这条路径上没有任何提示。」
+///
+/// `maxUses` 不传（或 <=0）服务端按默认 **1 次**；上限 100。
+/// 注意这和团队邀请**相反**：团队传 0 是「不限」。
+struct NewCalendarInviteBody: Encodable {
+    let role: String
+    let ttlHours: Int64
+    let maxUses: Int64
+
+    enum CodingKeys: String, CodingKey {
+        case role
+        case ttlHours = "ttl_hours"
+        case maxUses = "max_uses"
+    }
+}
+
+/// 匿名读一张日历邀请的元信息（`GET /api/invites/{code}`，**不需要登录**）。
+struct CalendarInvitePeekDTO: Decodable {
+    let valid: Bool
+    let kind: String
+    let calendarName: String
+    let inviterName: String
+    let role: String
+    /// `not_found` / `revoked` / `expired` / `exhausted`
+    let reason: String
+
+    enum CodingKeys: String, CodingKey {
+        case valid, kind, role, reason
+        case calendarName = "calendar_name"
+        case inviterName = "inviter_name"
+    }
+
+    var reasonText: String {
+        switch reason {
+        case "not_found": return "这张邀请码不存在"
+        case "revoked": return "这张邀请码已被撤销"
+        case "expired": return "这张邀请码已过期"
+        case "exhausted": return "这张邀请码的次数已用完"
+        default: return "这张邀请码现在不能用"
+        }
+    }
+}
+
 // MARK: - 课程表
 
 /// 一节课的「钟点」。

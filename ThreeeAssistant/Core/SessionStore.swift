@@ -528,6 +528,84 @@ final class SessionStore {
         await refresh()
     }
 
+    // MARK: - 日历邀请码
+
+    /// 这张日历发出过的邀请码。
+    ///
+    /// 服务端要 `canManageMembers`（owner 或 admin），且只回 `kind=invite` 的行
+    /// （`readonly` 那类是二期的只读链接，复用同一张表，这里不展示）。
+    func loadCalendarInvites(calendarID: String) async throws -> [CalendarInviteDTO] {
+        let res: CalendarInvitesResponse = try await APIClient.shared.get(
+            "/api/calendars/\(calendarID)/invites"
+        )
+        return res.invites
+    }
+
+    /// 生成一张日历邀请码。
+    ///
+    /// ## 三个必须清楚的默认值
+    ///
+    /// - `role` 只能是 `editor` / `viewer`。传更高的**直接 400**，不静默降级
+    /// - `maxUses <= 0` → 服务端按 **1 次**（和团队邀请相反的语义：那边 0 是不限）
+    /// - `maxUses > 100` → 服务端夹到 100
+    ///
+    /// 这里不替调用方夹值：夹了之后用户以为自己设了 500 次，
+    /// 实际只有 100。不如让他自己看到上限。
+    func createCalendarInvite(
+        calendarID: String,
+        role: String,
+        ttlHours: Int64 = 7 * 24,
+        maxUses: Int64 = 1
+    ) async throws -> CalendarInviteDTO {
+        guard role == "editor" || role == "viewer" else {
+            throw APIError.server(400, "邀请只能是「可编辑」或「只读」（邀请不能授予管理员/创建者）")
+        }
+        guard maxUses >= 1, maxUses <= 100 else {
+            throw APIError.server(400, "使用次数要在 1~100 之间")
+        }
+        guard ttlHours > 0 else {
+            throw APIError.server(400, "有效期要大于 0")
+        }
+        let data = try JSONEncoder().encode(
+            NewCalendarInviteBody(role: role, ttlHours: ttlHours, maxUses: maxUses)
+        )
+        let res: CalendarInviteEnvelopeDTO = try await APIClient.shared.post(
+            "/api/calendars/\(calendarID)/invites", body: data
+        )
+        return res.invite
+    }
+
+    /// 撤销一张邀请码。创建者本人或该日历的 owner 都能撤。
+    func revokeCalendarInvite(id: String) async throws {
+        try await APIClient.shared.delete("/api/invites/\(id)")
+    }
+
+    /// 用日历邀请码加入。
+    ///
+    /// **幂等**：已经是成员就直接成功，不消耗次数。
+    /// 角色取**码里存的值**，不接受调用方指定 ——
+    /// 否则「邀请的是只读、接受时自己改成可编辑」就是提权漏洞。
+    func acceptCalendarInvite(code: String) async throws -> String {
+        let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            throw APIError.server(400, "请填写邀请码")
+        }
+        // 前缀检查放在客户端只是为了让错误更早出现。
+        // 真正的判定在服务端（handlePeekInvite 先查 fsi_ 前缀再查库）。
+        guard trimmed.hasPrefix("fsi_") else {
+            throw APIError.server(400, "日历邀请码以 fsi_ 开头。团队邀请码是 fst_，两者不通用。")
+        }
+        struct AcceptResult: Decodable {
+            let calendarID: String?
+            enum CodingKeys: String, CodingKey { case calendarID = "calendar_id" }
+        }
+        let res: AcceptResult = try await APIClient.shared.post(
+            "/api/invites/\(trimmed)/accept", body: nil
+        )
+        await refresh()
+        return res.calendarID ?? ""
+    }
+
     // MARK: - 收件箱
 
     /// 拉收件箱。

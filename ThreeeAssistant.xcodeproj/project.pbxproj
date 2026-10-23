@@ -28,16 +28,17 @@
 		5BED02010000000000000040 /* RepeatRuleEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6936430B000000000000003F /* RepeatRuleEditor.swift */; };
 		1FDDB8B40000000000000042 /* ScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 348F838B0000000000000041 /* ScheduleView.swift */; };
 		C45F10800000000000000044 /* ShareEventSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1395E0B0000000000000043 /* ShareEventSheet.swift */; };
-		8F2E8E9A0000000000000046 /* CalendarMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 464C2B7A0000000000000045 /* CalendarMembersView.swift */; };
-		DD0054350000000000000048 /* CalendarTeamSharesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4A886B80000000000000047 /* CalendarTeamSharesView.swift */; };
-		3B2F09DB000000000000004A /* CalendarsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90C535C90000000000000049 /* CalendarsView.swift */; };
-		4A06B0CB000000000000004C /* ConflictsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C7FA7D0000000000000004B /* ConflictsView.swift */; };
-		C2154D2C000000000000004E /* CoursePeriodsEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40166B67000000000000004D /* CoursePeriodsEditorView.swift */; };
-		275E6E700000000000000050 /* InboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7087701D000000000000004F /* InboxView.swift */; };
-		5C5533820000000000000052 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCDE70B10000000000000051 /* SettingsView.swift */; };
-		3F09C70E0000000000000054 /* TeamDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86D5C9970000000000000053 /* TeamDetailView.swift */; };
-		9CD7BA4E0000000000000056 /* TeamListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87AE298B0000000000000055 /* TeamListView.swift */; };
-		14A5319A0000000000000057 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E684DE92000000000000001A /* Assets.xcassets */; };
+		806F47D70000000000000046 /* CalendarInvitesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63D2E27D0000000000000045 /* CalendarInvitesView.swift */; };
+		8F2E8E9A0000000000000048 /* CalendarMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 464C2B7A0000000000000047 /* CalendarMembersView.swift */; };
+		DD005435000000000000004A /* CalendarTeamSharesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4A886B80000000000000049 /* CalendarTeamSharesView.swift */; };
+		3B2F09DB000000000000004C /* CalendarsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90C535C9000000000000004B /* CalendarsView.swift */; };
+		4A06B0CB000000000000004E /* ConflictsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C7FA7D0000000000000004D /* ConflictsView.swift */; };
+		C2154D2C0000000000000050 /* CoursePeriodsEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40166B67000000000000004F /* CoursePeriodsEditorView.swift */; };
+		275E6E700000000000000052 /* InboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7087701D0000000000000051 /* InboxView.swift */; };
+		5C5533820000000000000054 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCDE70B10000000000000053 /* SettingsView.swift */; };
+		3F09C70E0000000000000056 /* TeamDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86D5C9970000000000000055 /* TeamDetailView.swift */; };
+		9CD7BA4E0000000000000058 /* TeamListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87AE298B0000000000000057 /* TeamListView.swift */; };
+		14A5319A0000000000000059 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E684DE92000000000000001A /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -63,15 +64,16 @@
 		6936430B000000000000003F /* RepeatRuleEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepeatRuleEditor.swift; sourceTree = "<group>"; };
 		348F838B0000000000000041 /* ScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleView.swift; sourceTree = "<group>"; };
 		F1395E0B0000000000000043 /* ShareEventSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareEventSheet.swift; sourceTree = "<group>"; };
-		464C2B7A0000000000000045 /* CalendarMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarMembersView.swift; sourceTree = "<group>"; };
-		E4A886B80000000000000047 /* CalendarTeamSharesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarTeamSharesView.swift; sourceTree = "<group>"; };
-		90C535C90000000000000049 /* CalendarsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarsView.swift; sourceTree = "<group>"; };
-		4C7FA7D0000000000000004B /* ConflictsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConflictsView.swift; sourceTree = "<group>"; };
-		40166B67000000000000004D /* CoursePeriodsEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoursePeriodsEditorView.swift; sourceTree = "<group>"; };
-		7087701D000000000000004F /* InboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxView.swift; sourceTree = "<group>"; };
-		BCDE70B10000000000000051 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		86D5C9970000000000000053 /* TeamDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamDetailView.swift; sourceTree = "<group>"; };
-		87AE298B0000000000000055 /* TeamListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamListView.swift; sourceTree = "<group>"; };
+		63D2E27D0000000000000045 /* CalendarInvitesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarInvitesView.swift; sourceTree = "<group>"; };
+		464C2B7A0000000000000047 /* CalendarMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarMembersView.swift; sourceTree = "<group>"; };
+		E4A886B80000000000000049 /* CalendarTeamSharesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarTeamSharesView.swift; sourceTree = "<group>"; };
+		90C535C9000000000000004B /* CalendarsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarsView.swift; sourceTree = "<group>"; };
+		4C7FA7D0000000000000004D /* ConflictsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConflictsView.swift; sourceTree = "<group>"; };
+		40166B67000000000000004F /* CoursePeriodsEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoursePeriodsEditorView.swift; sourceTree = "<group>"; };
+		7087701D0000000000000051 /* InboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxView.swift; sourceTree = "<group>"; };
+		BCDE70B10000000000000053 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		86D5C9970000000000000055 /* TeamDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamDetailView.swift; sourceTree = "<group>"; };
+		87AE298B0000000000000057 /* TeamListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamListView.swift; sourceTree = "<group>"; };
 		0FE0F9C30000000000000019 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		E684DE92000000000000001A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = ThreeeAssistant/Resources/Assets.xcassets; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -167,15 +169,16 @@
 		940B1924000000000000000B /* Settings */ = {
 			isa = PBXGroup;
 			children = (
-				464C2B7A0000000000000045 /* CalendarMembersView.swift */,
-				E4A886B80000000000000047 /* CalendarTeamSharesView.swift */,
-				90C535C90000000000000049 /* CalendarsView.swift */,
-				4C7FA7D0000000000000004B /* ConflictsView.swift */,
-				40166B67000000000000004D /* CoursePeriodsEditorView.swift */,
-				7087701D000000000000004F /* InboxView.swift */,
-				BCDE70B10000000000000051 /* SettingsView.swift */,
-				86D5C9970000000000000053 /* TeamDetailView.swift */,
-				87AE298B0000000000000055 /* TeamListView.swift */,
+				63D2E27D0000000000000045 /* CalendarInvitesView.swift */,
+				464C2B7A0000000000000047 /* CalendarMembersView.swift */,
+				E4A886B80000000000000049 /* CalendarTeamSharesView.swift */,
+				90C535C9000000000000004B /* CalendarsView.swift */,
+				4C7FA7D0000000000000004D /* ConflictsView.swift */,
+				40166B67000000000000004F /* CoursePeriodsEditorView.swift */,
+				7087701D0000000000000051 /* InboxView.swift */,
+				BCDE70B10000000000000053 /* SettingsView.swift */,
+				86D5C9970000000000000055 /* TeamDetailView.swift */,
+				87AE298B0000000000000057 /* TeamListView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -273,7 +276,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				14A5319A0000000000000057 /* Assets.xcassets in Resources */,
+				14A5319A0000000000000059 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -305,15 +308,16 @@
 				5BED02010000000000000040 /* RepeatRuleEditor.swift in Sources */,
 				1FDDB8B40000000000000042 /* ScheduleView.swift in Sources */,
 				C45F10800000000000000044 /* ShareEventSheet.swift in Sources */,
-				8F2E8E9A0000000000000046 /* CalendarMembersView.swift in Sources */,
-				DD0054350000000000000048 /* CalendarTeamSharesView.swift in Sources */,
-				3B2F09DB000000000000004A /* CalendarsView.swift in Sources */,
-				4A06B0CB000000000000004C /* ConflictsView.swift in Sources */,
-				C2154D2C000000000000004E /* CoursePeriodsEditorView.swift in Sources */,
-				275E6E700000000000000050 /* InboxView.swift in Sources */,
-				5C5533820000000000000052 /* SettingsView.swift in Sources */,
-				3F09C70E0000000000000054 /* TeamDetailView.swift in Sources */,
-				9CD7BA4E0000000000000056 /* TeamListView.swift in Sources */,
+				806F47D70000000000000046 /* CalendarInvitesView.swift in Sources */,
+				8F2E8E9A0000000000000048 /* CalendarMembersView.swift in Sources */,
+				DD005435000000000000004A /* CalendarTeamSharesView.swift in Sources */,
+				3B2F09DB000000000000004C /* CalendarsView.swift in Sources */,
+				4A06B0CB000000000000004E /* ConflictsView.swift in Sources */,
+				C2154D2C0000000000000050 /* CoursePeriodsEditorView.swift in Sources */,
+				275E6E700000000000000052 /* InboxView.swift in Sources */,
+				5C5533820000000000000054 /* SettingsView.swift in Sources */,
+				3F09C70E0000000000000056 /* TeamDetailView.swift in Sources */,
+				9CD7BA4E0000000000000058 /* TeamListView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
