@@ -38,6 +38,19 @@ final class SessionStore {
 
     var weekStart: Date = Date.now.startOfWeekMonday
 
+    /// 当前显示的月份（月视图用），恒为当月 1 日
+    var monthAnchor: Date = Date.now.startOfMonth
+
+    /// 周视图还是月视图。切换时要把拉取范围换掉，
+    /// 否则月视图只会显示第一周的数据 —— 看起来像"这个月别的日子都没安排"。
+    var scope: CalendarScope = .week
+
+    enum CalendarScope: String, CaseIterable, Identifiable {
+        case week, month
+        var id: String { rawValue }
+        var label: String { self == .week ? "周" : "月" }
+    }
+
     private let serverKey = "threees.server"
     private let userKey = "threees.user"
     private let tokenKey = "token"
@@ -153,8 +166,19 @@ final class SessionStore {
         isLoading = true
         errorMessage = nil
 
-        let from = weekStart.startOfDay
-        let to = weekStart.addingDays(7).startOfDay
+        // 拉取范围跟着视图走。
+        // 月视图按「当月 1 日 00:00 ~ 下月 1 日 00:00」取，
+        // 周视图按周一 ~ 下周一取 —— 两者都用半开区间，避免最后一天重复计入。
+        let from: Date
+        let to: Date
+        switch scope {
+        case .week:
+            from = weekStart.startOfDay
+            to = weekStart.addingDays(7).startOfDay
+        case .month:
+            from = monthAnchor.startOfDay
+            to = monthAnchor.addingMonths(1).startOfDay
+        }
         let query = [
             URLQueryItem(name: "from", value: String(Int64(from.timeIntervalSince1970))),
             URLQueryItem(name: "to", value: String(Int64(to.timeIntervalSince1970))),
@@ -202,8 +226,40 @@ final class SessionStore {
         await refresh()
     }
 
+    /// 月视图翻月。用 `addingMonths` 而不是加 30 天 ——
+    /// 后者在 2 月会漂到 3 月初，翻两次就乱了。
+    func shiftMonth(by months: Int) async {
+        monthAnchor = monthAnchor.addingMonths(months).startOfMonth
+        await refresh()
+    }
+
+    /// 统一的「往前 / 往后」入口，按当前视图决定是翻周还是翻月。
+    /// 视图层不该自己判断 scope —— 判断散在几处就一定会有一处忘了。
+    func shift(by direction: Int) async {
+        switch scope {
+        case .week: await shiftWeek(by: direction * 7)
+        case .month: await shiftMonth(by: direction)
+        }
+    }
+
     func goToday() async {
         weekStart = Date.now.startOfWeekMonday
+        monthAnchor = Date.now.startOfMonth
+        await refresh()
+    }
+
+    /// 切换周/月视图。切完必须重新拉一次范围。
+    func setScope(_ s: CalendarScope) async {
+        guard scope != s else { return }
+        scope = s
+        await refresh()
+    }
+
+    /// 月视图点某一天：直接跳过去，切回周视图看那天。
+    /// 月视图里格子太小，看不了详情，所以点日期 = "看这周"。
+    func jumpTo(day: Date) async {
+        weekStart = day.startOfWeekMonday
+        monthAnchor = day.startOfMonth
         await refresh()
     }
 

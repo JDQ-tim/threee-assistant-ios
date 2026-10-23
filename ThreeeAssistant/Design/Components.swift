@@ -147,9 +147,15 @@ struct PillView: View {
 struct DayHeaderView: View {
     let day: Date
 
+    /// 是否用「今天/明天」这种相对说法。
+    ///
+    /// ⚠️ 月视图必须关掉：一个月的列表里如果出现十几个"今天"式的相对标签，
+    ///    读者根本分不清哪天是哪天 —— 相对词只在"近在手边的几天"里才有意义。
+    var relativeDays: Bool = true
+
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(day.friendlyDay)
+            Text(relativeDays ? day.friendlyDay : day.monthDay)
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(Theme.textPrimary)
 

@@ -92,6 +92,21 @@ enum RepeatRule {
             }
         }
 
+        // ⚠️ 「每月」必须显式写 BYMONTHDAY。
+        //    只写 FREQ=MONTHLY 的话，语义是"跟随 DTSTART 那天的日期"，
+        //    开始日是 31 号时，2/4/6/9/11 月根本没有 31 号 ——
+        //    rrule 库会**直接跳过这些月**，用户看到的是"我的月度日程缺了几个月"。
+        //    写死 BYMONTHDAY=31 也不会更好（同样缺月），所以这里在 29/30/31 号时
+        //    退到当月最后一天能覆盖的最大安全值 —— 但那又改变了用户的本意。
+        //    折中：显式写出用户选的那天（就是开始日），至少规则是可读、可预期的，
+        //    并在 UI 上提示"月底的重复不会出现在没有这一天的月份"。
+        if kind == .monthly {
+            let dom = Calendar.current.component(.day, from: start)
+            if dom >= 1 && dom <= 31 {
+                parts.append("BYMONTHDAY=\(dom)")
+            }
+        }
+
         switch end {
         case .never:
             break

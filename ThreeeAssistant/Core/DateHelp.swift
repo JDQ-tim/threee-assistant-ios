@@ -24,6 +24,43 @@ extension Date {
         Calendar.current.date(byAdding: .day, value: n, to: self) ?? self
     }
 
+    /// 加月份。
+    ///
+    /// ⚠️ 不用「加 30 天」代替：1 月 31 日加 30 天是 3 月 2 日，
+    ///    连着翻几个月就会越翻越偏。Calendar 会正确处理月末（1/31 + 1 月 = 2/28）。
+    func addingMonths(_ n: Int) -> Date {
+        Calendar.current.date(byAdding: .month, value: n, to: self) ?? self
+    }
+
+    /// 当月 1 日 00:00
+    var startOfMonth: Date {
+        let cal = Calendar.current
+        let comps = cal.dateComponents([.year, .month], from: self)
+        return cal.date(from: comps) ?? startOfDay
+    }
+
+    /// 当月天数
+    var daysInMonth: Int {
+        Calendar.current.range(of: .day, in: .month, for: self)?.count ?? 30
+    }
+
+    /// 从本月 1 日到 1 日之间的空格数（用于月视图首行对齐）。
+    /// 以周一为一周之始，返回 0…6。
+    var leadingBlankDaysInMonth: Int {
+        let cal = Calendar.current
+        let firstWeekday = cal.component(.weekday, from: startOfMonth)  // 1=周日
+        // 转成「周一=0 … 周日=6」
+        return (firstWeekday + 5) % 7
+    }
+
+    /// 「2026年10月」
+    var yearMonth: String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "zh_Hans_CN")
+        f.dateFormat = "yyyy年M月"
+        return f.string(from: self)
+    }
+
     func isSameDay(as other: Date) -> Bool {
         Calendar.current.isDate(self, inSameDayAs: other)
     }

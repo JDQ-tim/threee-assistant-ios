@@ -18,7 +18,22 @@ struct ScheduleView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                weekStrip
+                topBar
+
+                if store.scope == .month {
+                    MonthGrid(
+                        anchor: store.monthAnchor,
+                        days: store.dayGroups,
+                        selected: nil,
+                        onPick: { day in
+                            Task {
+                                await store.setScope(.week)
+                                await store.jumpTo(day: day)
+                            }
+                        }
+                    )
+                    .padding(.bottom, 6)
+                }
 
                 ScrollView {
                     if let msg = store.errorMessage {
@@ -83,65 +98,85 @@ struct ScheduleView: View {
         }
     }
 
-    // MARK: - 周切换条
+    // MARK: - 顶部操作条
 
-    private var weekStrip: some View {
-        HStack(spacing: 12) {
-            Button {
-                Task { await store.shiftWeek(by: -7) }
-            } label: {
-                Image(systemName: "chevron.left")
-                    .frame(width: 34, height: 34)
-                    .background(Theme.surfaceAlt)
-                    .clipShape(Circle())
-            }
+    private var topBar: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 12) {
+                Button {
+                    Task { await store.shift(by: -1) }
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .frame(width: 34, height: 34)
+                        .background(Theme.surfaceAlt)
+                        .clipShape(Circle())
+                }
 
-            Spacer(minLength: 4)
+                Spacer(minLength: 4)
 
-            VStack(spacing: 1) {
-                Text(rangeLabel)
-                    .font(.system(size: 13, weight: .medium))
-                    .monospacedDigit()
-                    .foregroundStyle(Theme.textSecondary)
-                if store.isLoading {
-                    ProgressView().controlSize(.mini)
+                VStack(spacing: 1) {
+                    Text(rangeLabel)
+                        .font(.system(size: 13, weight: .medium))
+                        .monospacedDigit()
+                        .foregroundStyle(Theme.textSecondary)
+                    if store.isLoading {
+                        ProgressView().controlSize(.mini)
+                    }
+                }
+
+                Spacer(minLength: 4)
+
+                Button("今天") {
+                    Task { await store.goToday() }
+                }
+                .font(.system(size: 13, weight: .medium))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(Theme.surfaceAlt)
+                .clipShape(Capsule())
+
+                Button {
+                    Task { await store.shift(by: 1) }
+                } label: {
+                    Image(systemName: "chevron.right")
+                        .frame(width: 34, height: 34)
+                        .background(Theme.surfaceAlt)
+                        .clipShape(Circle())
                 }
             }
+            .foregroundStyle(Theme.textSecondary)
 
-            Spacer(minLength: 4)
-
-            Button("今天") {
-                Task { await store.goToday() }
+            // 周/月切换。放在操作条下面单独一行，
+            // 是因为它和"翻页"是两种不同层级的选择，挤在一行会让人分不清
+            Picker("视图", selection: Binding(
+                get: { store.scope },
+                set: { s in Task { await store.setScope(s) } }
+            )) {
+                ForEach(SessionStore.CalendarScope.allCases) { s in
+                    Text(s.label).tag(s)
+                }
             }
-            .font(.system(size: 13, weight: .medium))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background(Theme.surfaceAlt)
-            .clipShape(Capsule())
-
-            Button {
-                Task { await store.shiftWeek(by: 7) }
-            } label: {
-                Image(systemName: "chevron.right")
-                    .frame(width: 34, height: 34)
-                    .background(Theme.surfaceAlt)
-                    .clipShape(Circle())
-            }
+            .pickerStyle(.segmented)
         }
-        .foregroundStyle(Theme.textSecondary)
         .padding(.horizontal, 16)
         .padding(.bottom, 8)
     }
 
     private var rangeLabel: String {
-        let start = store.weekStart
-        let end = store.weekEnd
-        let cal = Calendar.current
-        let sameMonth = cal.component(.month, from: start) == cal.component(.month, from: end)
-        if sameMonth {
-            return "\(start.monthDay) – \(cal.component(.day, from: end))日"
+        switch store.scope {
+        case .week:
+            let start = store.weekStart
+            let end = store.weekStart.addingDays(6)
+            let cal = Calendar.current
+            let sameMonth = cal.component(.month, from: start) == cal.component(.month, from: end)
+            if sameMonth {
+                return "\(start.monthDay) – \(cal.component(.day, from: end))日"
+            }
+            return "\(start.monthDay) – \(end.monthDay)"
+
+        case .month:
+            return store.monthAnchor.yearMonth
         }
-        return "\(start.monthDay) – \(end.monthDay)"
     }
 
     // MARK: - 列表
@@ -158,15 +193,16 @@ struct ScheduleView: View {
             } else {
                 EmptyHint(
                     icon: "calendar",
-                    title: "这周还没有安排",
+                    title: store.scope == .month ? "这个月还没有安排" : "这周还没有安排",
                     subtitle: "点右上角的 + 新建一条"
                 )
             }
-        } else if isRegular && groups.count >= 2 {
+        } else if isRegular && groups.count >= 2 && store.scope == .week {
             // iPad：分两栏。
             // ⚠️ 不是「隔一天放一栏」，而是**前半周在左、后半周在右** ——
             //    这样每栏高度接近，右边不会出现一大片空白。
             // ⚠️ 只有一天时不分栏（分了会留一个空列，比单列更难看）。
+            // ⚠️ 月视图不分栏：一整个月分成两列读起来没有顺序感。
             HStack(alignment: .top, spacing: 20) {
                 column(Array(groups.prefix(half(of: groups.count))))
                 column(Array(groups.suffix(from: half(of: groups.count))))
@@ -184,7 +220,7 @@ struct ScheduleView: View {
         LazyVStack(alignment: .leading, spacing: 18) {
             ForEach(groups) { group in
                 VStack(alignment: .leading, spacing: 8) {
-                    DayHeaderView(day: group.day)
+                    DayHeaderView(day: group.day, relativeDays: store.scope == .week)
                     ForEach(group.items) { item in
                         rowButton(item)
                     }

@@ -21,11 +21,12 @@
 		1115C7880000000000000032 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F722AD9A0000000000000031 /* LoginView.swift */; };
 		706AD4E50000000000000034 /* EditEventSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F69D54800000000000000033 /* EditEventSheet.swift */; };
 		DCC0E71C0000000000000036 /* EventDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D882FD30000000000000035 /* EventDetailSheet.swift */; };
-		DFDC7BAC0000000000000038 /* NewEventSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99F7D5240000000000000037 /* NewEventSheet.swift */; };
-		5BED0201000000000000003A /* RepeatRuleEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6936430B0000000000000039 /* RepeatRuleEditor.swift */; };
-		1FDDB8B4000000000000003C /* ScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 348F838B000000000000003B /* ScheduleView.swift */; };
-		5C553382000000000000003E /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCDE70B1000000000000003D /* SettingsView.swift */; };
-		14A5319A000000000000003F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E684DE92000000000000001A /* Assets.xcassets */; };
+		38BA07DB0000000000000038 /* MonthGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = 239F98A40000000000000037 /* MonthGrid.swift */; };
+		DFDC7BAC000000000000003A /* NewEventSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99F7D5240000000000000039 /* NewEventSheet.swift */; };
+		5BED0201000000000000003C /* RepeatRuleEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6936430B000000000000003B /* RepeatRuleEditor.swift */; };
+		1FDDB8B4000000000000003E /* ScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 348F838B000000000000003D /* ScheduleView.swift */; };
+		5C5533820000000000000040 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCDE70B1000000000000003F /* SettingsView.swift */; };
+		14A5319A0000000000000041 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E684DE92000000000000001A /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -44,10 +45,11 @@
 		F722AD9A0000000000000031 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		F69D54800000000000000033 /* EditEventSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditEventSheet.swift; sourceTree = "<group>"; };
 		6D882FD30000000000000035 /* EventDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventDetailSheet.swift; sourceTree = "<group>"; };
-		99F7D5240000000000000037 /* NewEventSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewEventSheet.swift; sourceTree = "<group>"; };
-		6936430B0000000000000039 /* RepeatRuleEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepeatRuleEditor.swift; sourceTree = "<group>"; };
-		348F838B000000000000003B /* ScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleView.swift; sourceTree = "<group>"; };
-		BCDE70B1000000000000003D /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		239F98A40000000000000037 /* MonthGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthGrid.swift; sourceTree = "<group>"; };
+		99F7D5240000000000000039 /* NewEventSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewEventSheet.swift; sourceTree = "<group>"; };
+		6936430B000000000000003B /* RepeatRuleEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepeatRuleEditor.swift; sourceTree = "<group>"; };
+		348F838B000000000000003D /* ScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleView.swift; sourceTree = "<group>"; };
+		BCDE70B1000000000000003F /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		0FE0F9C30000000000000019 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		E684DE92000000000000001A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = ThreeeAssistant/Resources/Assets.xcassets; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -129,9 +131,10 @@
 			children = (
 				F69D54800000000000000033 /* EditEventSheet.swift */,
 				6D882FD30000000000000035 /* EventDetailSheet.swift */,
-				99F7D5240000000000000037 /* NewEventSheet.swift */,
-				6936430B0000000000000039 /* RepeatRuleEditor.swift */,
-				348F838B000000000000003B /* ScheduleView.swift */,
+				239F98A40000000000000037 /* MonthGrid.swift */,
+				99F7D5240000000000000039 /* NewEventSheet.swift */,
+				6936430B000000000000003B /* RepeatRuleEditor.swift */,
+				348F838B000000000000003D /* ScheduleView.swift */,
 			);
 			path = Schedule;
 			sourceTree = "<group>";
@@ -139,7 +142,7 @@
 		940B1924000000000000000B /* Settings */ = {
 			isa = PBXGroup;
 			children = (
-				BCDE70B1000000000000003D /* SettingsView.swift */,
+				BCDE70B1000000000000003F /* SettingsView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -237,7 +240,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				14A5319A000000000000003F /* Assets.xcassets in Resources */,
+				14A5319A0000000000000041 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -262,10 +265,11 @@
 				1115C7880000000000000032 /* LoginView.swift in Sources */,
 				706AD4E50000000000000034 /* EditEventSheet.swift in Sources */,
 				DCC0E71C0000000000000036 /* EventDetailSheet.swift in Sources */,
-				DFDC7BAC0000000000000038 /* NewEventSheet.swift in Sources */,
-				5BED0201000000000000003A /* RepeatRuleEditor.swift in Sources */,
-				1FDDB8B4000000000000003C /* ScheduleView.swift in Sources */,
-				5C553382000000000000003E /* SettingsView.swift in Sources */,
+				38BA07DB0000000000000038 /* MonthGrid.swift in Sources */,
+				DFDC7BAC000000000000003A /* NewEventSheet.swift in Sources */,
+				5BED0201000000000000003C /* RepeatRuleEditor.swift in Sources */,
+				1FDDB8B4000000000000003E /* ScheduleView.swift in Sources */,
+				5C5533820000000000000040 /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
