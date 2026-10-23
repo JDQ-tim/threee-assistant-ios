@@ -7,6 +7,8 @@ struct NewEventSheet: View {
 
     @State private var title = ""
     @State private var calendarID = ""
+    @State private var location = ""
+    @State private var notes = ""
     @State private var day = Date()
     @State private var time = Date()
     @State private var minutes = 60
@@ -122,6 +124,24 @@ struct NewEventSheet: View {
                         // 待办没有结束时间、全天由「天」决定，改时长都没有意义
                         .disabled(hidesDuration)
                         .opacity(hidesDuration ? 0.5 : 1)
+                    }
+
+                    labelled("地点") {
+                        TextField("可留空", text: $location)
+                            .textInputAutocapitalization(.never)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(Theme.surfaceAlt)
+                            .clipShape(RoundedRectangle(cornerRadius: Theme.cornerSmall, style: .continuous))
+                    }
+
+                    labelled("备注") {
+                        TextField("可留空", text: $notes, axis: .vertical)
+                            .lineLimit(3...6)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(Theme.surfaceAlt)
+                            .clipShape(RoundedRectangle(cornerRadius: Theme.cornerSmall, style: .continuous))
                     }
 
                     labelled("重复") {
@@ -295,7 +315,9 @@ struct NewEventSheet: View {
                     reminders: reminders,
                     isTask: isTask,
                     allDay: allDay,
-                    strong: strong
+                    strong: strong,
+                    notes: notes,
+                    location: location
                 )
                 dismiss()
             } catch {

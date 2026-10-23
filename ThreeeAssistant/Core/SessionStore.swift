@@ -278,7 +278,9 @@ final class SessionStore {
         reminders: [ReminderDTO] = [],
         isTask: Bool = false,
         allDay: Bool = false,
-        strong: Bool = false
+        strong: Bool = false,
+        notes: String = "",
+        location: String = ""
     ) async throws {
         // 全天日程的时长由「天」决定，调用方传的分钟数不可信 ——
         // 用户在新建页把「全天」打开时，时长 Stepper 是被禁用的，
@@ -290,8 +292,10 @@ final class SessionStore {
         let body = NewEventBody(
             calendarID: calendarID,
             title: title,
-            notes: "",
-            location: "",
+            // 服务端 notes / location 是可空字段，传空串和省略等价。
+            // 这里统一 trim 一下：用户误按空格进去的备注会变成一条"看起来有内容"的记录
+            notes: notes.trimmingCharacters(in: .whitespacesAndNewlines),
+            location: location.trimmingCharacters(in: .whitespacesAndNewlines),
             startUTC: Int64(start.timeIntervalSince1970.rounded()),
             durationSec: seconds,
             tzid: TimeZone.current.identifier,
