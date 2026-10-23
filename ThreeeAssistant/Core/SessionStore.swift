@@ -370,6 +370,78 @@ final class SessionStore {
         return res.reports
     }
 
+    // MARK: - 连通性自检
+
+    /// 打一次 `/api/health`（**匿名**，不带 token）。
+    ///
+    /// ## 为什么要这个
+    ///
+    /// 登录页 footer 一直教用户「用 Safari 打开 /api/health」——
+    /// 但对不懂技术的人来说，Safari 里那句「此连接非私人连接」
+    /// 才是真正的拦路虎：他不敢点「继续访问」。
+    /// App 内调一次，成功就一句「通」，失败就把真实错误摆出来，
+    /// 用户不用离开这个 App。
+    ///
+    /// ⚠️ 它会先 `configure` baseURL（token 传 nil），
+    ///    所以**只能在未登录状态下调用** —— 已登录时调会把 token 清掉，
+    ///    下一个请求就变匿名了。调用点必须自己保证。
+    func checkHealth(server: String) async throws -> HealthDTO {
+        let trimmed = server.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            throw APIError.server(400, "请填服务器地址")
+        }
+        let url = try APIClient.normalize(trimmed)
+        APIClient.shared.configure(baseURL: url, token: nil)
+        return try await APIClient.shared.get("/api/health")
+    }
+
+    // MARK: - 注册码
+
+    /// 读全站注册码（`GET /api/invite`，管理员专用）。
+    ///
+    /// 没有这个接口的话，唯一能知道注册码的办法是去读服务器日志 ——
+    /// 而这恰恰是「部署完想发码给同学」的人最拿不到的东西。
+    func loadSiteInvite() async throws -> String {
+        let res: SiteInviteDTO = try await APIClient.shared.get("/api/invite")
+        return res.inviteCode
+    }
+
+    // MARK: - 重复日程清理
+
+    /// 试运行：只统计有多少重复，**不改任何数据**（`?dry=1`）。
+    ///
+    /// 一定要先跑这个再跑真正的清理。理由很简单：
+    /// 用户看到「发现 37 条多余的」会先想确认一遍，
+    /// 如果第一个动作就是删，他没机会反悔。
+    func scanDuplicates() async throws -> DedupeResultDTO {
+        try await APIClient.shared.post(
+            "/api/maintenance/dedupe",
+            query: [URLQueryItem(name: "dry", value: "1")],
+            body: Data("{}".utf8)
+        )
+    }
+
+    /// 真删（不带 `dry`）。
+    ///
+    /// 只动**我有写权限**的日历里的重复（服务端逐组过 `canWrite`）；
+    /// 没权限的组会被跳过并计入 `skippedGroups`。
+    ///
+    /// `all` 传 true 时跨库跑，**只对管理员生效** ——
+    /// 普通用户传了也不报错，服务端按自己范围跑（`dedupe.go` 里
+    /// `all := q.Get("all") == "1" && s.isAdminUser(uid)`）。
+    @discardableResult
+    func removeDuplicates(all: Bool = false) async throws -> DedupeResultDTO {
+        var q: [URLQueryItem] = []
+        if all { q.append(URLQueryItem(name: "all", value: "1")) }
+        let res: DedupeResultDTO = try await APIClient.shared.post(
+            "/api/maintenance/dedupe", query: q, body: Data("{}".utf8)
+        )
+        // 删完必须刷新：本地列表里那些重复条目还在，
+        // 不刷的话用户会以为没删掉，然后再点一次
+        await refresh()
+        return res
+    }
+
     // MARK: - 注册
 
     /// 问一下这台服务器是不是还空着（`GET /api/bootstrap`）。

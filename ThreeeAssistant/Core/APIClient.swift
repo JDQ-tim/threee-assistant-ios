@@ -80,8 +80,16 @@ final class APIClient: NSObject, @unchecked Sendable {
         try await send("GET", path, query: query, body: nil)
     }
 
-    func post<T: Decodable>(_ path: String, body: Data?) async throws -> T {
-        try await send("POST", path, query: [], body: body)
+    /// `query` 默认空 —— 绝大多数 POST 的入参都在 body 里。
+    ///
+    /// 例外是 `POST /api/maintenance/dedupe`：服务端读的是
+    /// `r.URL.Query().Get("dry")` / `Get("all")`，**不从 body 取**，
+    /// 所以试运行必须走 query。给这个可选参数比在调用点手拼字符串安全 ——
+    /// 手拼容易漏掉转义（`all=1` 后面接 `&` 之类）。
+    func post<T: Decodable>(_ path: String,
+                            query: [URLQueryItem] = [],
+                            body: Data?) async throws -> T {
+        try await send("POST", path, query: query, body: body)
     }
 
     func put<T: Decodable>(_ path: String, body: Data?) async throws -> T {

@@ -9,6 +9,12 @@ struct LoginView: View {
     @State private var pass = ""
     @State private var busy = false
     @State private var showRegister = false
+
+    /// 连通性自检的状态
+    @State private var checking = false
+    @State private var healthText: String?
+    @State private var healthOK = false
+
     @FocusState private var focused: Field?
 
     private enum Field { case server, name, pass }
@@ -108,10 +114,39 @@ struct LoginView: View {
                     Text("连不上时先做这一步")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Theme.textSecondary)
-                    Text("用 Safari 打开「服务器地址/api/health」，看到一段 JSON 就说明证书和网络都是通的。自签证书第一次会提示「此连接非私人连接」，点「显示详细信息 → 访问此网站」，回来再登录。")
+                    Text("点下面的「测试连接」，通不通当场就知道。也可以手动用 Safari 打开「服务器地址/api/health」，看到一段 JSON 就说明证书和网络都是通的。\n\n自签证书第一次会提示「此连接非私人连接」，点「显示详细信息 → 访问此网站」。")
                         .font(.caption)
                         .foregroundStyle(Theme.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
+
+                    Button {
+                        Task { await runHealthCheck() }
+                    } label: {
+                        HStack(spacing: 6) {
+                            if checking { ProgressView().controlSize(.small) }
+                            Text(checking ? "正在测试…" : "测试连接")
+                                .font(.system(size: 13, weight: .medium))
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(Theme.surfaceAlt)
+                        .foregroundStyle(Theme.textPrimary)
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.cornerSmall, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.cornerSmall, style: .continuous)
+                                .stroke(Theme.separator, lineWidth: 0.5)
+                        )
+                    }
+                    .disabled(checking || busy)
+                    .padding(.top, 6)
+
+                    if let result = healthText {
+                        Text(result)
+                            .font(.caption)
+                            .foregroundStyle(healthOK ? Theme.teal600 : Theme.red600)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, 2)
+                    }
                 }
                 .padding(.top, 22)
                 .padding(.bottom, 40)
@@ -127,6 +162,37 @@ struct LoginView: View {
         }
     }
 
+    // MARK: - 连通性自检
+
+    private func runHealthCheck() async {
+        guard !checking else { return }
+        checking = true
+        healthText = nil
+        do {
+            let h = try await store.checkHealth(server: store.serverText)
+            healthOK = h.ok
+            // 把「时钟差」也算出来：时间不对会让日程时间全错，
+            // 而且这种错很难联想到时钟。这里顺手查一遍
+            var parts = ["连上了"]
+            if let v = h.version, !v.isEmpty { parts.append("版本 \(v)") }
+            if let t = h.time {
+                let drift = t - Int64(Date.now.timeIntervalSince1970)
+                if abs(drift) > 300 {
+                    // 5 分钟以上才算问题。手机和服务器本来就允许小误差，
+                    // 报一个「差 3 秒」只会制造焦虑
+                    parts.append("⚠️ 设备时钟和服务器差 \(abs(drift) / 60) 分钟，日程时间会显示错")
+                }
+            }
+            if h.pendingUpdate == true {
+                parts.append("服务端有待生效的更新")
+            }
+            healthText = parts.joined(separator: " · ")
+        } catch {
+            healthOK = false
+            healthText = store.message(for: error)
+        }
+        checking = false
+    }
     private func submit() {
         guard !busy else { return }
         focused = nil

@@ -28,8 +28,14 @@ struct DataIntegrityView: View {
     /// 因为 `report.issues` 是**修复前**那份，不能拿它当「现在还剩几条」
     @State private var repairOutcome: String?
 
+    // ---- 重复日程清理 ----
+    @State private var dedupe: DedupeResultDTO?
+    @State private var dedupeBusy = false
+    @State private var confirmDedupe = false
+    @State private var dedupeOutcome: String?
+
     private var isAdmin: Bool { store.user?.isAdmin ?? false }
-    private var busy: Bool { scanning || repairing }
+    private var busy: Bool { scanning || repairing || dedupeBusy }
 
     var body: some View {
         Form {
@@ -49,6 +55,7 @@ struct DataIntegrityView: View {
                 } else if !busy {
                     emptySection
                 }
+                dedupeSection
             }
         }
         .navigationTitle("数据自检")
@@ -58,6 +65,74 @@ struct DataIntegrityView: View {
             Button("修复", role: .destructive) { runRepair() }
         } message: {
             Text("修复会**写库**：删掉指向已删对象的孤儿行、给该消失的日程补上删除标记。它动的是整个库里的问题行，不只是你自己的数据。修完会立刻重新扫描一次。")
+        }
+        .alert("确认删除重复？", isPresented: $confirmDedupe) {
+            Button("取消", role: .cancel) {}
+            Button("删除", role: .destructive) { runDedupe(dry: false) }
+        } message: {
+            Text("每组完全重复的日程只保留一条，其余的删掉。判定标准是「同一张日历 + 标题相同 + 开始时刻相同 + 时长相同」。这个操作不可撤销。")
+        }
+    }
+
+    // MARK: - 重复日程
+
+    private var dedupeSection: some View {
+        Section {
+            Button {
+                runDedupe(dry: true)
+            } label: {
+                HStack(spacing: 8) {
+                    if dedupeBusy { ProgressView() }
+                    Text("查找重复日程（只统计）")
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .disabled(busy)
+
+            // 先试再删。第一个动作就能删的方案，用户没机会反悔
+            Button(role: .destructive) {
+                confirmDedupe = true
+            } label: {
+                Text("删除重复日程")
+                    .frame(maxWidth: .infinity)
+            }
+            .disabled(busy || (dedupe?.duplicates ?? 0) == 0)
+
+            if let d = dedupe {
+                LabeledContent("扫过", value: "\(d.scanned) 条")
+                LabeledContent("重复组", value: "\(d.groups) 组")
+                LabeledContent("多余条数", value: "\(d.duplicates) 条")
+                if d.skippedGroups > 0 {
+                    // 这条必须显示：不说的话，用户会奇怪
+                    // 「明明有重复，为什么还有没删的」
+                    LabeledContent("因无权限跳过", value: "\(d.skippedGroups) 组")
+                }
+                if d.orphans > 0 {
+                    LabeledContent("孤儿日程", value: "\(d.orphans) 条")
+                }
+            }
+
+            ForEach(Array((dedupe?.sample ?? []).prefix(20))) { g in
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(g.title.isEmpty ? "（无标题）" : g.title)
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(1)
+                    Text("\(g.calendarName) · \(g.count) 条 · 平均时长 \(g.durationSec / 60) 分钟")
+                        .font(.caption2)
+                        .foregroundStyle(Theme.textTertiary)
+                }
+                .padding(.vertical, 1)
+            }
+        } header: {
+            Text("重复日程")
+        } footer: {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("反复导入、多端同时新建，都会造出「同一天同一时刻、标题一字不差的几条」。它们在列表上叠在一起，看不出哪条是哪条。\n\n这里只处理**你写得动的**日历；没权限的会被跳过并统计出来。")
+                if let o = dedupeOutcome {
+                    Text(o).foregroundStyle(Theme.textPrimary)
+                }
+            }
         }
     }
 
@@ -197,6 +272,38 @@ struct DataIntegrityView: View {
                 self.error = store.message(for: error)
             }
             repairing = false
+        }
+    }
+
+    /// `dry: true` → 只统计；`false` → 真删。
+    ///
+    /// ⚠️ 两个分支调的是**不同**的 store 方法，不能共用一个「加个布尔开关」的写法。
+    ///    试运行误走真删的代价是不可逆的，所以让它们在代码上也是两条独立路径。
+    private func runDedupe(dry: Bool) {
+        guard !busy else { return }
+        dedupeBusy = true
+        error = nil
+        dedupeOutcome = nil
+        Task {
+            do {
+                if dry {
+                    let res = try await store.scanDuplicates()
+                    dedupe = res
+                    if res.duplicates == 0 {
+                        dedupeOutcome = "没有发现重复日程。"
+                    } else {
+                        dedupeOutcome = "统计完成，共 \(res.duplicates) 条多余的。确认无误再点「删除重复日程」。"
+                    }
+                } else {
+                    let res = try await store.removeDuplicates()
+                    dedupe = res
+                    dedupeOutcome = "删掉了 \(res.removed) 条重复日程"
+                        + (res.skippedGroups > 0 ? "，另有 \(res.skippedGroups) 组因无权限跳过。" : "。")
+                }
+            } catch {
+                self.error = store.message(for: error)
+            }
+            dedupeBusy = false
         }
     }
 }

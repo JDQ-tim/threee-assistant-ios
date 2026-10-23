@@ -42,13 +42,14 @@
 		275E6E70000000000000005C /* InboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7087701D000000000000005B /* InboxView.swift */; };
 		2EF9CD27000000000000005E /* MyReportsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1238D359000000000000005D /* MyReportsView.swift */; };
 		5C5533820000000000000060 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCDE70B1000000000000005F /* SettingsView.swift */; };
-		B6E864F40000000000000062 /* SyncStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89A020800000000000000061 /* SyncStatusView.swift */; };
-		3F09C70E0000000000000064 /* TeamDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86D5C9970000000000000063 /* TeamDetailView.swift */; };
-		9CD7BA4E0000000000000066 /* TeamListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87AE298B0000000000000065 /* TeamListView.swift */; };
-		7BC736B60000000000000068 /* TierView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB7E78DE0000000000000067 /* TierView.swift */; };
-		EBB57185000000000000006A /* WeatherLocationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FD0D5A90000000000000069 /* WeatherLocationView.swift */; };
-		8F96758C000000000000006C /* WipeDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53EC557C000000000000006B /* WipeDataView.swift */; };
-		14A5319A000000000000006D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E684DE92000000000000001A /* Assets.xcassets */; };
+		6C0808F30000000000000062 /* SiteInviteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3156DF580000000000000061 /* SiteInviteView.swift */; };
+		B6E864F40000000000000064 /* SyncStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89A020800000000000000063 /* SyncStatusView.swift */; };
+		3F09C70E0000000000000066 /* TeamDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86D5C9970000000000000065 /* TeamDetailView.swift */; };
+		9CD7BA4E0000000000000068 /* TeamListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87AE298B0000000000000067 /* TeamListView.swift */; };
+		7BC736B6000000000000006A /* TierView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB7E78DE0000000000000069 /* TierView.swift */; };
+		EBB57185000000000000006C /* WeatherLocationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FD0D5A9000000000000006B /* WeatherLocationView.swift */; };
+		8F96758C000000000000006E /* WipeDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53EC557C000000000000006D /* WipeDataView.swift */; };
+		14A5319A000000000000006F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E684DE92000000000000001A /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -88,12 +89,13 @@
 		7087701D000000000000005B /* InboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxView.swift; sourceTree = "<group>"; };
 		1238D359000000000000005D /* MyReportsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyReportsView.swift; sourceTree = "<group>"; };
 		BCDE70B1000000000000005F /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		89A020800000000000000061 /* SyncStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncStatusView.swift; sourceTree = "<group>"; };
-		86D5C9970000000000000063 /* TeamDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamDetailView.swift; sourceTree = "<group>"; };
-		87AE298B0000000000000065 /* TeamListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamListView.swift; sourceTree = "<group>"; };
-		AB7E78DE0000000000000067 /* TierView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TierView.swift; sourceTree = "<group>"; };
-		7FD0D5A90000000000000069 /* WeatherLocationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherLocationView.swift; sourceTree = "<group>"; };
-		53EC557C000000000000006B /* WipeDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WipeDataView.swift; sourceTree = "<group>"; };
+		3156DF580000000000000061 /* SiteInviteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SiteInviteView.swift; sourceTree = "<group>"; };
+		89A020800000000000000063 /* SyncStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncStatusView.swift; sourceTree = "<group>"; };
+		86D5C9970000000000000065 /* TeamDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamDetailView.swift; sourceTree = "<group>"; };
+		87AE298B0000000000000067 /* TeamListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamListView.swift; sourceTree = "<group>"; };
+		AB7E78DE0000000000000069 /* TierView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TierView.swift; sourceTree = "<group>"; };
+		7FD0D5A9000000000000006B /* WeatherLocationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherLocationView.swift; sourceTree = "<group>"; };
+		53EC557C000000000000006D /* WipeDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WipeDataView.swift; sourceTree = "<group>"; };
 		0FE0F9C30000000000000019 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		E684DE92000000000000001A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = ThreeeAssistant/Resources/Assets.xcassets; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -203,12 +205,13 @@
 				7087701D000000000000005B /* InboxView.swift */,
 				1238D359000000000000005D /* MyReportsView.swift */,
 				BCDE70B1000000000000005F /* SettingsView.swift */,
-				89A020800000000000000061 /* SyncStatusView.swift */,
-				86D5C9970000000000000063 /* TeamDetailView.swift */,
-				87AE298B0000000000000065 /* TeamListView.swift */,
-				AB7E78DE0000000000000067 /* TierView.swift */,
-				7FD0D5A90000000000000069 /* WeatherLocationView.swift */,
-				53EC557C000000000000006B /* WipeDataView.swift */,
+				3156DF580000000000000061 /* SiteInviteView.swift */,
+				89A020800000000000000063 /* SyncStatusView.swift */,
+				86D5C9970000000000000065 /* TeamDetailView.swift */,
+				87AE298B0000000000000067 /* TeamListView.swift */,
+				AB7E78DE0000000000000069 /* TierView.swift */,
+				7FD0D5A9000000000000006B /* WeatherLocationView.swift */,
+				53EC557C000000000000006D /* WipeDataView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -306,7 +309,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				14A5319A000000000000006D /* Assets.xcassets in Resources */,
+				14A5319A000000000000006F /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -352,12 +355,13 @@
 				275E6E70000000000000005C /* InboxView.swift in Sources */,
 				2EF9CD27000000000000005E /* MyReportsView.swift in Sources */,
 				5C5533820000000000000060 /* SettingsView.swift in Sources */,
-				B6E864F40000000000000062 /* SyncStatusView.swift in Sources */,
-				3F09C70E0000000000000064 /* TeamDetailView.swift in Sources */,
-				9CD7BA4E0000000000000066 /* TeamListView.swift in Sources */,
-				7BC736B60000000000000068 /* TierView.swift in Sources */,
-				EBB57185000000000000006A /* WeatherLocationView.swift in Sources */,
-				8F96758C000000000000006C /* WipeDataView.swift in Sources */,
+				6C0808F30000000000000062 /* SiteInviteView.swift in Sources */,
+				B6E864F40000000000000064 /* SyncStatusView.swift in Sources */,
+				3F09C70E0000000000000066 /* TeamDetailView.swift in Sources */,
+				9CD7BA4E0000000000000068 /* TeamListView.swift in Sources */,
+				7BC736B6000000000000006A /* TierView.swift in Sources */,
+				EBB57185000000000000006C /* WeatherLocationView.swift in Sources */,
+				8F96758C000000000000006E /* WipeDataView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

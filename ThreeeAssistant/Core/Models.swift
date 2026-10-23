@@ -778,6 +778,106 @@ struct MyReportDTO: Decodable, Identifiable, Hashable {
     }
 }
 
+/// `GET /api/health` —— 连通性自检。
+///
+/// ## 为什么 App 内要调它
+///
+/// 登录页 footer 已经教用户「用 Safari 打开 /api/health，看到 JSON 就说明通了」。
+/// 但**能让用户少走一步就该少走一步** —— 尤其是自签证书这一步，
+/// Safari 里那个「此连接非私人连接」的警告会把不懂的人直接吓退。
+/// App 内调一次，成功就一句「通」，失败就把真实错误原样摆出来。
+///
+/// ⚠️ 这个端点是**匿名**的，不带 token。所以它就只是"服务器活着吗"，
+///    不代表"我的登录还有效"—— 后者由 `/api/tier` 之类的鉴权接口验证。
+struct HealthDTO: Decodable {
+    let ok: Bool
+    let version: String?
+    /// 模块摘要（部署时启用了哪些模块），一般是哈希串。不展示
+    let modules: String?
+    /// 当前同步水位
+    let seq: Int64?
+    let users: Int?
+    let events: Int?
+    let instances: Int?
+    /// 是否有待生效的更新（服务端刚传完 exe、还没重启）
+    let pendingUpdate: Bool?
+    /// 服务端时间（Unix 秒）。和设备时间一比就知道时钟差多少
+    let time: Int64?
+
+    enum CodingKeys: String, CodingKey {
+        case ok, version, modules, seq, users, events, instances, time
+        case pendingUpdate = "pending_update"
+    }
+}
+
+/// `GET /api/invite` —— 管理员读全站注册码。
+///
+/// 服务端注释说得很直白：没有这个接口的话，
+/// 「唯一能知道注册码的办法是去读服务器日志」。
+struct SiteInviteDTO: Decodable {
+    let inviteCode: String
+    enum CodingKeys: String, CodingKey {
+        case inviteCode = "invite_code"
+    }
+}
+
+/// 一组完全重复的日程（`POST /api/maintenance/dedupe` 返回的 `sample`）。
+///
+/// 「完全重复」的判据是 `calendar_id + 标题(去两端空白) + 开始时刻 + 时长` ——
+/// 改判据等于改行为，所以客户端**不自己找重复**，只展示服务端判出来的组。
+struct DedupeGroupDTO: Decodable, Identifiable {
+    let calendarID: String
+    let calendarName: String
+    let title: String
+    let startUTC: Int64
+    let durationSec: Int64
+    /// 这一组里有几条（1 + removed.count）
+    let count: Int
+    /// 保留哪一条
+    let kept: String
+    /// 会被删掉的
+    let removed: [String]
+
+    var id: String { "\(calendarID)|\(startUTC)|\(title)" }
+
+    enum CodingKeys: String, CodingKey {
+        case title, count, kept, removed
+        case calendarID = "calendar_id"
+        case calendarName = "calendar_name"
+        case startUTC = "start_utc"
+        case durationSec = "duration_sec"
+    }
+}
+
+/// `POST /api/maintenance/dedupe` 的响应。
+///
+/// ⚠️ `dry == true` 表示**只统计没动手**。界面必须照实说，
+///    否则用户会以为已经清完了。
+struct DedupeResultDTO: Decodable {
+    let ok: Bool
+    /// 试运行（`?dry=1`）
+    let dry: Bool
+    /// 扫过的日程条数
+    let scanned: Int
+    /// 发现多少组重复
+    let groups: Int
+    /// 这些组里一共多少条是多余的
+    let duplicates: Int
+    /// 实际删掉了几条（dry 时恒为 0）
+    let removed: Int
+    /// 因为没写权限而跳过的组数
+    let skippedGroups: Int
+    /// 我自己名下的孤儿日程条数
+    let orphans: Int
+    /// 前 20 组明细
+    let sample: [DedupeGroupDTO]
+
+    enum CodingKeys: String, CodingKey {
+        case ok, dry, scanned, groups, duplicates, removed, orphans, sample
+        case skippedGroups = "skipped_groups"
+    }
+}
+
 // MARK: - 修改日程
 
 /// `PUT /api/events/{id}` 的请求体。

@@ -24,6 +24,13 @@ struct SettingsView: View {
                 Section("账号") {
                     LabeledContent("用户名", value: store.user?.name ?? "—")
                     LabeledContent("身份", value: (store.user?.isAdmin ?? false) ? "管理员" : "普通成员")
+                    // 注册码只对管理员显示：普通成员看到也没用，
+                    // 而且「注册码」这个词出现在成员屏幕上会让人以为要自己保管
+                    if store.user?.isAdmin ?? false {
+                        NavigationLink("注册码") {
+                            SiteInviteView()
+                        }
+                    }
                     NavigationLink {
                         TierView()
                     } label: {
