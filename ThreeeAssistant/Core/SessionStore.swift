@@ -549,11 +549,24 @@ final class SessionStore {
     ///
     /// 存 UserDefaults：它是跨启动要保留的东西。放内存里的话每次冷启动
     /// 都要全量拉一遍，一个月的数据量不是小数目。
+    ///
+    /// ## 为什么用 `integer(forKey:)` 而不是 `double(forKey:)`
+    ///
+    /// `UserDefaults.set(Double)` 把 Int64 存成浮点，超过 2^53 就开始丢精度。
+    /// 现在的 seq 远远到不了那个量级，但这是个「不该存在的隐患」——
+    /// 存整数就用整数接口，`integer(forKey:)` 本来就是 Int。
+    ///
+    /// ## 为什么键里带 user.id
+    ///
+    /// 游标是**按人**的服务端 seq。换个账号登录还沿用上一个人的游标，
+    /// 会导致新账号「一条都拉不到」（它以为已经同步到很后面了）。
     var syncCursor: Int64 {
-        get { Int64(UserDefaults.standard.double(forKey: syncCursorKey)) }
-        set { UserDefaults.standard.set(Double(newValue), forKey: syncCursorKey) }
+        get { Int64(UserDefaults.standard.integer(forKey: syncCursorKey)) }
+        set { UserDefaults.standard.set(Int(newValue), forKey: syncCursorKey) }
     }
 
+    /// ⚠️ 这是个**计算属性**，不是常量：`user` 在登录/登出时会变。
+    ///    登出后 `user` 为 nil，键退回 `anon`，游标归 0 —— 这是想要的行为。
     private var syncCursorKey: String { "threees.sync.cursor.\(user?.id ?? "anon")" }
 
     /// 一次 push 最多 500 条 —— 服务端硬上限，超了整批 400。
