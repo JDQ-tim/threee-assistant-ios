@@ -528,10 +528,171 @@ final class SessionStore {
         await refresh()
     }
 
+    // MARK: - 团队
+
+    /// 我加入的团队。
+    ///
+    /// ⚠️ 服务端的 WHERE 里带 `team_members.user_id = 我`，
+    ///    所以这个接口**永远**只回我自己的团队，不会有全服列表。
+    ///    客户端不需要（也不该）再做过滤 —— 做了反而掩盖了服务端漏条件的问题。
+    func loadTeams() async throws -> [TeamDTO] {
+        let res: TeamsResponse = try await APIClient.shared.get("/api/teams")
+        return res.teams
+    }
+
+    /// 建一个团队。创建者自动成为管理员。
+    func createTeam(name: String, note: String) async throws -> TeamDTO {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            throw APIError.server(400, "团队名不能为空")
+        }
+        // 服务端按 rune 数算，上限 40。Swift 的 count 也是「字符数」，
+        // 但 emoji 在 Go 里算 1 个 rune、在 Swift 里也可能算 1 个 Character，
+        // 两边一致；真正会分叉的是组合字符，这里不追那个精度 ——
+        // 服务端仍然会兜底拒绝，不会写坏数据。
+        guard trimmed.count <= 40 else {
+            throw APIError.server(400, "团队名太长了（最多 40 个字）")
+        }
+        let data = try JSONEncoder().encode(
+            CreateTeamBody(name: trimmed, note: note.trimmingCharacters(in: .whitespacesAndNewlines))
+        )
+        let res: TeamEnvelopeDTO = try await APIClient.shared.post("/api/teams", body: data)
+        return res.team
+    }
+
+    /// 团队详情（成员名单 + 已绑定的日历）。
+    ///
+    /// **非成员一律 404** —— 服务端刻意不回 403，因为 403 会泄漏「这个团队存在」。
+    func loadTeamDetail(id: String) async throws -> TeamDetailResponse {
+        try await APIClient.shared.get("/api/teams/\(id)")
+    }
+
+    /// 退出团队。创建者不能退（服务端 409），UI 上不给这个按钮。
+    func leaveTeam(id: String) async throws {
+        _ = try await APIClient.shared.postRaw("/api/teams/\(id)/leave", body: nil)
+    }
+
+    /// 团队管理员移除成员。创建者不可被移除（服务端 409）。
+    func removeTeamMember(teamID: String, userID: String) async throws {
+        try await APIClient.shared.delete("/api/teams/\(teamID)/members/\(userID)")
+    }
+
+    /// 改团队成员角色（`admin` ↔ `member`）。仅团队管理员。
+    ///
+    /// 服务端只认这两个值，别的直接 400。创建者必须保持 admin（409）。
+    func setTeamMemberRole(teamID: String, userID: String, role: String) async throws {
+        guard role == "admin" || role == "member" else {
+            throw APIError.server(400, "团队角色只能是管理员或成员")
+        }
+        let data = try JSONEncoder().encode(SetTeamRoleBody(role: role))
+        _ = try await APIClient.shared.putRaw("/api/teams/\(teamID)/members/\(userID)", body: data)
+    }
+
+    // MARK: - 团队邀请码
+
+    /// 生成团队邀请码。
+    ///
+    /// ⚠️ `role == "admin"` 的邀请**只有创建者能发** —— 普通管理员只能发 member 邀请。
+    ///    源码（`teams.go:477`）：「一个管理员手上的『发 admin 邀请』能力 = 可以无限复制
+    ///    管理员身份……足以让爸妈看不到共享日历。」UI 上要按 `team.ownerID` 判断，
+    ///    别只看 `isAdmin`，否则普通管理员点了才吃 403。
+    ///
+    /// `maxUses == 0` 表示不限次数（团队邀请的默认值和日历邀请故意不同）。
+    func createTeamInvite(
+        teamID: String,
+        role: String,
+        ttlHours: Int64 = 7 * 24,
+        maxUses: Int64 = 0
+    ) async throws -> TeamInviteDTO {
+        guard role == "admin" || role == "member" else {
+            throw APIError.server(400, "团队角色只能是管理员或成员")
+        }
+        let data = try JSONEncoder().encode(
+            CreateTeamInviteBody(role: role, ttlHours: ttlHours, maxUses: maxUses)
+        )
+        let res: TeamInviteEnvelopeDTO = try await APIClient.shared.post(
+            "/api/teams/\(teamID)/invites", body: data
+        )
+        return res.invite
+    }
+
+    func loadTeamInvites(teamID: String) async throws -> [TeamInviteDTO] {
+        let res: TeamInvitesResponse = try await APIClient.shared.get(
+            "/api/teams/\(teamID)/invites"
+        )
+        return res.invites
+    }
+
+    func revokeTeamInvite(id: String) async throws {
+        try await APIClient.shared.delete("/api/team-invites/\(id)")
+    }
+
+    /// 用邀请码加入团队。**已经是成员时服务端返回 `already_member` 并成功**，
+    /// 且不消耗次数 —— 所以重复点是安全的，不需要客户端先查一遍。
+    func acceptTeamInvite(code: String) async throws -> String {
+        let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            throw APIError.server(400, "请填写邀请码")
+        }
+        // 返回体带 team_id，用来进入团队页；这里只取 id，其余字段用不上。
+        struct AcceptResult: Decodable { let teamID: String?
+            enum CodingKeys: String, CodingKey { case teamID = "team_id" } }
+        let res: AcceptResult = try await APIClient.shared.post(
+            "/api/team-invites/\(trimmed)/accept", body: nil
+        )
+        return res.teamID ?? ""
+    }
+
+    // MARK: - 日历 ↔ 团队
+
+    /// 这张日历共享给了哪些团队。需要我对这张日历 `canManageMembers`。
+    func loadCalendarTeamShares(calendarID: String) async throws -> [TeamCalendarShareDTO] {
+        let res: CalendarTeamSharesResponse = try await APIClient.shared.get(
+            "/api/calendars/\(calendarID)/teams"
+        )
+        return res.shares
+    }
+
+    /// 把日历共享给团队。
+    ///
+    /// ## 三个前置条件，缺一不可
+    ///
+    /// 1. 我对这张日历 `canManageMembers`
+    /// 2. **我是这个团队的成员**（「先加入、后共享」）
+    /// 3. 角色只能是 `editor` / `viewer`
+    ///
+    /// 第 3 条**不做静默降级**：服务端对 admin/owner 直接 400，
+    /// 因为「静默降级会让共享者以为自己给了 admin」。
+    /// 所以这里也直接抛错，不替用户改成 editor 再发。
+    func shareCalendarToTeam(
+        calendarID: String,
+        teamID: String,
+        role: String
+    ) async throws {
+        guard role == "editor" || role == "viewer" else {
+            throw APIError.server(400, "团队能拿到的角色只有「可编辑」和「只读」")
+        }
+        let data = try JSONEncoder().encode(
+            ShareCalendarToTeamBody(teamID: teamID, role: role)
+        )
+        _ = try await APIClient.shared.postRaw(
+            "/api/calendars/\(calendarID)/teams", body: data
+        )
+        await refresh()
+    }
+
+    /// 取消某团队对这张日历的共享。
+    ///
+    /// 服务端会重挂同步流 —— 否则被取消的团队本地还能看到旧内容。
+    func unshareCalendarFromTeam(calendarID: String, teamID: String) async throws {
+        try await APIClient.shared.delete("/api/calendars/\(calendarID)/teams/\(teamID)")
+        await refresh()
+    }
+
     // MARK: - 课程表节次
 
     /// 课表的「节次表」—— 网格有哪几行、每行几点到几点。
-    ///
+
     /// 失败时退回 `CourseDefaults.periods` 而不是抛错：
     /// 拉不到节次表就把课表画成空白，比显示一个服务端默认布局更糟。
     /// 这个兜底和源码 `coursePeriods()` 里 `raw == ""` 的处理方式一致。

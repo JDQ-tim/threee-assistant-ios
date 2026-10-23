@@ -137,6 +137,20 @@ struct CalendarMembersView: View {
                 }
             }
 
+            // 团队共享：一个个加人太累，一个班三十人加不完。
+            // 共享给团队一次，新同学拿团队邀请码自己进来。
+            if canManage {
+                Section {
+                    NavigationLink {
+                        CalendarTeamSharesView(calendarID: calendarID)
+                    } label: {
+                        Label("共享给团队", systemImage: "person.3")
+                    }
+                } footer: {
+                    Text("共享给团队后，团队里所有人都能看到这张日历。新成员用团队邀请码加入就自动可见，不用再一个个加。")
+                }
+            }
+
             // 不是 owner 才给「退出」：owner 退出会把日历变成孤儿
             if !isOwner, calendar != nil {
                 Section {

@@ -57,6 +57,20 @@ struct CourseTableView: View {
         .background(Theme.background)
         .navigationTitle(calendar.name)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            // 节次表是全局配置，服务端 PUT 要求管理员；非管理员不显示入口，
+            // 免得点了才在服务端吃 403。
+            if store.user?.isAdmin ?? false {
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink {
+                        CoursePeriodsEditorView()
+                    } label: {
+                        Image(systemName: "clock.badge.checkmark")
+                    }
+                    .accessibilityLabel("编辑节次时间")
+                }
+            }
+        }
         .sheet(item: $detail) { item in
             EventDetailSheet(item: item, calendar: calendar)
                 .presentationDetents([.medium, .large])

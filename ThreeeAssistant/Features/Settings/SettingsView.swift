@@ -11,6 +11,7 @@ struct SettingsView: View {
     /// 待处理冲突数。0 时入口仍然显示 —— 藏起来会让人以为这个功能不存在，
     /// 真遇到冲突时根本找不到地方处理。
     @State private var pendingConflicts = 0
+    @State private var teamCount = 0
 
     var body: some View {
         NavigationStack {
@@ -35,6 +36,19 @@ struct SettingsView: View {
                 Section("数据") {
                     NavigationLink("我的日历（\(store.calendars.count)）") {
                         CalendarsView()
+                    }
+                    NavigationLink {
+                        TeamListView()
+                    } label: {
+                        HStack {
+                            Text("我的团队")
+                            Spacer(minLength: 0)
+                            if teamCount > 0 {
+                                Text("\(teamCount)")
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.textSecondary)
+                            }
+                        }
                     }
                     NavigationLink {
                         ConflictsView()
@@ -112,7 +126,10 @@ struct SettingsView: View {
             } message: {
                 Text("下次连接任意服务器时都会重新记录一次证书指纹。")
             }
-            .task { await loadConflictCount() }
+            .task {
+                await loadConflictCount()
+                await loadTeamCount()
+            }
         }
     }
 
@@ -123,5 +140,11 @@ struct SettingsView: View {
     private func loadConflictCount() async {
         let list = (try? await store.loadConflicts()) ?? []
         pendingConflicts = list.count
+    }
+
+    /// 我加入的团队数。同样失败静默保持 0。
+    private func loadTeamCount() async {
+        let list = (try? await store.loadTeams()) ?? []
+        teamCount = list.count
     }
 }

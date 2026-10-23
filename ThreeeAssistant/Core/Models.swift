@@ -707,6 +707,247 @@ struct EventResponse: Decodable {
 }
 
 
+// MARK: - 团队
+
+/// 一个团队。
+///
+/// ## 团队和「日历成员名单」是两件事
+///
+/// 原来分享日历是「把日历一个个分享给一个个具体的人」。一个班要同步一张课表，
+/// 得把三十个人挨个加一遍。团队把这件事变成「日历共享给团队一次」：
+/// 新同学拿团队邀请码自己进来，不需要任何人再动那张日历的成员名单。
+///
+/// 源码 `teams.go:22` 的五条安全约束里，有两条会直接影响这里的 UI：
+///
+/// ① **只看得到自己已加入的团队** —— `GET /api/teams` 的 WHERE 里有
+///    `team_members.user_id = 我`。所以这个列表永远不会出现「别人的团队」。
+/// ② **团队身份 ≠ 日历管理权** —— 团队共享给日历的角色上限是 `editor`，
+///    永远给不出 owner/admin。UI 上的角色选择器也只能给 editor/viewer。
+struct TeamDTO: Codable, Identifiable, Hashable {
+    let id: String
+    let name: String
+    let ownerID: String
+    let note: String?
+    let createdAt: Int64
+    /// 我在这支团队里的角色：`admin` / `member`
+    let myRole: String?
+    let memberCount: Int64?
+    let calendarCount: Int64?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, note
+        case ownerID = "owner_id"
+        case createdAt = "created_at"
+        case myRole = "my_role"
+        case memberCount = "member_count"
+        case calendarCount = "calendar_count"
+    }
+
+    /// 我是不是团队管理员（能邀人、能移除人、能共享日历给团队）。
+    /// 服务端 `isTeamAdmin` 里创建者恒定视为 admin。
+    var isAdmin: Bool { myRole == "admin" }
+
+    var roleLabel: String {
+        switch myRole {
+        case "admin": return "管理员"
+        case "member": return "成员"
+        default: return myRole ?? "成员"
+        }
+    }
+}
+
+/// 团队成员。
+///
+/// ⚠️ 注意这里**没有** `isOwner` 字段。想知道谁是创建者，
+/// 要拿 `TeamDTO.ownerID` 比 `user_id`。服务端不会在成员行上重复标它。
+struct TeamMemberDTO: Codable, Identifiable, Hashable {
+    let teamID: String
+    let userID: String
+    let name: String
+    let role: String
+    let joinedAt: Int64
+
+    var id: String { userID }
+
+    enum CodingKeys: String, CodingKey {
+        case name, role
+        case teamID = "team_id"
+        case userID = "user_id"
+        case joinedAt = "joined_at"
+    }
+
+    var roleLabel: String {
+        role == "admin" ? "管理员" : "成员"
+    }
+}
+
+/// 团队详情里「这个团队能看到哪些日历」的一行。
+///
+/// 只有名字和角色 —— 日历内容本身走同步流，不从这里下发。
+struct TeamCalendarShareDTO: Codable, Identifiable, Hashable {
+    let calendarID: String
+    let role: String
+    let name: String
+
+    var id: String { calendarID }
+
+    enum CodingKeys: String, CodingKey {
+        case role, name
+        case calendarID = "calendar_id"
+    }
+}
+
+/// 团队邀请码。
+///
+/// 服务端把「能不能用」拆成了三个布尔（`expired` / `revoked` / `exhausted`）
+/// 加一个统一的 `reason` 文案。这里保留原始三个布尔，因为 UI 上要显示
+/// 「已过期」「已撤销」「已用尽」三种不同的灰字。
+struct TeamInviteDTO: Codable, Identifiable, Hashable {
+    let id: String
+    let code: String
+    let teamID: String
+    let role: String
+    let createdBy: String
+    let expiresAt: Int64
+    /// 0 = 不限次数
+    let maxUses: Int64
+    let usedCount: Int64
+    let revokedAt: Int64
+    let createdAt: Int64
+    let expired: Bool?
+    let revoked: Bool?
+    /// 注意 JSON 键是 `exhausted`，Go 字段名叫 `Exhaust`
+    let exhausted: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case id, code, role, expired, revoked, exhausted
+        case teamID = "team_id"
+        case createdBy = "created_by"
+        case expiresAt = "expires_at"
+        case maxUses = "max_uses"
+        case usedCount = "used_count"
+        case revokedAt = "revoked_at"
+        case createdAt = "created_at"
+    }
+
+    /// 还能不能用来加入。三个标记任一为真就废了。
+    var usable: Bool {
+        !(expired ?? false) && !(revoked ?? false) && !(exhausted ?? false)
+    }
+
+    /// 灰字说明。顺序和服务端 `teamInviteUnusableReason` 一致（撤销 > 过期 > 用尽）。
+    var statusText: String {
+        if revoked ?? false { return "已撤销" }
+        if expired ?? false { return "已过期" }
+        if exhausted ?? false { return "已用尽" }
+        if maxUses == 0 { return "不限次数 · 已用 \(usedCount)" }
+        return "已用 \(usedCount)/\(maxUses)"
+    }
+
+    var roleLabel: String { role == "admin" ? "管理员" : "成员" }
+}
+
+struct TeamsResponse: Decodable {
+    let teams: [TeamDTO]
+}
+
+struct TeamEnvelopeDTO: Decodable {
+    let team: TeamDTO
+}
+
+/// `GET /api/teams/{id}` 的响应：团队 + 成员名单 + 已绑定的日历。
+struct TeamDetailResponse: Decodable {
+    let team: TeamDTO
+    let members: [TeamMemberDTO]
+    let calendars: [TeamCalendarShareDTO]
+}
+
+struct TeamInvitesResponse: Decodable {
+    let invites: [TeamInviteDTO]
+}
+
+struct TeamInviteEnvelopeDTO: Decodable {
+    let invite: TeamInviteDTO
+}
+
+/// `GET /api/calendars/{id}/teams` 的响应。
+struct CalendarTeamSharesResponse: Decodable {
+    let shares: [TeamCalendarShareDTO]
+}
+
+/// 匿名读团队邀请（`GET /api/team-invites/{code}`，**不需要登录**）。
+///
+/// 服务端刻意只回「能不能用 + 哪个团队 + 谁邀的 + 什么角色 + 为什么不可用」，
+/// 绝不回成员名单或日历内容。这里的字段和它一一对应。
+struct TeamInvitePeekDTO: Decodable {
+    let valid: Bool
+    let teamName: String
+    let inviterName: String
+    let role: String
+    /// `not_found` / `revoked` / `expired` / `exhausted`，能用时为空串
+    let reason: String
+
+    enum CodingKeys: String, CodingKey {
+        case valid, role, reason
+        case teamName = "team_name"
+        case inviterName = "inviter_name"
+    }
+
+    /// 把机器可读的 reason 翻成中文。服务端的 peek 故意不给中文原文
+    /// （避免把 i18n 塞进服务端），所以这层翻译在客户端。
+    var reasonText: String {
+        switch reason {
+        case "not_found": return "这张邀请码不存在"
+        case "revoked": return "这张邀请码已被撤销"
+        case "expired": return "这张邀请码已过期"
+        case "exhausted": return "这张邀请码的次数已用完"
+        default: return "这张邀请码现在不能用"
+        }
+    }
+}
+
+// MARK: - 团队的请求体
+
+struct CreateTeamBody: Encodable {
+    let name: String
+    let note: String
+}
+
+/// `POST /api/teams/{id}/invites`。
+///
+/// `ttl_hours` 不传服务端按 7 天算，`max_uses` 传 0 = 不限次数
+/// （团队邀请的默认值和日历邀请故意不同：日历默认 1 次，团队默认不限）。
+struct CreateTeamInviteBody: Encodable {
+    let role: String
+    let ttlHours: Int64
+    let maxUses: Int64
+
+    enum CodingKeys: String, CodingKey {
+        case role
+        case ttlHours = "ttl_hours"
+        case maxUses = "max_uses"
+    }
+}
+
+struct SetTeamRoleBody: Encodable {
+    let role: String
+}
+
+/// `POST /api/calendars/{id}/teams`。
+///
+/// ⚠️ 角色**只认 viewer / editor**。传更高的服务端回 400 而**不是**静默降级
+/// （源码注释：「不静默降级 —— 静默降级会让共享者以为自己给了 admin」）。
+/// 所以这里的 `role` 由 UI 的 Picker 限定在两个值里，不做任何转换。
+struct ShareCalendarToTeamBody: Encodable {
+    let teamID: String
+    let role: String
+
+    enum CodingKeys: String, CodingKey {
+        case role
+        case teamID = "team_id"
+    }
+}
+
 // MARK: - 课程表
 
 /// 一节课的「钟点」。
