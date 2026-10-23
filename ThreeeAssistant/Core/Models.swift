@@ -509,6 +509,68 @@ struct LoginBody: Encodable {
     let pass: String
 }
 
+/// `GET /api/bootstrap` —— 服务端部署状态。
+///
+/// ## 为什么客户端要问这一句
+///
+/// **全新部署上第一个账号是免邀请码的，而且自动成为管理员**
+/// （`handleRegister` 里 `isAdmin := n == 0`）。
+/// 客户端如果不管这个，第一次装 App 的人会看到一个「请输入邀请码」的框，
+/// 而他手上根本没有邀请码 —— 部署就卡死在这一步了。
+///
+/// 所以登录页要先问：这台服务器是不是还空着？
+/// - `needAdmin == true` → 显示「创建管理员」，不要邀请码
+/// - `needAdmin == false` → 显示「注册」并要求邀请码
+///
+/// ⚠️ 这个端点是**匿名**的，只回两个字段，没有任何用户数据。
+struct BootstrapResponse: Decodable {
+    /// 服务端还没有任何用户 —— 现在注册就是管理员
+    let needAdmin: Bool
+    /// 服务端时间（Unix 秒）。用来发现「设备时钟差得离谱」——
+    /// 时间不对会让日程时间全错，越早知道越好
+    let serverTime: Int64
+
+    enum CodingKeys: String, CodingKey {
+        case needAdmin = "need_admin"
+        case serverTime = "server_time"
+    }
+}
+
+/// `POST /api/auth/register` 的请求体。
+///
+/// ## 三个字段的分工（和服务端一一对应）
+///
+/// - `inviteCode`：**全站**注册凭证（部署者配的那个），只给一个账号
+/// - `calendarInvite`：一张日历邀请码（`fsi_`）。给它就**不要求**全站码，
+///   因为邀请本来就比全站码更窄（绑死一张日历 + 不超过 editor 的角色）。
+///   注册完自动成为那张日历的成员。
+/// - 两个都不给：只有「空库第一个账号」这一种情况合法。
+struct RegisterBody: Encodable {
+    let inviteCode: String
+    let name: String
+    let pass: String
+    let calendarInvite: String
+
+    enum CodingKeys: String, CodingKey {
+        case name, pass
+        case inviteCode = "invite_code"
+        case calendarInvite = "calendar_invite"
+    }
+}
+
+/// `POST /api/auth/register` 的响应。和登录响应几乎一样，多一个可选字段。
+struct RegisterResponse: Decodable {
+    let token: String
+    let user: APIUser
+    /// 凭日历邀请码注册时，进了哪张日历。空串表示没走邀请这条路。
+    let joinedCalendarID: String?
+
+    enum CodingKeys: String, CodingKey {
+        case token, user
+        case joinedCalendarID = "joined_calendar_id"
+    }
+}
+
 // MARK: - 修改日程
 
 /// `PUT /api/events/{id}` 的请求体。

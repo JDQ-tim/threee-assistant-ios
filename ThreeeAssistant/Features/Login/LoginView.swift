@@ -8,6 +8,7 @@ struct LoginView: View {
     @State private var name = ""
     @State private var pass = ""
     @State private var busy = false
+    @State private var showRegister = false
     @FocusState private var focused: Field?
 
     private enum Field { case server, name, pass }
@@ -88,6 +89,21 @@ struct LoginView: View {
                 .opacity(busy ? 0.6 : 1)
                 .padding(.top, 10)
 
+                // 注册入口。做成文字链而不是第二个同色按钮：
+                // 主操作只有一个，两个等重的按钮会让人犹豫点哪个
+                Button {
+                    store.errorMessage = nil
+                    showRegister = true
+                } label: {
+                    Text("还没有账号？注册")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Theme.accent)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 13)
+                }
+                .disabled(busy)
+                .padding(.top, 4)
+
                 VStack(alignment: .leading, spacing: 6) {
                     Text("连不上时先做这一步")
                         .font(.caption.weight(.semibold))
@@ -106,6 +122,9 @@ struct LoginView: View {
         }
         .background(Theme.background)
         .scrollDismissesKeyboard(.interactively)
+        .sheet(isPresented: $showRegister) {
+            RegisterView()
+        }
     }
 
     private func submit() {
@@ -120,7 +139,17 @@ struct LoginView: View {
 }
 
 /// 带标签的输入框容器。抽出来是为了三个框的间距/圆角只有一处定义
-private struct FieldBox<Content: View>: View {
+///
+/// ⚠️ 不加 `private`：注册页（`RegisterView`）也要用。
+///    两页的输入框必须长得一模一样 —— 用户在登录和注册之间切来切去时，
+///    如果框的圆角、内边距、标签色差一点，会被读成「这是两个不同的东西」。
+///
+/// ⚠️ `@MainActor` 在这里不是形式主义：`Content` 是调用方给的视图，
+///    而调用方（LoginView / RegisterView）都是 @MainActor 的 View。
+///    在 Xcode 15.4 + iOS 17.5 SDK 下，View 的 body 是非隔离上下文，
+///    这个容器如果不进主线程域，它包着的 `TextField` 绑定的 `@State` 会被报隔离冲突。
+@MainActor
+struct FieldBox<Content: View>: View {
 
     let label: String
     let content: Content

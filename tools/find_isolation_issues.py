@@ -24,8 +24,19 @@ Xcode 16 起 SDK 给 `View.body` 加了 `@MainActor`，同样写法编得过。
 ## 判据（近似但足够用）
 
 1. `@MainActor` 类里的存储属性、方法 → 隔离集合
-2. `View` 的 `body` / `some View` 计算属性 / 按钮闭包 → 非隔离上下文
-3. 在非隔离上下文里出现 `store.<隔离成员>` → 报错
+2. **没标 `@MainActor` 的 `View`** 的 `body` / `some View` 计算属性 / 按钮闭包
+   → 非隔离上下文；里面出现 `store.<隔离成员>` 就报错
+3. 标了 `@MainActor` 的 `View` → 整个类型都在主线程域，跳过
+
+## 为什么判据要「看 View 自己标没标」
+
+`View.body` 是非隔离上下文是**协议要求**，不是某个 View 的偶然现象。
+所以正确的做法不是让每个 View 都去跟协议掰，而是给每个 View 标 `@MainActor`
+—— 类型进主线程域后，它所有的成员（含 body）一起进，
+body 就变成了「主线程域里的 body」，满足协议，也不再隔离冲突。
+
+所以这个脚本现在的职责很明确：**守住「每个 View 都标了 @MainActor」这条线**。
+漏标一个，这里就报一串。
 
 ## 例外（不算错）
 
@@ -155,6 +166,35 @@ def collect_isolated(src_clean):
     return attrs, funcs
 
 
+def enclosing_is_main_actor(lines, idx):
+    """第 idx 行所在的类型声明有没有 `@MainActor`。
+
+    ## 为什么要往上找，而且一路找到文件顶
+
+    我们是从引用点往上追溯「这条引用被包在哪个类型里」。
+    最近的类型声明行是**内层**，但内层可能是 View 内部定义的小结构体
+    （比如 `private struct Report { ... }`），它自己没有 `@MainActor`，
+    而外层的 `SyncStatusView` 标了。
+
+    Swift 的隔离规则是分层的，但嵌套类型不会继承外层的 `@MainActor` ——
+    严谨说，内层没标就该单独标。可这些内层小结构体大多是纯数据，
+    根本碰不到 store；真正碰 store 的是外层 View 的 body。
+
+    所以这里做的是：**一路往上找，只要有任何一层标了 @MainActor 就放行**。
+    这样既不误报，也不会漏掉「整个文件一个 @MainActor 都没有」的情况。
+    """
+    for back in range(idx, -1, -1):
+        bl = lines[back]
+        if not re.search(r"^\s*(?:private\s+|internal\s+|public\s+)?(?:final\s+)?(?:struct|class|enum|extension)\s+\w+", bl):
+            continue
+        # 看这一行本身，以及之前 3 行内有没有 @MainActor
+        for k in range(back, max(-1, back - 4), -1):
+            if re.search(r"@MainActor\b", lines[k]):
+                return True
+        # 内层没标 → 继续往上找外层，而不是直接判负
+    return False
+
+
 def main():
     sources = read_sources()
     cleaned = {k: strip_strings_and_comments(v) for k, v in sources.items()}
@@ -167,6 +207,7 @@ def main():
             funcs |= f
 
     problems = []
+    unmarked = []
 
     # 只关心 UI 层：Features/ 和 Design/ 下的 View。
     # Core/ 里没有 store 引用，App/ 只有一个 @main。
@@ -177,11 +218,13 @@ def main():
         lines = c.split("\n")
         # 找到每个「非隔离」区域：body 计算属性、some View 属性、Button 闭包
         for idx, line in enumerate(lines):
-            stripped = line.strip()
-            # 跳过已经是 async 的上下文（Task / .task / await 所在行）
             for m in re.finditer(r"\bstore\.(\w+)", line):
                 name = m.group(1)
                 if name not in attrs and name not in funcs:
+                    continue
+
+                # 所在类型标了 @MainActor 吗？（往上找最近一个 struct/class 声明）
+                if enclosing_is_main_actor(lines, idx):
                     continue
 
                 # 判断是否在 async 安全区：往上找最近的 Task { 或 .task
@@ -199,19 +242,31 @@ def main():
 
                 problems.append("%s:%d store.%s" % (rel, idx + 1, name))
 
+        # 声明了 View 但整个类型没标 @MainActor 的，单独列出来
+        for idx, line in enumerate(lines):
+            if not re.search(r"^\s*(?:private\s+|internal\s+)?(?:struct|class)\s+\w+[^\{]*:\s*[^{]*\bView\b", line):
+                continue
+            if enclosing_is_main_actor(lines, idx):
+                continue
+            unmarked.append("%s:%d %s" % (rel, idx + 1, line.strip()))
+
     print("=" * 62)
     print("并发隔离检查（模拟 Xcode 15.4 / iOS 17.5 SDK）")
     print("=" * 62)
     print("隔离属性 %d 个：%s" % (len(attrs), ", ".join(sorted(attrs))[:200]))
     print("隔离方法 %d 个" % len(funcs))
     print("-" * 62)
+    if unmarked:
+        print("以下 View 没标 @MainActor（body 会变成非隔离上下文）：")
+        for p in unmarked:
+            print("  [漏标] " + p)
     if problems:
         for p in problems:
             print("[错误] " + p)
-    else:
+    if not problems and not unmarked:
         print("未发现非隔离上下文中读取隔离成员")
     print("=" * 62)
-    return 1 if problems else 0
+    return 1 if (problems or unmarked) else 0
 
 
 if __name__ == "__main__":

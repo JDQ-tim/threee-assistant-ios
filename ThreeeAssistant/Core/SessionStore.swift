@@ -206,6 +206,126 @@ final class SessionStore {
         return res.signedOut
     }
 
+    // MARK: - 注册
+
+    /// 问一下这台服务器是不是还空着（`GET /api/bootstrap`）。
+    ///
+    /// 全新部署上第一个账号**免邀请码、且自动是管理员**。
+    /// 不问这一句的话，第一次装 App 的人会被「请输入邀请码」卡死 ——
+    /// 而他手上根本没有邀请码。
+    ///
+    /// ## 为什么不把它返回给界面、而只存在这里
+    ///
+    /// 注册页需要「知道 `needAdmin`」来决定要不要显示邀请码框。
+    /// 但如果界面自己拿一份，用户改了服务器地址后**那份就过期了** ——
+    /// 界面会按 A 服务器的状态去填 B 服务器的表。
+    /// 存在 store 里 + 记下是**哪台服务器**的答案，界面读 `bootstrap`，
+    /// 改地址就自动清空、重新探测，状态只有一个来源。
+    ///
+    /// ⚠️ 这个请求会先 `configure` 一次 baseURL（不带 token），
+    ///    因为此时用户可能还没登录，`APIClient` 里还留着上一次的配置。
+    func checkBootstrap(server: String) async throws -> BootstrapResponse {
+        let trimmed = server.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            throw APIError.server(400, "请填服务器地址")
+        }
+        let url = try APIClient.normalize(trimmed)
+        APIClient.shared.configure(baseURL: url, token: nil)
+        let res: BootstrapResponse = try await APIClient.shared.get("/api/bootstrap")
+
+        // 记下「这是哪台服务器的答案」。界面靠 `bootstrapIsFresh` 判断能不能用它。
+        bootstrap = res
+        bootstrapServer = url.absoluteString
+        return res
+    }
+
+    /// 上一次 `checkBootstrap` 拿到的部署状态；还没问过就是 nil
+    private(set) var bootstrap: BootstrapResponse?
+
+    /// `bootstrap` 是向哪台服务器问的（规范化后的地址）
+    private(set) var bootstrapServer: String?
+
+    /// 现在输入框里那台服务器，和 `bootstrap` 的答案是不是同一台。
+    ///
+    /// 用户改了地址但还没重新探测时返回 false —— 界面这时候**不能**按
+    /// 旧答案决定「要不要显示邀请码框」，否则会拿 A 服务器的状态填 B 服务器的表。
+    var bootstrapIsFresh: Bool {
+        guard let asked = bootstrapServer else { return false }
+        let now = (try? APIClient.normalize(
+            serverText.trimmingCharacters(in: .whitespacesAndNewlines)
+        ))?.absoluteString
+        return now != nil && now == asked
+    }
+
+    /// 清掉探测结果。用户改服务器地址时调 —— 宁可多探一次，也别用错答案
+    func clearBootstrap() {
+        bootstrap = nil
+        bootstrapServer = nil
+    }
+
+    /// 注册新账号。
+    ///
+    /// ## 三条路（和服务端 `handleRegister` 一一对应）
+    ///
+    /// 1. **空库第一个账号** → 两个码都不传，服务端把它设成管理员
+    /// 2. **全站注册码** → `inviteCode` 传部署者给的码
+    /// 3. **日历邀请码 `fsi_`** → 传 `calendarInvite`，注册完自动成为那张日历的成员
+    ///
+    /// ## 这里为什么要把 fsi_ 自动挪到 calendarInvite
+    ///
+    /// 用户只会有一个「邀请码」的概念，不会分清「全站码」和「日历邀请码」。
+    /// 服务端已经做了兼容（`invite_code` 传 fsi_ 也按日历邀请处理），
+    /// 客户端也顺手摆正一下 —— 两处都兼容，任何一边先改都不会断。
+    ///
+    /// 注册成功后**直接进入登录态**（服务端一并返回 token），不需要再登一次。
+    func register(server: String,
+                  name: String,
+                  pass: String,
+                  inviteCode: String,
+                  calendarInvite: String = "") async throws -> RegisterResponse {
+        let trimmedServer = server.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !trimmedServer.isEmpty else { throw APIError.server(400, "请填服务器地址") }
+        guard !trimmedName.isEmpty else { throw APIError.server(400, "请填用户名") }
+        guard pass.count >= 4 else { throw APIError.server(400, "密码至少 4 位") }
+
+        let url = try APIClient.normalize(trimmedServer)
+
+        // 两个码摆正位置：用户把 fsi_ 填进「邀请码」也认
+        var site = inviteCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        var cal = calendarInvite.trimmingCharacters(in: .whitespacesAndNewlines)
+        if cal.isEmpty && site.hasPrefix("fsi_") {
+            cal = site
+            site = ""
+        }
+
+        APIClient.shared.configure(baseURL: url, token: nil)
+
+        let body = try JSONEncoder().encode(
+            RegisterBody(inviteCode: site, name: trimmedName, pass: pass, calendarInvite: cal)
+        )
+        let res: RegisterResponse = try await APIClient.shared.post(
+            "/api/auth/register", body: body
+        )
+
+        // 直接进入登录态
+        token = res.token
+        user = res.user
+        serverText = url.absoluteString
+
+        APIClient.shared.setToken(res.token)
+        Keychain.save(res.token, for: tokenKey)
+        UserDefaults.standard.set(serverText, forKey: serverKey)
+        if let data = try? JSONEncoder().encode(res.user) {
+            UserDefaults.standard.set(data, forKey: userKey)
+        }
+
+        weekStart = Date.now.startOfWeekMonday
+        await refresh()
+        return res
+    }
+
     /// 拉一次自己的用户组与能力清单（`GET /api/tier`）。
     ///
     /// ⚠️ 这是**展示用**的：真正的判档在服务端。
