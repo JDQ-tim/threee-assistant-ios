@@ -206,6 +206,46 @@ final class SessionStore {
         return res.signedOut
     }
 
+    /// 清空「我自己创建的」数据（`POST /api/account/wipe`）。
+    ///
+    /// ## 这里删的是什么、不删什么
+    ///
+    /// 删：**我创建的**日历（连带里面的日程）、以及我在别人日历里的成员身份。
+    /// 不删：别人的日历和别人的日程。
+    ///
+    /// ## 为什么确认方式是把账号名原样打一遍
+    ///
+    /// 这个操作**不可逆**，而且服务端是打墓碑（软删）——
+    /// 界面上不会立刻「啪一下全没了」，而是下次同步才消失。
+    /// 所以确认这道关必须足够重，重到用户不会手滑：
+    /// 弹窗里只有「取消」和「已输入正确名字才能点」的红色按钮。
+    ///
+    /// ⚠️ 服务端是**刻意不 trim** 的（多一个空格都算失败），
+    ///    这里也不 trim —— 两端规则必须一致，否则用户在客户端看着能过、
+    ///    到了服务端被拒，只会觉得"这破 App 又坏了"。
+    ///
+    /// 返回值是三类计数，用来给用户一句确切的话。
+    func wipeAccount(confirm: String) async throws -> WipeResultDTO {
+        guard let me = user?.name else {
+            throw APIError.server(401, "登录已失效，请重新登录")
+        }
+        guard confirm == me else {
+            throw APIError.server(400, "请在确认框里原样输入账号名「\(me)」")
+        }
+        struct Body: Encodable {
+            let confirm: String
+        }
+        let data = try JSONEncoder().encode(Body(confirm: confirm))
+        let res: WipeResultDTO = try await APIClient.shared.post("/api/account/wipe", body: data)
+        // 本地也清一遍：服务端已经打墓碑了，本地再留着就是「删了还在」。
+        // 不走 `refresh()`，因为这一步之后是空库，拉一次只是多一个请求
+        calendars = []
+        instances = []
+        repeatRuleByEventID = [:]
+        await refresh()
+        return res
+    }
+
     // MARK: - 注册
 
     /// 问一下这台服务器是不是还空着（`GET /api/bootstrap`）。

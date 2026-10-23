@@ -169,6 +169,17 @@ struct SettingsView: View {
                     Text("服务端生成天气预报用的坐标。默认由部署时的启动参数决定。")
                 }
 
+                Section {
+                    NavigationLink {
+                        WipeDataView()
+                    } label: {
+                        Text("清空我创建的数据")
+                            .foregroundStyle(Theme.red600)
+                    }
+                } footer: {
+                    Text("删掉我自己创建的日历、日程，以及我在别人日历里的成员身份。别人的数据不受影响，账号本身也不会被删。不可撤销。")
+                }
+
                 Section("关于") {
                     LabeledContent("版本", value: "0.1 (1)")
                     Text("原生 iOS 版。日程支持新建、修改、重复、提醒、强提醒、全天、待办、稍后提醒，以及周/月视图；日历支持新建、改名改色、删除；课程表日历可打开节次网格；还能处理多人同时修改产生的字段级冲突。")

@@ -571,6 +571,24 @@ struct RegisterResponse: Decodable {
     }
 }
 
+/// `POST /api/account/wipe` 的结果。
+///
+/// ## 为什么要回这三个数字
+///
+/// 「已清空」这种话说了等于没说 —— 用户会怀疑到底删没删。
+/// 「删掉了 2 张日历、37 条日程、3 个别人的日历里的身份」才是可核对的。
+/// 尤其 `memberships` 这一项：很多人不知道自己"加入过别人的日历"，
+/// 数字对不上时能立刻看出还漏了什么。
+struct WipeResultDTO: Decodable {
+    let ok: Bool
+    let calendars: Int
+    let events: Int
+    let memberships: Int
+    /// 服务端给的说明文字。直接展示，不自己另写一份 ——
+    /// 服务端知道这次具体删了什么，客户端只能靠猜
+    let note: String?
+}
+
 // MARK: - 修改日程
 
 /// `PUT /api/events/{id}` 的请求体。
