@@ -29,7 +29,9 @@ struct SettingsView: View {
                 }
 
                 Section("数据") {
-                    LabeledContent("日历", value: "\(store.calendars.count) 个")
+                    NavigationLink("我的日历（\(store.calendars.count)）") {
+                        CalendarsView()
+                    }
                     Button("重新同步") {
                         Task { await store.refresh() }
                     }
@@ -48,7 +50,7 @@ struct SettingsView: View {
 
                 Section("关于") {
                     LabeledContent("版本", value: "0.1 (1)")
-                    Text("这是原生 iOS 版的第一版，目前只有日程的查看、新建和删除。")
+                    Text("原生 iOS 版。日程支持新建、修改、重复、提醒、待办，以及周/月视图；日历支持新建、改名改色、删除。")
                         .font(.caption)
                         .foregroundStyle(Theme.textTertiary)
                 }

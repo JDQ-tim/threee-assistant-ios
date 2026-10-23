@@ -405,6 +405,51 @@ final class SessionStore {
         await refresh()
     }
 
+    // MARK: - 日历
+
+    private struct CalendarEnvelope: Decodable {
+        let calendar: CalendarDTO?
+    }
+
+    func createCalendar(name: String, color: String, kind: String) async throws {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw APIError.server(400, "日历名称不能为空") }
+
+        let body = CalendarBody(name: trimmed, color: color, kind: kind)
+        let data = try JSONEncoder().encode(body)
+        let _: CalendarEnvelope = try await APIClient.shared.post("/api/calendars", body: data)
+        await refresh()
+    }
+
+    /// 改名 / 改颜色。
+    ///
+    /// ⚠️ `kind` 只有 owner 能改（服务端 2026-10-20 收紧过）。
+    ///    所以这里只在传了 kind 且确实变化时才带它，
+    ///    不然 editor 改个颜色会被 403 拦下来 —— 而他明明只改了颜色。
+    func updateCalendar(
+        id: String,
+        name: String?,
+        color: String?,
+        kind: String?
+    ) async throws {
+        var body = CalendarBody()
+        body.name = name
+        body.color = color
+        body.kind = kind
+
+        let data = try JSONEncoder().encode(body)
+        let _: CalendarEnvelope = try await APIClient.shared.put(
+            "/api/calendars/\(id)", body: data
+        )
+        await refresh()
+    }
+
+    /// 删除日历（连带里面的日程）。服务端只允许 owner。
+    func deleteCalendar(id: String) async throws {
+        try await APIClient.shared.delete("/api/calendars/\(id)")
+        await refresh()
+    }
+
     // MARK: - 文案
 
     func message(for error: Error) -> String {

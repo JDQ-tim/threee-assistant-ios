@@ -35,16 +35,80 @@ struct CalendarDTO: Codable, Identifiable, Hashable {
     let kind: String?
     let role: String?
     let ownerID: String?
+    let ownerName: String?
+    let members: [MemberDTO]?
 
     enum CodingKeys: String, CodingKey {
-        case id, name, color, kind, role
+        case id, name, color, kind, role, members
         case ownerID = "owner_id"
+        case ownerName = "owner_name"
+    }
+
+    // 手写解码：members / owner_name 在列表接口里可能不下发（`omitempty`），
+    // 而它们是 let 常量，没有默认值 —— 不手写的话整条日历会解析失败，
+    // 表现是"登录成功但一个日历都没有"，非常难查。
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        color = try c.decodeIfPresent(String.self, forKey: .color)
+        kind = try c.decodeIfPresent(String.self, forKey: .kind)
+        role = try c.decodeIfPresent(String.self, forKey: .role)
+        ownerID = try c.decodeIfPresent(String.self, forKey: .ownerID)
+        ownerName = try c.decodeIfPresent(String.self, forKey: .ownerName)
+        members = try c.decodeIfPresent([MemberDTO].self, forKey: .members)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(name, forKey: .name)
+        try c.encodeIfPresent(color, forKey: .color)
+        try c.encodeIfPresent(kind, forKey: .kind)
+        try c.encodeIfPresent(role, forKey: .role)
+        try c.encodeIfPresent(ownerID, forKey: .ownerID)
+        try c.encodeIfPresent(ownerName, forKey: .ownerName)
+        try c.encodeIfPresent(members, forKey: .members)
     }
 
     /// 服务端给的是 `#RRGGBB`，解析不出来时给一个兜底色
     var displayColor: String {
         guard let c = color, c.hasPrefix("#"), c.count >= 7 else { return "#185FA5" }
         return c
+    }
+
+    /// 我能不能改这个日历的名字 / 删掉它。
+    /// 服务端：改名要 owner，改颜色 editor 就行，删除只有 owner。
+    /// 这里统一按最严的 owner 判断 —— 给一个改不了名字的日历开放编辑页，
+    /// 用户改完点保存才被拒，体验比一开始就不给入口差得多。
+    var canManage: Bool { role == "owner" }
+}
+
+/// 日历成员。共享日历上用来展示"都有谁"。
+struct MemberDTO: Codable, Hashable, Identifiable {
+    let userID: String
+    let name: String
+    let role: String
+
+    var id: String { userID }
+
+    enum CodingKeys: String, CodingKey {
+        case name, role
+        case userID = "user_id"
+    }
+}
+
+/// 新建 / 修改日历的请求体。
+/// 两边共用：PUT 时没传的字段保持原值（服务端是局部合并）。
+struct CalendarBody: Encodable {
+    var name: String?
+    var color: String?
+    /// ⚠️ 只允许 `private` / `shared` / `course`。
+    ///    服务端对别的值**不报错，直接改成 private** —— 传错了表现是"设了没生效"。
+    var kind: String?
+
+    enum CodingKeys: String, CodingKey {
+        case name, color, kind
     }
 }
 
