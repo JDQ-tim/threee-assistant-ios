@@ -18,11 +18,12 @@
 		496D98A0000000000000002C /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100DF3A7000000000000002B /* Components.swift */; };
 		EB5FCC7C000000000000002E /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64BD9E91000000000000002D /* Theme.swift */; };
 		1115C7880000000000000030 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F722AD9A000000000000002F /* LoginView.swift */; };
-		DCC0E71C0000000000000032 /* EventDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D882FD30000000000000031 /* EventDetailSheet.swift */; };
-		DFDC7BAC0000000000000034 /* NewEventSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99F7D5240000000000000033 /* NewEventSheet.swift */; };
-		1FDDB8B40000000000000036 /* ScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 348F838B0000000000000035 /* ScheduleView.swift */; };
-		5C5533820000000000000038 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCDE70B10000000000000037 /* SettingsView.swift */; };
-		14A5319A0000000000000039 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E684DE92000000000000001A /* Assets.xcassets */; };
+		706AD4E50000000000000032 /* EditEventSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F69D54800000000000000031 /* EditEventSheet.swift */; };
+		DCC0E71C0000000000000034 /* EventDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D882FD30000000000000033 /* EventDetailSheet.swift */; };
+		DFDC7BAC0000000000000036 /* NewEventSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99F7D5240000000000000035 /* NewEventSheet.swift */; };
+		1FDDB8B40000000000000038 /* ScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 348F838B0000000000000037 /* ScheduleView.swift */; };
+		5C553382000000000000003A /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCDE70B10000000000000039 /* SettingsView.swift */; };
+		14A5319A000000000000003B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E684DE92000000000000001A /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -38,10 +39,11 @@
 		100DF3A7000000000000002B /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
 		64BD9E91000000000000002D /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		F722AD9A000000000000002F /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
-		6D882FD30000000000000031 /* EventDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventDetailSheet.swift; sourceTree = "<group>"; };
-		99F7D5240000000000000033 /* NewEventSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewEventSheet.swift; sourceTree = "<group>"; };
-		348F838B0000000000000035 /* ScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleView.swift; sourceTree = "<group>"; };
-		BCDE70B10000000000000037 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		F69D54800000000000000031 /* EditEventSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditEventSheet.swift; sourceTree = "<group>"; };
+		6D882FD30000000000000033 /* EventDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventDetailSheet.swift; sourceTree = "<group>"; };
+		99F7D5240000000000000035 /* NewEventSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewEventSheet.swift; sourceTree = "<group>"; };
+		348F838B0000000000000037 /* ScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleView.swift; sourceTree = "<group>"; };
+		BCDE70B10000000000000039 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		0FE0F9C30000000000000019 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		E684DE92000000000000001A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = ThreeeAssistant/Resources/Assets.xcassets; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -120,9 +122,10 @@
 		4DF8A0D0000000000000000A /* Schedule */ = {
 			isa = PBXGroup;
 			children = (
-				6D882FD30000000000000031 /* EventDetailSheet.swift */,
-				99F7D5240000000000000033 /* NewEventSheet.swift */,
-				348F838B0000000000000035 /* ScheduleView.swift */,
+				F69D54800000000000000031 /* EditEventSheet.swift */,
+				6D882FD30000000000000033 /* EventDetailSheet.swift */,
+				99F7D5240000000000000035 /* NewEventSheet.swift */,
+				348F838B0000000000000037 /* ScheduleView.swift */,
 			);
 			path = Schedule;
 			sourceTree = "<group>";
@@ -130,7 +133,7 @@
 		940B1924000000000000000B /* Settings */ = {
 			isa = PBXGroup;
 			children = (
-				BCDE70B10000000000000037 /* SettingsView.swift */,
+				BCDE70B10000000000000039 /* SettingsView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -228,7 +231,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				14A5319A0000000000000039 /* Assets.xcassets in Resources */,
+				14A5319A000000000000003B /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -250,10 +253,11 @@
 				496D98A0000000000000002C /* Components.swift in Sources */,
 				EB5FCC7C000000000000002E /* Theme.swift in Sources */,
 				1115C7880000000000000030 /* LoginView.swift in Sources */,
-				DCC0E71C0000000000000032 /* EventDetailSheet.swift in Sources */,
-				DFDC7BAC0000000000000034 /* NewEventSheet.swift in Sources */,
-				1FDDB8B40000000000000036 /* ScheduleView.swift in Sources */,
-				5C5533820000000000000038 /* SettingsView.swift in Sources */,
+				706AD4E50000000000000032 /* EditEventSheet.swift in Sources */,
+				DCC0E71C0000000000000034 /* EventDetailSheet.swift in Sources */,
+				DFDC7BAC0000000000000036 /* NewEventSheet.swift in Sources */,
+				1FDDB8B40000000000000038 /* ScheduleView.swift in Sources */,
+				5C553382000000000000003A /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -12,6 +12,10 @@ struct EventDetailSheet: View {
     @State private var busy = false
     @State private var failure: String?
 
+    @State private var showEdit = false
+    /// 改完要关掉详情页，否则详情页还显示着改之前的内容 —— 看起来像没保存成功
+    @State private var edited = false
+
     private var timeText: String {
         if item.allDay { return "全天" }
         if !item.hasSpan { return item.start.hhmm }
@@ -52,6 +56,20 @@ struct EventDetailSheet: View {
                     infoRow("地点", item.location?.isEmpty == false ? item.location! : "—")
                     infoRow("备注", item.notes?.isEmpty == false ? item.notes! : "—")
 
+                    Button {
+                        showEdit = true
+                    } label: {
+                        Text("修改这条日程")
+                            .font(.system(size: 16, weight: .semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 13)
+                            .background(Theme.accent)
+                            .foregroundStyle(Theme.onAccent)
+                            .clipShape(RoundedRectangle(cornerRadius: Theme.corner, style: .continuous))
+                    }
+                    .disabled(busy)
+                    .padding(.top, 22)
+
                     Button(role: .destructive) {
                         confirmDelete = true
                     } label: {
@@ -67,9 +85,9 @@ struct EventDetailSheet: View {
                         .clipShape(RoundedRectangle(cornerRadius: Theme.corner, style: .continuous))
                     }
                     .disabled(busy)
-                    .padding(.top, 22)
+                    .padding(.top, 10)
 
-                    Text("只删除这一次。如果它是重复日程中的一次，其它几次不受影响。")
+                    Text("删除只影响这一次。如果它是重复日程中的一次，其它几次不受影响。")
                         .font(.caption2)
                         .foregroundStyle(Theme.textTertiary)
                         .padding(.top, 8)
@@ -83,6 +101,19 @@ struct EventDetailSheet: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("完成") { dismiss() }
                 }
+            }
+            // ⚠️ 用 fullScreenCover 而不是再套一层 sheet。
+            //    详情页本身就是 sheet，sheet 上再 present 一个 sheet，
+            //    iOS 会静默不显示（不报错，点了编辑没任何反应）。
+            .fullScreenCover(isPresented: $showEdit) {
+                EditEventSheet(instance: item) {
+                    edited = true
+                }
+            }
+            .onChange(of: showEdit) { _, isShowing in
+                // 编辑页关掉之后，详情页的内容已经过期了：直接退出，
+                // 让用户回到列表看到最新结果，比留一个旧快照更不容易误解
+                if !isShowing && edited { dismiss() }
             }
             .alert("确定删除？", isPresented: $confirmDelete) {
                 Button("删除", role: .destructive) { performDelete() }

@@ -99,6 +99,16 @@ final class APIClient: NSObject, @unchecked Sendable {
         try await sendRaw("POST", path, query: [], body: body)
     }
 
+    /// 「不关心响应体」的 PUT。
+    ///
+    /// 改单次日程的接口返回的是 `{"event": {...}}`，
+    /// 但调用方紧接着就会 `refresh()` 重拉实例列表，
+    /// 把这个响应强类型解码出来纯属多此一举 —— 多定义一个模型就多一处会过期的假设。
+    @discardableResult
+    func putRaw(_ path: String, body: Data?) async throws -> Data {
+        try await sendRaw("PUT", path, query: [], body: body)
+    }
+
     private func send<T: Decodable>(
         _ method: String,
         _ path: String,
