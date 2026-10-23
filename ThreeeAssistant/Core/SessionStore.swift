@@ -528,6 +528,116 @@ final class SessionStore {
         await refresh()
     }
 
+    // MARK: - 离线同步
+
+    /// 设备标识。服务端只用它记录「这次改动是哪台设备写的」，
+    /// 冲突记录里也会带上（`client_device`），方便用户判断要不要留。
+    ///
+    /// 存 UserDefaults 而不是每次随机：随机的话同一台设备改两次会被
+    /// 当成两台设备，冲突提示会变成「另一台设备也改了」这种误导性文案。
+    var deviceID: String {
+        let key = "threees.device"
+        if let v = UserDefaults.standard.string(forKey: key), !v.isEmpty {
+            return v
+        }
+        let v = "ios-" + UUID().uuidString.prefix(8)
+        UserDefaults.standard.set(v, forKey: key)
+        return v
+    }
+
+    /// 同步游标（`last_seq`）。0 表示还没同步过，要拉全量快照。
+    ///
+    /// 存 UserDefaults：它是跨启动要保留的东西。放内存里的话每次冷启动
+    /// 都要全量拉一遍，一个月的数据量不是小数目。
+    var syncCursor: Int64 {
+        get { Int64(UserDefaults.standard.double(forKey: syncCursorKey)) }
+        set { UserDefaults.standard.set(Double(newValue), forKey: syncCursorKey) }
+    }
+
+    private var syncCursorKey: String { "threees.sync.cursor.\(user?.id ?? "anon")" }
+
+    /// 一次 push 最多 500 条 —— 服务端硬上限，超了整批 400。
+    static let maxOpsPerPush = 500
+
+    /// 把一批操作推上去。
+    ///
+    /// ## 内部会分批
+    ///
+    /// `ops` 超过 500 条时自动切片，一批一批推。**不合并成一个大请求**：
+    /// 服务端会把整批 400 掉，一条都不执行 —— 那还不如不推。
+    ///
+    /// ## 返回值
+    ///
+    /// 把所有批次的 conflicts / errors 汇总。调用方要**把 errors 显示出来** ——
+    /// 里面可能是「标题含违规词」这种用户完全猜不到的原因（服务端特意
+    /// 和 forbidden 分开报）。静默吞掉的后果是「我改了但没生效」。
+    func push(_ ops: [SyncOp]) async throws -> SyncPushOutcome {
+        var outcome = SyncPushOutcome()
+        guard !ops.isEmpty else { return outcome }
+
+        var index = 0
+        while index < ops.count {
+            let end = min(index + Self.maxOpsPerPush, ops.count)
+            let chunk = Array(ops[index..<end])
+            let body = SyncPushRequest(deviceID: deviceID, ops: chunk)
+            let data = try JSONEncoder().encode(body)
+            let res: SyncPushResponse = try await APIClient.shared.post(
+                "/api/sync/push", body: data
+            )
+            outcome.applied.append(contentsOf: res.applied.map { "\($0.entity) \($0.id)" })
+            outcome.conflicts.append(contentsOf: res.conflicts)
+            outcome.errors.append(contentsOf: res.errors)
+            if let seq = res.seq { outcome.serverSeq = seq }
+            index = end
+        }
+
+        // 推上去之后本地视图就旧了，重拉一次
+        await refresh()
+        return outcome
+    }
+
+    /// 增量拉。返回「这次拉到的东西」以及「要不要整份重拉」。
+    ///
+    /// ## `maintenance` 必须处理
+    ///
+    /// 服务端做过整库修复时会回 `maintenance: true`。收到之后要**丢掉游标**，
+    /// 下一轮做全量 —— 否则本地残渣（比如一条指向已删日历的日程）永远洗不掉。
+    /// 源码注释里那段用户报障就是这个原因：服务端修好了，但没有客户端知道。
+    func pullChanges() async throws -> SyncPullOutcome {
+        let since = syncCursor
+        let res: SyncChangesResponse = try await APIClient.shared.get(
+            "/api/sync/changes",
+            query: [URLQueryItem(name: "since", value: String(since))]
+        )
+
+        var outcome = SyncPullOutcome()
+        outcome.maintenance = res.maintenance ?? false
+        outcome.hasMore = res.hasMore ?? false
+        outcome.calendars = res.calendars ?? []
+        outcome.events = res.events ?? []
+
+        if outcome.maintenance {
+            // 丢掉游标，下一轮变成全量。这里**不立刻重拉** ——
+            // 交给调用方决定什么时候做（它可能正在被用户手动下拉刷新）。
+            syncCursor = 0
+        } else if let last = res.lastSeq {
+            syncCursor = last
+        }
+
+        // 拉到的东西要落到视图上。这里统一走 refresh()，
+        // 而不是自己拼 calendars/instances —— 拉取范围的换算（周/月）
+        // 只在 refresh() 里有一份实现，别处复制一遍必然分叉。
+        if !outcome.calendars.isEmpty || !outcome.events.isEmpty {
+            await refresh()
+        }
+        return outcome
+    }
+
+    /// 忽略游标，强制全量。用户手动「重新同步」时用。
+    func resetSyncCursor() {
+        syncCursor = 0
+    }
+
     // MARK: - 日历邀请码
 
     /// 这张日历发出过的邀请码。
