@@ -236,6 +236,14 @@ struct CreateTeamSheet: View {
 ///
 /// 幂等：已经是成员时服务端返回 `already_member` 且成功、**不消耗次数**，
 /// 所以重复点是安全的。
+///
+/// ## 为什么要先看一眼
+///
+/// 加入团队的后果比加入日历更重：团队里共享给团队的日历，**加入的瞬间全部对我可见**，
+/// 而且管理员可能还能改我的角色。用户在不认识这个团队名的情况下点「加入」，
+/// 是一次没有知情同意的授权。
+///
+/// `GET /api/team-invites/{code}` 是匿名端点，只回团队名 / 邀请人 / 角色，够用了。
 @MainActor
 struct JoinTeamSheet: View {
 
@@ -249,6 +257,14 @@ struct JoinTeamSheet: View {
     @State private var busy = false
     @State private var failure: String?
 
+    /// 「看一眼」的结果，输入一变就作废
+    @State private var preview: TeamInvitePeekDTO?
+    @State private var previewing = false
+
+    private var trimmedCode: String {
+        code.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -257,11 +273,17 @@ struct JoinTeamSheet: View {
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .font(.system(.body, design: .monospaced))
+                        .onChange(of: code) { _, _ in
+                            preview = nil
+                            failure = nil
+                        }
                 } header: {
                     Text("团队邀请码")
                 } footer: {
                     Text("把管理员给你的邀请码粘进来。团队邀请码以 fst_ 开头（日历邀请码是 fsi_，两者不通用）。")
                 }
+
+                previewSection
 
                 if let msg = failure {
                     Section {
@@ -287,9 +309,61 @@ struct JoinTeamSheet: View {
                             Text("加入")
                         }
                     }
-                    .disabled(busy || code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(busy || !(preview?.valid ?? false))
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var previewSection: some View {
+        Section {
+            if previewing {
+                HStack {
+                    ProgressView().controlSize(.small)
+                    Text("正在确认这张邀请码…").foregroundStyle(.secondary)
+                }
+            } else if let p = preview {
+                if p.valid {
+                    LabeledContent("团队", value: p.teamName)
+                    LabeledContent("邀请人", value: p.inviterName)
+                    LabeledContent("你的角色", value: p.role == "admin" ? "管理员" : "成员")
+                } else {
+                    Text(p.reasonText)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                }
+            } else {
+                Button {
+                    peek()
+                } label: {
+                    Text("先确认一下")
+                }
+                .disabled(trimmedCode.isEmpty || previewing)
+            }
+        } header: {
+            Text("确认")
+        } footer: {
+            if preview?.valid == true {
+                Text(preview?.role == "admin"
+                     ? "管理员：能添加移除成员、改成员角色、生成邀请码。"
+                     : "成员：能看团队共享的日历，不能管成员。")
+            }
+        }
+    }
+
+    private func peek() {
+        guard !previewing else { return }
+        previewing = true
+        failure = nil
+        Task {
+            do {
+                preview = try await store.peekTeamInvite(code: trimmedCode)
+            } catch {
+                failure = store.message(for: error)
+                preview = nil
+            }
+            previewing = false
         }
     }
 

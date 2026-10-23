@@ -24,6 +24,79 @@ struct APIUser: Codable, Identifiable, Hashable {
     }
 }
 
+/// 我的用户组（`GET /api/tier`）。
+///
+/// ## 客户端为什么需要它
+///
+/// 服务端在 `entitlementsFor` 里定义了四档的差异（目前只有 `club` 一项不同）。
+/// 客户端拿到这份清单后可以**提前**把用不了的入口收起来 ——
+/// 比让用户点进去吃一个 403 体面得多。
+///
+/// ## 三条使用纪律
+///
+/// 1. **不要用 `now > tierExpiresAt` 自己判档位。** 判档只在服务端做
+///    （过期的用户服务端已经回落成 free）。这里只用来显示「你的 VIP 已过期」。
+/// 2. **`0` 表示不限，不是「0 个」。** `maxDevices` / `maxApiKeys` / `maxEvents`
+///    都是这个约定，别写成「最多 0 台设备」。
+/// 3. **`tier` 是品牌串（free/vip/svip/academic），`tierLabel` 才是给人看的。**
+///    界面上一律用 label，因为中文名只在服务端定义了一处。
+struct TierInfoDTO: Decodable, Hashable {
+    /// `free` / `vip` / `svip` / `academic`
+    let tier: String
+    /// 服务端给的中文名（普通用户 / VIP / SVIP / 学术VIP）
+    let tierLabel: String
+    /// 0 = 永久；> 0 = 到期 Unix 秒
+    let tierExpiresAt: Int64
+    /// 曾经是某档但已过期，现在实际按 free 算
+    let tierExpired: Bool
+    let entitlements: EntitlementsDTO
+
+    enum CodingKeys: String, CodingKey {
+        case tier
+        case tierLabel = "tier_label"
+        case tierExpiresAt = "tier_expires_at"
+        case tierExpired = "tier_expired"
+        case entitlements
+    }
+
+    /// 有效期的人话。永久档不显示日期 —— 「永久有效」比「2099-12-31 到期」清楚。
+    var expiryText: String {
+        if tierExpired { return "已过期" }
+        if tierExpiresAt <= 0 { return "永久有效" }
+        let date = Date(timeIntervalSince1970: TimeInterval(tierExpiresAt))
+        return date.yearMonthDay + " 到期"
+    }
+}
+
+/// 当前档位能做什么。
+///
+/// 数量类字段的 **0 == 不限**，千万不要当成「零额度」渲染。
+struct EntitlementsDTO: Decodable, Hashable {
+    let tier: String
+    let tierLabel: String
+    let maxDevices: Int
+    let maxApiKeys: Int
+    let maxEvents: Int
+    /// 实时协作
+    let liveCollab: Bool
+    /// 外部 API
+    let extApi: Bool
+    /// 插件市场
+    let market: Bool
+    /// 社团插件 —— 目前唯一有档位差异的一项（SVIP 及以上）
+    let club: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case tier, market, club
+        case tierLabel = "tier_label"
+        case maxDevices = "max_devices"
+        case maxApiKeys = "max_api_keys"
+        case maxEvents = "max_events"
+        case liveCollab = "live_collab"
+        case extApi = "ext_api"
+    }
+}
+
 /// 一部日历。
 ///
 /// ⚠️ 不能叫 `Calendar` —— 会和 Foundation.Calendar 撞名，

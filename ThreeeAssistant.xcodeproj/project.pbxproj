@@ -33,14 +33,16 @@
 		8F2E8E9A000000000000004A /* CalendarMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 464C2B7A0000000000000049 /* CalendarMembersView.swift */; };
 		DD005435000000000000004C /* CalendarTeamSharesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4A886B8000000000000004B /* CalendarTeamSharesView.swift */; };
 		3B2F09DB000000000000004E /* CalendarsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90C535C9000000000000004D /* CalendarsView.swift */; };
-		4A06B0CB0000000000000050 /* ConflictsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C7FA7D0000000000000004F /* ConflictsView.swift */; };
-		C2154D2C0000000000000052 /* CoursePeriodsEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40166B670000000000000051 /* CoursePeriodsEditorView.swift */; };
-		275E6E700000000000000054 /* InboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7087701D0000000000000053 /* InboxView.swift */; };
-		5C5533820000000000000056 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCDE70B10000000000000055 /* SettingsView.swift */; };
-		B6E864F40000000000000058 /* SyncStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89A020800000000000000057 /* SyncStatusView.swift */; };
-		3F09C70E000000000000005A /* TeamDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86D5C9970000000000000059 /* TeamDetailView.swift */; };
-		9CD7BA4E000000000000005C /* TeamListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87AE298B000000000000005B /* TeamListView.swift */; };
-		14A5319A000000000000005D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E684DE92000000000000001A /* Assets.xcassets */; };
+		EFE4AAEF0000000000000050 /* ChangePasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABB6B27F000000000000004F /* ChangePasswordView.swift */; };
+		4A06B0CB0000000000000052 /* ConflictsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C7FA7D00000000000000051 /* ConflictsView.swift */; };
+		C2154D2C0000000000000054 /* CoursePeriodsEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40166B670000000000000053 /* CoursePeriodsEditorView.swift */; };
+		275E6E700000000000000056 /* InboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7087701D0000000000000055 /* InboxView.swift */; };
+		5C5533820000000000000058 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCDE70B10000000000000057 /* SettingsView.swift */; };
+		B6E864F4000000000000005A /* SyncStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89A020800000000000000059 /* SyncStatusView.swift */; };
+		3F09C70E000000000000005C /* TeamDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86D5C997000000000000005B /* TeamDetailView.swift */; };
+		9CD7BA4E000000000000005E /* TeamListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87AE298B000000000000005D /* TeamListView.swift */; };
+		7BC736B60000000000000060 /* TierView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB7E78DE000000000000005F /* TierView.swift */; };
+		14A5319A0000000000000061 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E684DE92000000000000001A /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -71,13 +73,15 @@
 		464C2B7A0000000000000049 /* CalendarMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarMembersView.swift; sourceTree = "<group>"; };
 		E4A886B8000000000000004B /* CalendarTeamSharesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarTeamSharesView.swift; sourceTree = "<group>"; };
 		90C535C9000000000000004D /* CalendarsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarsView.swift; sourceTree = "<group>"; };
-		4C7FA7D0000000000000004F /* ConflictsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConflictsView.swift; sourceTree = "<group>"; };
-		40166B670000000000000051 /* CoursePeriodsEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoursePeriodsEditorView.swift; sourceTree = "<group>"; };
-		7087701D0000000000000053 /* InboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxView.swift; sourceTree = "<group>"; };
-		BCDE70B10000000000000055 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		89A020800000000000000057 /* SyncStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncStatusView.swift; sourceTree = "<group>"; };
-		86D5C9970000000000000059 /* TeamDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamDetailView.swift; sourceTree = "<group>"; };
-		87AE298B000000000000005B /* TeamListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamListView.swift; sourceTree = "<group>"; };
+		ABB6B27F000000000000004F /* ChangePasswordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangePasswordView.swift; sourceTree = "<group>"; };
+		4C7FA7D00000000000000051 /* ConflictsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConflictsView.swift; sourceTree = "<group>"; };
+		40166B670000000000000053 /* CoursePeriodsEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoursePeriodsEditorView.swift; sourceTree = "<group>"; };
+		7087701D0000000000000055 /* InboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxView.swift; sourceTree = "<group>"; };
+		BCDE70B10000000000000057 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		89A020800000000000000059 /* SyncStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncStatusView.swift; sourceTree = "<group>"; };
+		86D5C997000000000000005B /* TeamDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamDetailView.swift; sourceTree = "<group>"; };
+		87AE298B000000000000005D /* TeamListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamListView.swift; sourceTree = "<group>"; };
+		AB7E78DE000000000000005F /* TierView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TierView.swift; sourceTree = "<group>"; };
 		0FE0F9C30000000000000019 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		E684DE92000000000000001A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = ThreeeAssistant/Resources/Assets.xcassets; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -178,13 +182,15 @@
 				464C2B7A0000000000000049 /* CalendarMembersView.swift */,
 				E4A886B8000000000000004B /* CalendarTeamSharesView.swift */,
 				90C535C9000000000000004D /* CalendarsView.swift */,
-				4C7FA7D0000000000000004F /* ConflictsView.swift */,
-				40166B670000000000000051 /* CoursePeriodsEditorView.swift */,
-				7087701D0000000000000053 /* InboxView.swift */,
-				BCDE70B10000000000000055 /* SettingsView.swift */,
-				89A020800000000000000057 /* SyncStatusView.swift */,
-				86D5C9970000000000000059 /* TeamDetailView.swift */,
-				87AE298B000000000000005B /* TeamListView.swift */,
+				ABB6B27F000000000000004F /* ChangePasswordView.swift */,
+				4C7FA7D00000000000000051 /* ConflictsView.swift */,
+				40166B670000000000000053 /* CoursePeriodsEditorView.swift */,
+				7087701D0000000000000055 /* InboxView.swift */,
+				BCDE70B10000000000000057 /* SettingsView.swift */,
+				89A020800000000000000059 /* SyncStatusView.swift */,
+				86D5C997000000000000005B /* TeamDetailView.swift */,
+				87AE298B000000000000005D /* TeamListView.swift */,
+				AB7E78DE000000000000005F /* TierView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -282,7 +288,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				14A5319A000000000000005D /* Assets.xcassets in Resources */,
+				14A5319A0000000000000061 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -319,13 +325,15 @@
 				8F2E8E9A000000000000004A /* CalendarMembersView.swift in Sources */,
 				DD005435000000000000004C /* CalendarTeamSharesView.swift in Sources */,
 				3B2F09DB000000000000004E /* CalendarsView.swift in Sources */,
-				4A06B0CB0000000000000050 /* ConflictsView.swift in Sources */,
-				C2154D2C0000000000000052 /* CoursePeriodsEditorView.swift in Sources */,
-				275E6E700000000000000054 /* InboxView.swift in Sources */,
-				5C5533820000000000000056 /* SettingsView.swift in Sources */,
-				B6E864F40000000000000058 /* SyncStatusView.swift in Sources */,
-				3F09C70E000000000000005A /* TeamDetailView.swift in Sources */,
-				9CD7BA4E000000000000005C /* TeamListView.swift in Sources */,
+				EFE4AAEF0000000000000050 /* ChangePasswordView.swift in Sources */,
+				4A06B0CB0000000000000052 /* ConflictsView.swift in Sources */,
+				C2154D2C0000000000000054 /* CoursePeriodsEditorView.swift in Sources */,
+				275E6E700000000000000056 /* InboxView.swift in Sources */,
+				5C5533820000000000000058 /* SettingsView.swift in Sources */,
+				B6E864F4000000000000005A /* SyncStatusView.swift in Sources */,
+				3F09C70E000000000000005C /* TeamDetailView.swift in Sources */,
+				9CD7BA4E000000000000005E /* TeamListView.swift in Sources */,
+				7BC736B60000000000000060 /* TierView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

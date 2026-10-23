@@ -158,6 +158,63 @@ final class SessionStore {
         UserDefaults.standard.removeObject(forKey: userKey)
     }
 
+    /// 改自己的密码。
+    ///
+    /// ## 为什么必须报旧密码
+    ///
+    /// 只认 token 的话，谁临时拿到你解锁着的手机就能把密码改掉、
+    /// 顺手把你所有设备踢下线 —— 这是账号被夺走之后的第一步。
+    /// 服务端强制要求旧密码（`handleChangePassword` 里 `verifyPassword`），
+    /// 客户端把这一项如实收集上来，不做任何「记住旧密码帮忙填」的小聪明。
+    ///
+    /// ## 为什么本机会话不受影响
+    ///
+    /// 服务端改完密码会作废 `token <> 当前 token` 的**所有**会话，
+    /// 只留当前这台。这正是改密该有的效果（密码泄露后其余登录必须失效），
+    /// 而当前这台留着才不会让用户"改完密码自己先被踢出去"。
+    ///
+    /// 返回值是**被踢掉的会话数**，用来给用户一句确切的话
+    /// （"其它 2 台设备的登录已失效"），比干巴巴一句"成功"有用。
+    func changePassword(oldPass: String, newPass: String) async throws -> Int64 {
+        guard !oldPass.isEmpty else {
+            throw APIError.server(400, "请填写旧密码")
+        }
+        guard newPass.count >= 4 else {
+            throw APIError.server(400, "新密码至少 4 位")
+        }
+        guard newPass != oldPass else {
+            throw APIError.server(400, "新密码不能和旧密码一样")
+        }
+        struct Body: Encodable {
+            let oldPass: String
+            let newPass: String
+            enum CodingKeys: String, CodingKey {
+                case oldPass = "old_pass"
+                case newPass = "new_pass"
+            }
+        }
+        struct Result: Decodable {
+            let ok: Bool
+            let signedOut: Int64
+            enum CodingKeys: String, CodingKey {
+                case ok
+                case signedOut = "signed_out"
+            }
+        }
+        let data = try JSONEncoder().encode(Body(oldPass: oldPass, newPass: newPass))
+        let res: Result = try await APIClient.shared.post("/api/password", body: data)
+        return res.signedOut
+    }
+
+    /// 拉一次自己的用户组与能力清单（`GET /api/tier`）。
+    ///
+    /// ⚠️ 这是**展示用**的：真正的判档在服务端。
+    ///    客户端的义务只是「别把用不了的入口摆出来」，
+    ///    而不是「算一遍自己有没有权限」—— 万一算错就是越权。
+    func loadTier() async throws -> TierInfoDTO {
+        try await APIClient.shared.get("/api/tier")
+    }
+
     // MARK: - 数据同步
 
     func refresh() async {
@@ -703,6 +760,27 @@ final class SessionStore {
         try await APIClient.shared.delete("/api/invites/\(id)")
     }
 
+    /// 先用一张日历邀请码「看一眼」是哪张日历、谁邀的、给什么角色。
+    ///
+    /// 加入一张别人的日历 = 对方的内容出现在我的日程里。按「加入」之前
+    /// 用户有权知道这是哪张、谁给的、给的是只读还是可编辑。
+    ///
+    /// ⚠️ 这个端点**匿名可用**，只回元信息（`handlePeekInvite` 刻意不回
+    ///    日历内容和成员名单）。所以不需要登录态。
+    ///
+    /// ⚠️ 不可用的码服务端仍返回 **HTTP 200** + `valid: false`，
+    ///    必须看 `valid` 而不是靠 catch。
+    func peekCalendarInvite(code: String) async throws -> CalendarInvitePeekDTO {
+        let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            throw APIError.server(400, "请填写邀请码")
+        }
+        guard trimmed.hasPrefix("fsi_") else {
+            throw APIError.server(400, "日历邀请码以 fsi_ 开头。团队邀请码是 fst_，两者不通用。")
+        }
+        return try await APIClient.shared.get("/api/invites/\(trimmed)")
+    }
+
     /// 用日历邀请码加入。
     ///
     /// **幂等**：已经是成员就直接成功，不消耗次数。
@@ -976,6 +1054,28 @@ final class SessionStore {
             "/api/team-invites/\(trimmed)/accept", body: nil
         )
         return res.teamID ?? ""
+    }
+
+    /// 先用一张团队邀请码「看一眼」是哪个团队、谁邀的、给什么角色。
+    ///
+    /// 这一步的价值：加入团队是个**改变权限**的动作（之后团队里的日历对我来说可见）。
+    /// 用户在按「加入」之前必须知道自己在加入什么，而不是点完才发现是别人的团队。
+    ///
+    /// ⚠️ 这个端点是**匿名**的（服务端不用 auth 包），只回元信息。
+    ///    所以这里不需要登录也能调用 —— 但当前 UI 只在已登录时才展示入口，
+    ///    因为「加入了却什么都看不到」比「加不进去」更让人困惑。
+    ///
+    /// ⚠️ 注意服务端对不可用的码仍然返回 **HTTP 200**，只是 `valid: false`。
+    ///    所以这里不能靠 catch 判失败，必须看 `valid`。
+    func peekTeamInvite(code: String) async throws -> TeamInvitePeekDTO {
+        let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            throw APIError.server(400, "请填写邀请码")
+        }
+        guard trimmed.hasPrefix("fst_") else {
+            throw APIError.server(400, "团队邀请码以 fst_ 开头。日历邀请码是 fsi_，两者不通用。")
+        }
+        return try await APIClient.shared.get("/api/team-invites/\(trimmed)")
     }
 
     // MARK: - 日历 ↔ 团队

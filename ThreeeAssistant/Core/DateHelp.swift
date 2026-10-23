@@ -81,6 +81,16 @@ extension Date {
         return f.string(from: self)
     }
 
+    /// 「2027年3月1日」——带年份，用于到期日这类**跨年也要说清**的场合。
+    ///
+    /// 不用 `monthDay`：会员到期日可能是明年，「3月1日到期」看不出是今年还是明年。
+    var yearMonthDay: String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "zh_Hans_CN")
+        f.dateFormat = "yyyy年M月d日"
+        return f.string(from: self)
+    }
+
     /// 「周六」
     var weekdayName: String {
         let f = DateFormatter()

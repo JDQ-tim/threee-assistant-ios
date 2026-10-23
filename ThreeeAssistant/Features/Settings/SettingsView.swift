@@ -15,6 +15,8 @@ struct SettingsView: View {
     @State private var teamCount = 0
     /// 待处理收件箱条数（不含过期和系统通知）
     @State private var inboxCount = 0
+    /// 自己的用户组（拿不到就保持 nil，行尾显示「—」）
+    @State private var tier: TierInfoDTO?
 
     var body: some View {
         NavigationStack {
@@ -22,6 +24,25 @@ struct SettingsView: View {
                 Section("账号") {
                     LabeledContent("用户名", value: store.user?.name ?? "—")
                     LabeledContent("身份", value: (store.user?.isAdmin ?? false) ? "管理员" : "普通成员")
+                    NavigationLink {
+                        TierView()
+                    } label: {
+                        HStack {
+                            Text("用户组")
+                            Spacer(minLength: 0)
+                            // 拿不到就不显示档位名。这里不缓存上一次的值 ——
+                            // 缓存了会在管理员改档之后还显示旧档位
+                            if let t = tier {
+                                Text(t.tierLabel)
+                                    .font(.caption)
+                                    .foregroundStyle(t.tierExpired ? Theme.red600 : Theme.textSecondary)
+                            } else {
+                                Text("—")
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.textTertiary)
+                            }
+                        }
+                    }
                 }
 
                 Section("连接") {
@@ -128,6 +149,16 @@ struct SettingsView: View {
                     Text("安全")
                 }
 
+                Section {
+                    NavigationLink {
+                        ChangePasswordView()
+                    } label: {
+                        Text("修改密码")
+                    }
+                } footer: {
+                    Text("怀疑密码被别人知道时用。改完其它设备上的登录会自动失效，你手上这台不受影响。")
+                }
+
                 Section("关于") {
                     LabeledContent("版本", value: "0.1 (1)")
                     Text("原生 iOS 版。日程支持新建、修改、重复、提醒、强提醒、全天、待办、稍后提醒，以及周/月视图；日历支持新建、改名改色、删除；课程表日历可打开节次网格；还能处理多人同时修改产生的字段级冲突。")
@@ -166,6 +197,7 @@ struct SettingsView: View {
                 await loadConflictCount()
                 await loadTeamCount()
                 await loadInboxCount()
+                await loadTier()
             }
         }
     }
@@ -193,5 +225,11 @@ struct SettingsView: View {
     private func loadInboxCount() async {
         let list = (try? await store.loadInbox(status: "pending")) ?? []
         inboxCount = list.filter { $0.isPending && !$0.isStale && !$0.isSystem }.count
+    }
+
+    /// 用户组。失败静默保持 nil（行尾显示「—」）：
+    /// 为了一个附加信息在设置页弹错误横幅不值得，用户点进详情页会看到真实原因。
+    private func loadTier() async {
+        tier = try? await store.loadTier()
     }
 }

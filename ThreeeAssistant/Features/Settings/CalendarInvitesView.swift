@@ -297,6 +297,15 @@ struct CreateCalendarInviteSheet: View {
 ///
 /// 幂等：已经是成员就直接成功，不消耗次数。
 /// 角色取码里存的值 —— 这里没有任何「选权限」的控件，那是设计如此。
+///
+/// ## 为什么要有「先看一眼」这一步
+///
+/// 加入别人的日历 = 对方的内容出现在我的日程里、也可能能改我的安排。
+/// 让用户在**按下加入之前**就知道「这是张三的《项目排期》，给我可编辑」，
+/// 比加完了才发现要退出要友好得多。
+///
+/// 服务端的 `GET /api/invites/{code}` 是匿名端点，只回元信息，
+/// 正好够这个用途，不需要额外权限。
 @MainActor
 struct JoinCalendarSheet: View {
 
@@ -307,6 +316,15 @@ struct JoinCalendarSheet: View {
     @State private var busy = false
     @State private var failure: String?
 
+    /// 「看一眼」的结果。nil 表示还没看 / 输入变了要重看。
+    @State private var preview: CalendarInvitePeekDTO?
+    @State private var previewing = false
+
+    /// 去掉首尾空白的码，所有判断都用它
+    private var trimmedCode: String {
+        code.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -315,11 +333,19 @@ struct JoinCalendarSheet: View {
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .font(.system(.body, design: .monospaced))
+                        // 码一改，之前看一眼的结论就作废了 ——
+                        // 否则用户改了三个字符，下面还挂着上一张码的日历名
+                        .onChange(of: code) { _, _ in
+                            preview = nil
+                            failure = nil
+                        }
                 } header: {
                     Text("日历邀请码")
                 } footer: {
                     Text("以 fsi_ 开头。团队邀请码是 fst_，那是加团队的，不能填在这里。")
                 }
+
+                previewSection
 
                 if let msg = failure {
                     Section {
@@ -345,9 +371,64 @@ struct JoinCalendarSheet: View {
                             Text("加入")
                         }
                     }
-                    .disabled(busy || code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    // 先看一眼、确认可用，才让「加入」可点。
+                    // 不是苛刻：没看过就加入等于让用户盲签。
+                    .disabled(busy || !(preview?.valid ?? false))
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var previewSection: some View {
+        Section {
+            if previewing {
+                HStack {
+                    ProgressView().controlSize(.small)
+                    Text("正在确认这张邀请码…").foregroundStyle(.secondary)
+                }
+            } else if let p = preview {
+                if p.valid {
+                    LabeledContent("日历", value: p.calendarName)
+                    LabeledContent("邀请人", value: p.inviterName)
+                    LabeledContent("给你的权限", value: p.role == "editor" ? "可编辑" : "只读")
+                } else {
+                    Text(p.reasonText)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                }
+            } else {
+                Button {
+                    peek()
+                } label: {
+                    Text("先确认一下")
+                }
+                .disabled(trimmedCode.isEmpty || previewing)
+            }
+        } header: {
+            Text("确认")
+        } footer: {
+            if preview?.valid == true {
+                Text(preview?.role == "editor"
+                     ? "可编辑：你能在这个日历里新建、修改、删除日程。"
+                     : "只读：你只能看，不能改。")
+            }
+        }
+    }
+
+    /// 只读一张码的元信息，不消耗次数、不改变任何状态。
+    private func peek() {
+        guard !previewing else { return }
+        previewing = true
+        failure = nil
+        Task {
+            do {
+                preview = try await store.peekCalendarInvite(code: trimmedCode)
+            } catch {
+                failure = store.message(for: error)
+                preview = nil
+            }
+            previewing = false
         }
     }
 
