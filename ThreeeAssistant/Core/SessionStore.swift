@@ -458,6 +458,61 @@ final class SessionStore {
         await refresh()
     }
 
+    // MARK: - 课程表节次
+
+    /// 课表的「节次表」—— 网格有哪几行、每行几点到几点。
+    ///
+    /// 失败时退回 `CourseDefaults.periods` 而不是抛错：
+    /// 拉不到节次表就把课表画成空白，比显示一个服务端默认布局更糟。
+    /// 这个兜底和源码 `coursePeriods()` 里 `raw == ""` 的处理方式一致。
+    func loadCoursePeriods() async -> [CoursePeriod] {
+        do {
+            let res: CoursePeriodsResponse = try await APIClient.shared.get("/api/course/periods")
+            return res.periods.isEmpty ? CourseDefaults.periods : res.periods.sorted { $0.index < $1.index }
+        } catch {
+            return CourseDefaults.periods
+        }
+    }
+
+    /// 保存节次表。**只有管理员能调** —— 服务端 handler 第一行就是 requireAdmin。
+    ///
+    /// 客户端这边也做了同样的校验前置，本地把不合法的数据挡住，
+    /// 免得把用户辛苦排好的表发出去吃一个 400 再回来改。
+    func saveCoursePeriods(_ periods: [CoursePeriod]) async throws {
+        guard !periods.isEmpty, periods.count <= 20 else {
+            throw APIError.server(400, "节次数需要在 1~20 之间")
+        }
+        // 序号不能重复 —— 服务端用它当网格行标识
+        var seen = Set<Int>()
+        for p in periods {
+            guard !seen.contains(p.index) else {
+                throw APIError.server(400, "第 \(p.index) 节重复了")
+            }
+            seen.insert(p.index)
+            // 必须是严格的 HH:MM 且 start < end。
+            // 服务端是按**字符串**比较的，所以「9:00」这种不补零的写法会得到错误的大小关系，
+            // 这里也按字符串比，保持和服务端一致的判断。
+            guard Self.isClock(p.start), Self.isClock(p.end) else {
+                throw APIError.server(400, "第 \(p.index) 节的时间要写成 HH:MM")
+            }
+            guard p.start < p.end else {
+                throw APIError.server(400, "第 \(p.index) 节的结束时间要晚于开始时间")
+            }
+        }
+
+        let body = CoursePeriodsBody(periods: periods.sorted { $0.index < $1.index })
+        let data = try JSONEncoder().encode(body)
+        _ = try await APIClient.shared.putRaw("/api/course/periods", body: data)
+    }
+
+    /// `HH:MM`，两位小时 + 两位分钟，且取值合法。
+    private static func isClock(_ s: String) -> Bool {
+        let parts = s.split(separator: ":", omittingEmptySubsequences: false)
+        guard parts.count == 2, parts[0].count == 2, parts[1].count == 2,
+              let h = Int(parts[0]), let m = Int(parts[1]) else { return false }
+        return h >= 0 && h <= 23 && m >= 0 && m <= 59
+    }
+
     // MARK: - 冲突
 
     /// 拉冲突列表。

@@ -31,26 +31,47 @@ struct CalendarsView: View {
 
                 Section {
                     ForEach(store.calendars) { cal in
-                        Button {
-                            editing = cal
-                        } label: {
-                            row(cal)
-                        }
-                        .buttonStyle(.plain)
-                        .swipeActions(edge: .trailing) {
-                            // 只有 owner 才有删除权。给所有人显示一个必然失败的按钮
-                            // 比不显示更糟 —— 用户会以为是网络问题。
-                            if cal.canManage {
-                                Button(role: .destructive) {
-                                    pendingDelete = cal
-                                } label: {
-                                    Label("删除", systemImage: "trash")
+                        // 课程表日历单独给一个「打开课表」入口 ——
+                        // 它和普通日历的读法完全不同（节次 × 星期网格），
+                        // 塞进日程页的周/月 Picker 里会把那三个选项变成四选一，
+                        // 而且课表自己也要翻周，两套翻页逻辑会打架。
+                        if cal.kind == "course" {
+                            NavigationLink {
+                                CourseTableView(calendar: cal)
+                            } label: {
+                                row(cal)
+                            }
+                            .swipeActions(edge: .trailing) {
+                                if cal.canManage {
+                                    Button(role: .destructive) {
+                                        pendingDelete = cal
+                                    } label: {
+                                        Label("删除", systemImage: "trash")
+                                    }
+                                }
+                            }
+                        } else {
+                            Button {
+                                editing = cal
+                            } label: {
+                                row(cal)
+                            }
+                            .buttonStyle(.plain)
+                            .swipeActions(edge: .trailing) {
+                                // 只有 owner 才有删除权。给所有人显示一个必然失败的按钮
+                                // 比不显示更糟 —— 用户会以为是网络问题。
+                                if cal.canManage {
+                                    Button(role: .destructive) {
+                                        pendingDelete = cal
+                                    } label: {
+                                        Label("删除", systemImage: "trash")
+                                    }
                                 }
                             }
                         }
                     }
                 } footer: {
-                    Text("左滑可删除自己创建的日历。别人分享给你的日历不能删，只能退出。")
+                    Text("左滑可删除自己创建的日历。别人分享给你的日历不能删，只能退出。\n点「课程表」日历可直接打开课表网格。")
                 }
 
                 Section {

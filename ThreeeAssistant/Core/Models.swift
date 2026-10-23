@@ -619,6 +619,90 @@ struct EventResponse: Decodable {
 }
 
 
+// MARK: - 课程表
+
+/// 一节课的「钟点」。
+///
+/// ## 课表不是一种新实体
+///
+/// 源码 `course.go:11` 开头就写明了：
+/// 「A timetable is not a new entity: it is an ordinary calendar whose kind is
+///   "course", rendered as a periods x weekdays grid instead of an agenda.」
+///
+/// 所以课表就是 `kind == "course"` 的普通日历，日程数据完全复用
+/// `ScheduleInstance`。**唯一新增的状态是这张节次表** ——
+/// 它决定网格有哪几行、每行对应几点。
+struct CoursePeriod: Codable, Identifiable, Hashable {
+    /// 从 1 开始。服务端按它排序，也是网格的行号。
+    let index: Int
+    /// 显示名，比如「第1节」。服务端在 label 为空时会自动补成这个格式。
+    let label: String
+    /// `HH:MM`，**不是** epoch 秒。服务端用 `time.Parse("15:04", ...)` 校验，
+    /// 格式不对直接 400，而且要求 `start < end`（按字符串比较，所以必须补零）。
+    let start: String
+    let end: String
+
+    var id: Int { index }
+
+    enum CodingKeys: String, CodingKey {
+        case index, label, start, end
+    }
+
+    init(index: Int, label: String, start: String, end: String) {
+        self.index = index
+        self.label = label
+        self.start = start
+        self.end = end
+    }
+
+    // label 可能缺失（服务端在返回老数据时不会补），给个兜底
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        index = try c.decode(Int.self, forKey: .index)
+        start = try c.decodeIfPresent(String.self, forKey: .start) ?? "00:00"
+        end = try c.decodeIfPresent(String.self, forKey: .end) ?? "00:00"
+        label = try c.decodeIfPresent(String.self, forKey: .label)
+            ?? "第\(index)节"
+    }
+}
+
+struct CoursePeriodsResponse: Decodable {
+    let periods: [CoursePeriod]
+}
+
+/// `PUT /api/course/periods` 的请求体。
+///
+/// ## ⚠️ 这是全局配置，不是个人设置
+///
+/// 节次表存在服务端 `app_settings` 里，**所有客户端共享**。
+/// 而且 2026-10-16 起这条接口要求 **admin**（`routes.go:442` 只包了 `s.auth`，
+/// 但 handler 内部第一行就是 `s.requireAdmin`）。
+/// 所以普通用户点保存会拿到 403 —— UI 上必须对非管理员禁掉编辑入口，
+/// 而不是让他改完才被拒。
+struct CoursePeriodsBody: Encodable {
+    let periods: [CoursePeriod]
+}
+
+/// 服务端默认的节次表（10 节，上午四节、下午四节、晚上两节）。
+///
+/// 客户端**保留一份副本是有意义的**：拉取失败时用它兜底渲染网格，
+/// 总比让用户看到一个空白课表好。但要和服务端 `defaultCoursePeriods()` 保持一致 ——
+/// 这边改了那边没改，首次登录的两个客户端会显示出不同的行布局。
+enum CourseDefaults {
+    static let periods: [CoursePeriod] = [
+        CoursePeriod(index: 1, label: "第1节", start: "08:00", end: "08:45"),
+        CoursePeriod(index: 2, label: "第2节", start: "08:55", end: "09:40"),
+        CoursePeriod(index: 3, label: "第3节", start: "10:00", end: "10:45"),
+        CoursePeriod(index: 4, label: "第4节", start: "10:55", end: "11:40"),
+        CoursePeriod(index: 5, label: "第5节", start: "14:30", end: "15:15"),
+        CoursePeriod(index: 6, label: "第6节", start: "15:25", end: "16:10"),
+        CoursePeriod(index: 7, label: "第7节", start: "16:30", end: "17:15"),
+        CoursePeriod(index: 8, label: "第8节", start: "17:25", end: "18:10"),
+        CoursePeriod(index: 9, label: "第9节", start: "19:30", end: "20:15"),
+        CoursePeriod(index: 10, label: "第10节", start: "20:25", end: "21:10")
+    ]
+}
+
 // MARK: - 界面用的分组
 
 /// 按天分组后的一天。视图直接吃这个，不再自己算排序。
