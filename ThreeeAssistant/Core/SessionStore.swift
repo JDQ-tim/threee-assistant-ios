@@ -23,6 +23,14 @@ final class SessionStore {
     private(set) var calendars: [CalendarDTO] = []
     private(set) var instances: [ScheduleInstance] = []
 
+    /// `eventID → rrule`。实例列表里只有展开结果，不带重复规则，
+    /// 而列表上要显示「每周」这类标记。
+    ///
+    /// ⚠️ 不为每条日程单独发 `GET /api/events/{id}`：一周 20 条就是 20 个请求。
+    ///    这里用**本地记录**的方式填 —— 见 `rememberRules(for:)`。
+    ///    拿不到就是 nil，列表上不显示重复标记，不影响任何功能。
+    private(set) var repeatRuleByEventID: [String: String] = [:]
+
     var isLoading = false
     var errorMessage: String?
 
@@ -162,6 +170,11 @@ final class SessionStore {
 
             calendars = cals.calendars
             instances = insts.instances
+
+            // 顺手把「这次新建/编辑时知道的规则」回填进去。
+            // 只对当前窗口里出现过的 eventID 保留，避免字典无限增长
+            let alive = Set(insts.instances.map { $0.eventID })
+            repeatRuleByEventID = repeatRuleByEventID.filter { alive.contains($0.key) }
         } catch {
             if case APIError.unauthorized = error {
                 handleExpiredToken()
@@ -204,18 +217,52 @@ final class SessionStore {
         calendarID: String,
         title: String,
         start: Date,
-        durationMinutes: Int
+        durationMinutes: Int,
+        rrule: String? = nil,
+        reminders: [ReminderDTO] = [],
+        isTask: Bool = false
     ) async throws {
         let body = NewEventBody(
             calendarID: calendarID,
             title: title,
+            notes: "",
+            location: "",
             startUTC: Int64(start.timeIntervalSince1970.rounded()),
             durationSec: Int64(max(0, durationMinutes) * 60),
-            tzid: TimeZone.current.identifier
+            tzid: TimeZone.current.identifier,
+            rrule: rrule ?? "",
+            isTask: isTask,
+            reminders: reminders
         )
         let data = try JSONEncoder().encode(body)
-        let _: CreatedEvent = try await APIClient.shared.post("/api/events", body: data)
+        let created: CreatedEvent = try await APIClient.shared.post("/api/events", body: data)
+
+        // 新建时规则是我们自己算的，直接记下来，列表立刻能显示重复标记，
+        // 不需要再多发一次详情请求
+        if let id = created.id, !(rrule ?? "").isEmpty {
+            repeatRuleByEventID[id] = rrule
+        }
+
         await refresh()
+    }
+
+    /// 勾上 / 取消一个待办。
+    ///
+    /// 不走 `PUT /api/events/{id}` 而是走「只改这一次」：
+    /// 重复待办（比如"每天背 30 个单词"）勾掉今天不应该把整个系列都标成完成。
+    /// 服务端的 `overridePatch` 有 `done_at` 字段，正好干这个。
+    func setDone(_ instance: ScheduleInstance, done: Bool) async throws {
+        var p = UpdateEventBody()
+        // ⚠️ 取消完成发的是**当前时间戳以外的一个"有值"的 0**，不是 nil。
+        //    nil 表示"这个字段不改"，那样点了取消毫无反应。
+        //    服务端 `DoneAt *int64` 收到 0 会存成 0，客户端按 0 视为未完成。
+        p.doneAt = done ? Int64(Date().timeIntervalSince1970) : 0
+
+        try await updateOccurrence(
+            eventID: instance.eventID,
+            occurrenceKey: instance.occurrenceKey,
+            patch: p
+        )
     }
 
     func deleteEvent(eventID: String) async throws {
@@ -231,6 +278,8 @@ final class SessionStore {
     /// 拿它去编辑会把重复日程的一次单独改掉，语义完全不同。
     func loadEvent(id: String) async throws -> APIEvent {
         let res: EventResponse = try await APIClient.shared.get("/api/events/\(id)")
+        // 打开过详情就等于知道了它的规则，顺手记下来给列表用
+        repeatRuleByEventID[id] = res.event.rrule
         return res.event
     }
 
@@ -248,6 +297,10 @@ final class SessionStore {
         let res: UpdateEventResponse = try await APIClient.shared.put(
             "/api/events/\(id)", body: data
         )
+        // 改完规则可能变了（比如取消了重复），记住最新值
+        if let r = patch.rrule {
+            repeatRuleByEventID[id] = r
+        }
         await refresh()
         return res.conflicts ?? []
     }
@@ -271,10 +324,19 @@ final class SessionStore {
         occurrenceKey: Int64,
         patch: UpdateEventBody
     ) async throws {
-        // 日历字段在 override 里无效，硬塞进去会被服务端静默丢弃，
-        // 让用户以为"换了日历但没生效"。这里直接撇掉。
+        // 只保留 overridePatch 认识的键。
+        //
+        // ⚠️ 服务端对不认识的键是**静默忽略**，不会报错。所以如果这里不拦住，
+        //    用户在「只改这一次」里改了重复规则或提醒，请求会成功返回，
+        //    但改动根本没落库 —— 下次打开发现白改了，而且完全无从排查。
+        //    overridePatch 只认：title / notes / location / all_day /
+        //    dtstart_utc / duration_sec / done_at。
         var p = patch
         p.calendarID = nil
+        p.tzid = nil
+        p.rrule = nil
+        p.reminders = nil
+        p.isTask = nil
 
         let body = OccurrenceBody(occurrenceKey: occurrenceKey, patch: p)
         let data = try JSONEncoder().encode(body)

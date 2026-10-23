@@ -65,6 +65,9 @@ struct ScheduleInstance: Codable, Identifiable, Hashable {
     let isTask: Bool
     let isOverride: Bool
 
+    /// 待办的完成时间。nil = 未完成。非待办恒为 nil。
+    let doneAt: Int64?
+
     /// 这一次的"原始时间"（epoch 秒）。改「只改这一次」时要用它当主键。
     ///
     /// ⚠️ 对这个字段缺失有兜底：老服务端可能不返回，这时退回 `startUTC`
@@ -81,6 +84,7 @@ struct ScheduleInstance: Codable, Identifiable, Hashable {
         case isTask = "is_task"
         case isOverride = "is_override"
         case occurrenceKey = "occurrence_key"
+        case doneAt = "done_at"
     }
 
     // 服务端会返回 occurrence_key，但为了兼容"万一没返回"的情况，
@@ -99,6 +103,7 @@ struct ScheduleInstance: Codable, Identifiable, Hashable {
         isTask = try c.decodeIfPresent(Bool.self, forKey: .isTask) ?? false
         isOverride = try c.decodeIfPresent(Bool.self, forKey: .isOverride) ?? false
         occurrenceKey = try c.decodeIfPresent(Int64.self, forKey: .occurrenceKey) ?? startUTC
+        doneAt = try c.decodeIfPresent(Int64.self, forKey: .doneAt)
     }
 
     var start: Date { Date(timeIntervalSince1970: TimeInterval(startUTC)) }
@@ -107,6 +112,27 @@ struct ScheduleInstance: Codable, Identifiable, Hashable {
     /// 任务型日程没有时长（`end_utc == start_utc`），
     /// 直接拼成「09:00 – 09:00」会让人以为时间填错了
     var hasSpan: Bool { endUTC > startUTC }
+
+    /// 已完成的待办。列表里要画勾号并加删除线。
+    var isDone: Bool { doneAt != nil }
+
+    /// 手写 init(from:) 后需要补 encode(to:) 才是完整 Codable。
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(eventID, forKey: .eventID)
+        try c.encode(calendarID, forKey: .calendarID)
+        try c.encode(startUTC, forKey: .startUTC)
+        try c.encode(endUTC, forKey: .endUTC)
+        try c.encode(allDay, forKey: .allDay)
+        try c.encodeIfPresent(title, forKey: .title)
+        try c.encodeIfPresent(notes, forKey: .notes)
+        try c.encodeIfPresent(location, forKey: .location)
+        try c.encode(isTask, forKey: .isTask)
+        try c.encode(isOverride, forKey: .isOverride)
+        try c.encode(occurrenceKey, forKey: .occurrenceKey)
+        try c.encodeIfPresent(doneAt, forKey: .doneAt)
+    }
 }
 
 // MARK: - 响应包络
@@ -132,18 +158,49 @@ struct HealthResponse: Codable {
 
 /// 新建日程。只带服务端认识的字段 —— `eventReq` 里其它字段都是指针类型，
 /// 传了就等于「明确要设成这个值」，不传表示「不管」。
+/// 一条提醒。
+///
+/// ⚠️ 字段名是 `minutes_before`（**分钟**），不是 API 文档里写的 `offset_sec`（秒）。
+///    文档和实际代码不一致，这里以 `server/internal/app/models.go` 的
+///    `Reminder` 结构为准。写成 offset_sec 不会报错，只会静默失效 ——
+///    服务端读不到 minutes_before 就当成 0，等于"准点提醒"。
+struct ReminderDTO: Codable, Hashable, Identifiable {
+    let id: String?
+    let minutesBefore: Int64
+    let channel: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, channel
+        case minutesBefore = "minutes_before"
+    }
+
+    init(id: String? = nil, minutesBefore: Int64, channel: String = "notify") {
+        self.id = id
+        self.minutesBefore = minutesBefore
+        self.channel = channel
+    }
+}
+
+/// 新建日程的请求体。
 struct NewEventBody: Encodable {
     let calendarID: String
     let title: String
+    let notes: String
+    let location: String
     let startUTC: Int64
     let durationSec: Int64
     let tzid: String
+    /// 空字符串 = 不重复。服务端按 `rrule == ""` 判单次。
+    let rrule: String
+    let isTask: Bool
+    let reminders: [ReminderDTO]
 
     enum CodingKeys: String, CodingKey {
-        case title, tzid
+        case title, notes, location, tzid, rrule, reminders
         case calendarID = "calendar_id"
         case startUTC = "dtstart_utc"
         case durationSec = "duration_sec"
+        case isTask = "is_task"
     }
 }
 
@@ -174,12 +231,20 @@ struct UpdateEventBody: Encodable {
     var dtstartUTC: Int64?
     var durationSec: Int64?
     var tzid: String?
+    /// 传空字符串表示"取消重复"，转成单次日程。服务端按 `rrule == ""` 判单次。
+    var rrule: String?
+    var reminders: [ReminderDTO]?
+    var isTask: Bool?
+    /// 待办完成时间。发 0 表示"取消完成"（不是 nil —— nil 表示这个字段不改）。
+    var doneAt: Int64?
 
     enum CodingKeys: String, CodingKey {
-        case title, notes, location, tzid
+        case title, notes, location, tzid, rrule, reminders
         case calendarID = "calendar_id"
         case dtstartUTC = "dtstart_utc"
         case durationSec = "duration_sec"
+        case isTask = "is_task"
+        case doneAt = "done_at"
     }
 
     /// 只编码**非 nil** 的字段。nil 的字段连键都不出现，
@@ -193,12 +258,17 @@ struct UpdateEventBody: Encodable {
         try c.encodeIfPresent(dtstartUTC, forKey: .dtstartUTC)
         try c.encodeIfPresent(durationSec, forKey: .durationSec)
         try c.encodeIfPresent(tzid, forKey: .tzid)
+        try c.encodeIfPresent(rrule, forKey: .rrule)
+        try c.encodeIfPresent(reminders, forKey: .reminders)
+        try c.encodeIfPresent(isTask, forKey: .isTask)
+        try c.encodeIfPresent(doneAt, forKey: .doneAt)
     }
 
     /// 一个字段都没改时不要发请求（服务端会正常返回，但白跑一趟）
     var isEmpty: Bool {
         calendarID == nil && title == nil && notes == nil && location == nil
             && dtstartUTC == nil && durationSec == nil && tzid == nil
+            && rrule == nil && reminders == nil && isTask == nil && doneAt == nil
     }
 }
 
@@ -260,14 +330,43 @@ struct APIEvent: Codable, Identifiable, Hashable {
     let tzid: String
     let rrule: String
     let isTask: Bool
+    let doneAt: Int64?
+    let reminders: [ReminderDTO]
+    /// 我自己对这条开的强提醒。**是按调用者过滤过的值**，不是共享字段。
+    let strong: Bool
 
     enum CodingKeys: String, CodingKey {
-        case id, title, notes, location, tzid, rrule
+        case id, title, notes, location, tzid, rrule, reminders, strong
         case calendarID = "calendar_id"
         case allDay = "all_day"
         case dtstartUTC = "dtstart_utc"
         case durationSec = "duration_sec"
         case isTask = "is_task"
+        case doneAt = "done_at"
+    }
+
+    // 手写解码只为给 reminders / strong 兜底。
+    //
+    // ⚠️ 服务端**明确不加 omitempty**：`reminders: []` 表示"这条不提醒我"，
+    //    和"字段没下发"是两件不同的事。所以缺失时必须当成空数组，
+    //    不能退回成"默认提前 15 分钟"——那会让用户在设置里关掉提醒后，
+    //    下次打开又自己长回来。
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        calendarID = try c.decode(String.self, forKey: .calendarID)
+        title = try c.decodeIfPresent(String.self, forKey: .title) ?? ""
+        notes = try c.decodeIfPresent(String.self, forKey: .notes) ?? ""
+        location = try c.decodeIfPresent(String.self, forKey: .location) ?? ""
+        allDay = try c.decodeIfPresent(Bool.self, forKey: .allDay) ?? false
+        dtstartUTC = try c.decode(Int64.self, forKey: .dtstartUTC)
+        durationSec = try c.decodeIfPresent(Int64.self, forKey: .durationSec) ?? 0
+        tzid = try c.decodeIfPresent(String.self, forKey: .tzid) ?? "Asia/Shanghai"
+        rrule = try c.decodeIfPresent(String.self, forKey: .rrule) ?? ""
+        isTask = try c.decodeIfPresent(Bool.self, forKey: .isTask) ?? false
+        doneAt = try c.decodeIfPresent(Int64.self, forKey: .doneAt)
+        reminders = try c.decodeIfPresent([ReminderDTO].self, forKey: .reminders) ?? []
+        strong = try c.decodeIfPresent(Bool.self, forKey: .strong) ?? false
     }
 
     var start: Date { Date(timeIntervalSince1970: TimeInterval(dtstartUTC)) }
@@ -275,6 +374,26 @@ struct APIEvent: Codable, Identifiable, Hashable {
     /// 是否是重复日程。有 rrule 就不能简单粗暴地改时间——
     /// 服务端会重算后续所有实例，这也是为什么改时间要二次确认。
     var isRecurring: Bool { !rrule.isEmpty }
+
+    /// 手写 init(from:) 之后编译器不再自动合成 encode(to:)，
+    /// 而 Codable 要求两个都有。这里补齐——目前只有缓存会用到。
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(calendarID, forKey: .calendarID)
+        try c.encode(title, forKey: .title)
+        try c.encode(notes, forKey: .notes)
+        try c.encode(location, forKey: .location)
+        try c.encode(allDay, forKey: .allDay)
+        try c.encode(dtstartUTC, forKey: .dtstartUTC)
+        try c.encode(durationSec, forKey: .durationSec)
+        try c.encode(tzid, forKey: .tzid)
+        try c.encode(rrule, forKey: .rrule)
+        try c.encode(isTask, forKey: .isTask)
+        try c.encodeIfPresent(doneAt, forKey: .doneAt)
+        try c.encode(reminders, forKey: .reminders)
+        try c.encode(strong, forKey: .strong)
+    }
 }
 
 /// `GET /api/events/{id}` 的响应

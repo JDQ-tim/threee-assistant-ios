@@ -9,6 +9,10 @@ struct ScheduleView: View {
     @State private var showNew = false
     @State private var showSettings = false
 
+    /// 勾选失败时的临时提示，几秒后自动消失
+    @State private var toast: String?
+    @State private var toastTask: Task<Void, Never>?
+
     private var isRegular: Bool { sizeClass == .regular }
 
     var body: some View {
@@ -62,6 +66,20 @@ struct ScheduleView: View {
             .sheet(isPresented: $showSettings) {
                 SettingsView()
             }
+            .overlay(alignment: .bottom) {
+                if let t = toast {
+                    Text(t)
+                        .font(.footnote)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(Theme.red600)
+                        .clipShape(Capsule())
+                        .padding(.bottom, 28)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .animation(.easeOut(duration: 0.2), value: toast)
         }
     }
 
@@ -168,16 +186,58 @@ struct ScheduleView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     DayHeaderView(day: group.day)
                     ForEach(group.items) { item in
-                        Button {
-                            detail = item
-                        } label: {
-                            EventRowView(item: item, calendar: store.calendarsByID[item.calendarID])
-                        }
-                        .buttonStyle(.plain)
+                        rowButton(item)
                     }
                 }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func rowButton(_ item: ScheduleInstance) -> some View {
+        let row = Button {
+            detail = item
+        } label: {
+            EventRowView(
+                item: item,
+                calendar: store.calendarsByID[item.calendarID],
+                repeatRule: store.repeatRuleByEventID[item.eventID]
+            )
+        }
+        .buttonStyle(.plain)
+
+        // 只有待办才给勾选滑动。日程滑出「完成」是没有意义的动作，
+        // 给了反而让人误以为能把一节课标记成"做完"。
+        if item.isTask {
+            row.swipeActions(edge: .leading, allowsFullSwipe: true) {
+                Button {
+                    toggleDone(item)
+                } label: {
+                    Label(item.isDone ? "取消完成" : "完成",
+                          systemImage: item.isDone ? "arrow.uturn.backward" : "checkmark")
+                }
+                .tint(item.isDone ? Theme.textSecondary : Theme.teal600)
+            }
+        } else {
+            row
+        }
+    }
+
+    private func toggleDone(_ item: ScheduleInstance) {
+        Task {
+            do {
+                try await store.setDone(item, done: !item.isDone)
+            } catch {
+                // 勾选失败不该弹出整页红色横幅 —— 那会盖住整个列表，
+                // 而用户只是滑了一下。用一条会自己消失的提示。
+                toast = store.message(for: error)
+                toastTask?.cancel()
+                toastTask = Task {
+                    try? await Task.sleep(for: .seconds(3))
+                    if !Task.isCancelled { toast = nil }
+                }
+            }
+        }
     }
 }

@@ -41,6 +41,20 @@ struct EditEventSheet: View {
     @State private var minutes = 60
     @State private var calendarID = ""
 
+    // 重复规则（只在「改整个系列」或非重复日程时可用）
+    @State private var repeatKind: RepeatRule.Kind = .none
+    @State private var repeatInterval = 1
+    @State private var repeatWeekdays: Set<Int> = []
+    @State private var repeatEnd: RepeatRule.End = .never
+    @State private var repeatCount = 10
+    @State private var repeatUntil = Date().addingDays(90)
+
+    // 提醒
+    @State private var remindersOn = true
+    @State private var reminderOffsets: Set<Int> = []
+
+    @State private var isTask = false
+
     @State private var loading = true
     @State private var saving = false
     @State private var failure: String?
@@ -118,15 +132,79 @@ struct EditEventSheet: View {
 
             day = instance.start
             time = instance.start
+
+            // 回填重复规则。只回填频率和间隔，
+            // 因为 build() 的反向解析需要能覆盖所有形态，这里不做无谓的复杂度 ——
+            // 用户只要不改「重复」这一栏，patch 里就不会出现 rrule
+            //
+            // filling 在这里全程为 true，挡住 onChange 误把回填当成用户改动
+            filling = true
+            fillRepeat(from: ev.rrule)
+            reminderOffsets = Set(ev.reminders.map { Int($0.minutesBefore) })
+            remindersOn = !ev.reminders.isEmpty
+            isTask = ev.isTask
         } catch {
             failure = store.message(for: error)
             loadFailed = true
         }
         loading = false
+        // 等 SwiftUI 把这一轮 @State 变化处理完再打开 onChange，
+        // 否则回填触发的 onChange 会在 filling 还是 false 时到达
+        DispatchQueue.main.async { filling = false }
     }
 
-    private var loadErrorView: some View {
-        VStack(spacing: 14) {
+    /// 从 RRULE 反推出界面上的几项。
+    ///
+    /// 只做**尽力而为**的反向解析：已知形态能完整还原（编辑页打开和原来一致），
+    /// 遇到不认识的形态（别的客户端写进去的复杂规则）就退回「不重复」，
+    /// 但**只要用户没动重复这一栏，patch 里就不会带 rrule**，原规则不会被破坏。
+    /// 这一点很关键 —— 否则打开编辑页看一眼再保存，就把别人的复杂规则洗成"不重复"了。
+    private func fillRepeat(from rrule: String) {
+        let raw = rrule.trimmingCharacters(in: .whitespaces)
+        guard !raw.isEmpty else { repeatKind = .none; return }
+
+        let body = raw.hasPrefix("RRULE:") ? String(raw.dropFirst(6)) : raw
+        var d: [String: String] = [:]
+        for seg in body.split(separator: ";") {
+            let kv = seg.split(separator: "=", maxSplits: 1)
+            if kv.count == 2 { d[String(kv[0]).uppercased()] = String(kv[1]) }
+        }
+
+        switch (d["FREQ"] ?? "").uppercased() {
+        case "DAILY": repeatKind = .daily
+        case "WEEKLY": repeatKind = .weekly
+        case "MONTHLY": repeatKind = .monthly
+        case "YEARLY": repeatKind = .yearly
+        default:
+            // 认不出来（HOURLY、或者格式怪）就假装不重复，
+            // 但下面的 comparesRule 会拦住"没动却提交"的情况
+            repeatKind = .none
+            return
+        }
+
+        repeatInterval = Int(d["INTERVAL"] ?? "") ?? 1
+
+        if let byday = d["BYDAY"], !byday.isEmpty {
+            let map: [String: Int] = ["SU": 1, "MO": 2, "TU": 3, "WE": 4, "TH": 5, "FR": 6, "SA": 7]
+            repeatWeekdays = Set(byday.split(separator: ",").compactMap { map[String($0).uppercased()] })
+        }
+
+        if let c = d["COUNT"], let n = Int(c) {
+            repeatEnd = .count
+            repeatCount = n
+        } else if let u = d["UNTIL"] {
+            repeatEnd = .until
+            let f = DateFormatter()
+            f.locale = Locale(identifier: "en_US_POSIX")
+            f.timeZone = TimeZone(identifier: "UTC")
+            f.dateFormat = "yyyyMMdd'T'HHmmss'Z'"
+            repeatUntil = f.date(from: u) ?? Date().addingDays(90)
+        } else {
+            repeatEnd = .never
+        }
+    }
+
+    private var loadErrorView: some View {        VStack(spacing: 14) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 32))
                 .foregroundStyle(Theme.red600)
@@ -238,6 +316,67 @@ struct EditEventSheet: View {
                         .clipShape(RoundedRectangle(cornerRadius: Theme.cornerSmall, style: .continuous))
                 }
 
+                labelled("重复") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        RepeatRuleEditor(
+                            kind: $repeatKind,
+                            interval: $repeatInterval,
+                            weekdays: $repeatWeekdays,
+                            end: $repeatEnd,
+                            count: $repeatCount,
+                            until: $repeatUntil,
+                            start: epochDate
+                        )
+                        .onChange(of: repeatKind) { _, _ in markRepeatTouched() }
+                        .onChange(of: repeatInterval) { _, _ in markRepeatTouched() }
+                        .onChange(of: repeatWeekdays) { _, _ in markRepeatTouched() }
+                        .onChange(of: repeatEnd) { _, _ in markRepeatTouched() }
+                        .onChange(of: repeatCount) { _, _ in markRepeatTouched() }
+                        .onChange(of: repeatUntil) { _, _ in markRepeatTouched() }
+
+                        if isRecurring {
+                            Text("改重复规则属于「改整个系列」，保存时会一起问。")
+                                .font(.caption2)
+                                .foregroundStyle(Theme.textTertiary)
+                        }
+                    }
+                }
+
+                labelled("提醒") {
+                    VStack(spacing: 10) {
+                        Toggle(isOn: $remindersOn) {
+                            Text("到点提醒我")
+                                .font(.system(size: 15))
+                                .foregroundStyle(Theme.textPrimary)
+                        }
+                        .tint(Theme.accent)
+
+                        if remindersOn {
+                            FlowRow(spacing: 8) {
+                                ForEach([0, 5, 15, 30, 60, 120, 1440], id: \.self) { m in
+                                    let on = reminderOffsets.contains(m)
+                                    Button {
+                                        if on { reminderOffsets.remove(m) } else { reminderOffsets.insert(m) }
+                                    } label: {
+                                        Text(EditEventSheet.reminderLabel(m))
+                                            .font(.system(size: 12.5, weight: on ? .semibold : .regular))
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 7)
+                                            .background(on ? Theme.accent : Theme.surfaceAlt)
+                                            .foregroundStyle(on ? Theme.onAccent : Theme.textSecondary)
+                                            .clipShape(Capsule())
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .background(Theme.surfaceAlt)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.cornerSmall, style: .continuous))
+                }
+
                 if hasChanges {
                     Text("改动会同步到你的其它设备。")
                         .font(.caption2)
@@ -284,8 +423,34 @@ struct EditEventSheet: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// 用户是否真的动过「重复」这一栏。
+    ///
+    /// 见 patch 里的说明：不能靠"算出来的值和原值不同"来判断，
+    /// 因为反向解析对复杂规则是**有损**的。只有用户主动改过才提交。
+    @State private var repeatTouched = false
+
+    /// 加载期间要屏蔽 onChange 的置位 —— 回填本身也会触发 onChange，
+    /// 那样一进页面 repeatTouched 就是 true，等于没起到作用。
+    @State private var filling = false
+
     private var isRecurring: Bool {
         original?.isRecurring ?? false
+    }
+
+    /// 表单当前拼出来的开始时间点
+    private var epochDate: Date {
+        Date(timeIntervalSince1970: TimeInterval(epochSeconds(date: day, time: time)))
+    }
+
+    private static func reminderLabel(_ minutes: Int) -> String {
+        if minutes <= 0 { return "准点" }
+        if minutes >= 1440 && minutes % 1440 == 0 { return "提前 \(minutes / 1440) 天" }
+        if minutes >= 60 && minutes % 60 == 0 { return "提前 \(minutes / 60) 小时" }
+        return "提前 \(minutes) 分钟"
+    }
+
+    private func markRepeatTouched() {
+        if !filling && !loading { repeatTouched = true }
     }
 
     // MARK: - 差异计算
@@ -326,6 +491,36 @@ struct EditEventSheet: View {
         let newDuration = Int64(max(0, minutes) * 60)
         if newDuration != instance.endUTC - instance.startUTC {
             p.durationSec = newDuration
+        }
+
+        // 重复规则：只有**用户真的动了这一栏**才提交。
+        //
+        // ⚠️ 不能简单地「表单算出来的 rrule != 原 rrule 就提交」。
+        //    fillRepeat 对认不出的规则（比如别的客户端写的 FREQ=HOURLY）
+        //    会退回 .none，那样一进编辑页就变成"改动"，
+        //    保存一下就把别人的规则洗成不重复了。
+        //    这里用一个显式脏标记，见 repeatTouched。
+        if repeatTouched {
+            let newRule = RepeatRule.build(
+                kind: repeatKind,
+                interval: repeatInterval,
+                weekdays: repeatWeekdays,
+                end: repeatEnd,
+                count: repeatCount,
+                until: repeatUntil,
+                start: epochDate
+            ) ?? ""
+            if newRule != (original?.rrule ?? "") {
+                p.rrule = newRule
+            }
+        }
+
+        if let ev = original {
+            let newOffsets = remindersOn ? reminderOffsets.sorted() : []
+            let oldOffsets = ev.reminders.map { Int($0.minutesBefore) }.sorted()
+            if newOffsets != oldOffsets {
+                p.reminders = newOffsets.map { ReminderDTO(minutesBefore: Int64($0)) }
+            }
         }
 
         return p

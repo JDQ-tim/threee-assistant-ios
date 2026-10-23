@@ -6,6 +6,10 @@ struct EventRowView: View {
     let item: ScheduleInstance
     let calendar: CalendarDTO?
 
+    /// 所属日程的重复规则原文。实例本身不知道自己是哪条重复规则展开来的，
+    /// 由上层从 `store.repeatRuleByEventID` 查出来传进来。
+    var repeatRule: String?
+
     private var barColor: Color {
         Color(hexString: calendar?.displayColor ?? "#185FA5")
     }
@@ -29,6 +33,16 @@ struct EventRowView: View {
                 .fill(barColor)
                 .frame(width: 3)
 
+            // 已完成的待办：左侧一个实心勾。
+            // ⚠️ 勾号画在这里而不是整行按钮，是因为整行还要响应「点开详情」，
+            //    两个点击热区重叠时子按钮优先，但父按钮的 highlighted 状态会跟着变，
+            //    看起来像整行都被按下去了。所以勾选热区单独做成 44×44 的明确区域。
+            if item.isDone {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 17))
+                    .foregroundStyle(Theme.teal600)
+            }
+
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     Text(timeText)
@@ -37,13 +51,20 @@ struct EventRowView: View {
                         .foregroundStyle(Theme.textSecondary)
 
                     if item.allDay { PillView(text: "全天", tone: .accent) }
-                    if item.isTask { PillView(text: "待办", tone: .amber) }
+                    if item.isTask && !item.isDone { PillView(text: "待办", tone: .amber) }
+                    if item.isDone { PillView(text: "已完成", tone: .teal) }
                     if item.isOverride { PillView(text: "已改期", tone: .teal) }
+
+                    if let rt = repeatText {
+                        PillView(text: rt, tone: .plain)
+                    }
                 }
 
                 Text(item.title?.isEmpty == false ? item.title! : "（无标题）")
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(Theme.textPrimary)
+                    .foregroundStyle(item.isDone ? Theme.textTertiary : Theme.textPrimary)
+                    // 完成的划掉。这是"完成"最不需要解释的表达方式
+                    .strikethrough(item.isDone, color: Theme.textTertiary)
                     .lineLimit(1)
 
                 if !metaText.isEmpty {
@@ -64,6 +85,18 @@ struct EventRowView: View {
             RoundedRectangle(cornerRadius: Theme.corner, style: .continuous)
                 .stroke(Theme.separator, lineWidth: 0.5)
         )
+        // 完成的整行降低对比度，让未完成的自然浮上来
+        .opacity(item.isDone ? 0.72 : 1)
+    }
+
+    /// 列表里给一个极简标记就够了（「重复」「每周」太长会挤掉标题）。
+    /// 具体规则在详情页用 RepeatRule.describe 展开。
+    private var repeatText: String? {
+        guard let r = repeatRule, !r.isEmpty else { return nil }
+        let desc = RepeatRule.describe(r)
+        // 「每天」这种两个字的直接显示；更长的统一显示「重复」，
+        // 否则一行里塞「每周的周一、周三、周五」会把标题挤没
+        return desc.count <= 3 ? desc : "重复"
     }
 }
 
@@ -73,6 +106,9 @@ struct PillView: View {
 
     enum Tone {
         case accent, teal, amber
+        /// 中性档：用于「重复」这类只是说明事实、不带状态含义的标记。
+        /// 用彩色会让人误以为它是某种需要注意的状态。
+        case plain
     }
 
     let text: String
@@ -83,6 +119,7 @@ struct PillView: View {
         case .accent: return Theme.blue600
         case .teal: return Theme.teal600
         case .amber: return Theme.amber600
+        case .plain: return Theme.textSecondary
         }
     }
 
@@ -91,6 +128,7 @@ struct PillView: View {
         case .accent: return Theme.blue50
         case .teal: return Theme.teal50
         case .amber: return Theme.amber50
+        case .plain: return Theme.surfaceAlt
         }
     }
 

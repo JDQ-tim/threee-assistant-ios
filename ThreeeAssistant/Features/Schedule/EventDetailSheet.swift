@@ -16,6 +16,10 @@ struct EventDetailSheet: View {
     /// 改完要关掉详情页，否则详情页还显示着改之前的内容 —— 看起来像没保存成功
     @State private var edited = false
 
+    /// 打开详情时拉一次原始数据。列表里只有展开后的实例，
+    /// 重复规则、提醒、强提醒这些只有 `GET /api/events/{id}` 才有。
+    @State private var full: APIEvent?
+
     private var timeText: String {
         if item.allDay { return "全天" }
         if !item.hasSpan { return item.start.hhmm }
@@ -53,6 +57,15 @@ struct EventDetailSheet: View {
                     infoRow("日期", "\(item.start.monthDay) \(item.start.weekdayName)")
                     infoRow("时长", durationText)
                     infoRow("日历", calendar?.name ?? "—")
+                    if let r = store.repeatRuleByEventID[item.eventID], !r.isEmpty {
+                        infoRow("重复", RepeatRule.describe(r))
+                    }
+                    if let ev = full {
+                        infoRow("提醒", reminderText(ev.reminders))
+                        if ev.strong {
+                            infoRow("强提醒", "已开启")
+                        }
+                    }
                     infoRow("地点", item.location?.isEmpty == false ? item.location! : "—")
                     infoRow("备注", item.notes?.isEmpty == false ? item.notes! : "—")
 
@@ -121,7 +134,28 @@ struct EventDetailSheet: View {
             } message: {
                 Text("「\(item.title ?? "无标题")」将被删除，其它设备同步后也会消失。")
             }
+            .task { await loadFull() }
         }
+    }
+
+    /// 拉一次原始日程，补齐实例里没有的字段。
+    ///
+    /// 失败不提示：这是「补充信息」，拉不到只是少显示两行，
+    /// 不该让用户看到一个「读取失败」的页面 —— 他点的是一次正常的详情查看。
+    private func loadFull() async {
+        full = try? await store.loadEvent(id: item.eventID)
+    }
+
+    private func reminderText(_ list: [ReminderDTO]) -> String {
+        guard !list.isEmpty else { return "不提醒" }
+        let parts = list.map { r -> String in
+            let m = Int(r.minutesBefore)
+            if m <= 0 { return "准点" }
+            if m >= 1440 && m % 1440 == 0 { return "提前 \(m / 1440) 天" }
+            if m >= 60 && m % 60 == 0 { return "提前 \(m / 60) 小时" }
+            return "提前 \(m) 分钟"
+        }
+        return parts.joined(separator: "、")
     }
 
     private func infoRow(_ key: String, _ value: String) -> some View {
