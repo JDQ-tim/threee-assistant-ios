@@ -25,6 +25,9 @@ struct EventDetailSheet: View {
     /// 分享给别人的弹窗
     @State private var showShare = false
 
+    /// 举报弹窗
+    @State private var showReport = false
+
     /// 打开详情时拉一次原始数据。列表里只有展开后的实例，
     /// 重复规则、提醒、强提醒这些只有 `GET /api/events/{id}` 才有。
     @State private var full: APIEvent?
@@ -144,6 +147,21 @@ struct EventDetailSheet: View {
                         .foregroundStyle(Theme.textTertiary)
                         .padding(.top, 8)
                         .fixedSize(horizontal: false, vertical: true)
+
+                    // 举报入口刻意做得比删除**轻**：它不是常规操作，
+                    // 放成一个红色大按钮会让人误点，也会让这一页看起来像
+                    // 「一进来就该删点什么」。一行灰色文字链足够，
+                    // 需要它的人找得到，不需要的人不会碰到
+                    Button {
+                        showReport = true
+                    } label: {
+                        Text("举报这条日程")
+                            .font(.system(size: 13))
+                            .foregroundStyle(Theme.textTertiary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                    }
+                    .padding(.top, 14)
                 }
                 .padding(20)
             }
@@ -167,6 +185,14 @@ struct EventDetailSheet: View {
             // 但它不需要在关闭后退出详情页：分享不改变这条日程本身。
             .fullScreenCover(isPresented: $showShare) {
                 ShareEventSheet(instance: item, full: full)
+            }
+            // 举报同样走全屏（sheet 套 sheet 会被 iOS 静默忽略）。
+            .fullScreenCover(isPresented: $showReport) {
+                ReportEventSheet(
+                    eventID: item.eventID,
+                    calendarID: item.calendarID,
+                    eventTitle: item.title ?? ""
+                )
             }
             .onChange(of: showEdit) { _, isShowing in
                 // 编辑页关掉之后，详情页的内容已经过期了：直接退出，

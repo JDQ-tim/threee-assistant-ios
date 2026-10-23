@@ -657,6 +657,114 @@ struct RepairReportDTO: Decodable {
     }
 }
 
+/// 举报原因选项（`GET /api/moderation/meta` 里的 `reasons`）。
+///
+/// ## 为什么不把中文名写死在客户端
+///
+/// 服务端 `reportReasonLabels` 是**唯一**定义处，这里拿到的是它的原样。
+/// 客户端写死一份的话，服务端加一条「诈骗」而 App 还没更新时，
+/// 用户就永远选不到那一项 —— 而且他不会知道自己漏了什么。
+typealias ReportReasonMap = [String: String]
+
+/// `GET /api/moderation/meta` 的响应。
+///
+/// 这里只用 `reasons`。同响应里的 `words`（敏感词库）和 `categories`
+/// 是给服务端自己的过滤逻辑用的 —— **客户端不该拿它去本地判违规**：
+/// 词库会变，而 App 不跟版本走；本地判一遍只会造出
+/// 「服务端说没问题、App 自己拦住不让发」这种莫名其妙的拦截。
+struct ModerationMetaDTO: Decodable {
+    let reasons: ReportReasonMap
+    let count: Int?
+}
+
+/// `POST /api/reports` 的请求体。
+struct ReportBody: Encodable {
+    /// `event` / `calendar` / `user` / `other`
+    let targetKind: String
+    let targetID: String
+    let calendarID: String
+    let eventID: String
+    /// 必填其一：原因或说明。服务端两者都空会 400
+    let reason: String
+    /// 补充说明，最多 2000 字
+    let detail: String
+
+    enum CodingKeys: String, CodingKey {
+        case reason, detail
+        case targetKind = "target_kind"
+        case targetID = "target_id"
+        case calendarID = "calendar_id"
+        case eventID = "event_id"
+    }
+}
+
+/// `POST /api/reports` 的响应。
+struct ReportCreatedDTO: Decodable {
+    let ok: Bool
+    let id: String
+    /// `true` 表示**更新了之前那条还没处理的**，而不是新建一条。
+    ///
+    /// ⚠️ 这个字段必须区别对待：连点两下时用户会看到「提交了两条」，
+    ///    而服务端其实只留了一条。文案上说清「已更新你的上一次举报」，
+    ///    比说「已提交」准确 —— 后者会让他以为报重了、被刷屏了。
+    let updated: Bool?
+}
+
+/// 我提交过的一条举报（`GET /api/reports/mine`）。
+struct MyReportDTO: Decodable, Identifiable, Hashable {
+    let id: String
+    /// `event` / `calendar` / `user` / `other`
+    let targetKind: String
+    /// 被举报对象的标题快照（服务端在提交时存的）
+    let targetTitle: String
+    let reason: String
+    /// 服务端给的中文原因名
+    let reasonLabel: String
+    let detail: String
+    /// `pending` / `accepted` / `rejected` —— 只有这三种
+    let status: String
+    /// 管理员写的处理意见，会回给举报人
+    let handleNote: String
+    /// `none` / `del_content`
+    let action: String
+    let createdAt: Int64
+    /// 0 表示还没处理
+    let handledAt: Int64
+
+    var isPending: Bool { status == "pending" }
+    var isRejected: Bool { status == "rejected" }
+
+    /// 状态中文名。**三态之外一律显示成「已处理」** ——
+    /// 服务端以后加第四种状态时，宁可笼统也不能显示一个空字符串
+    var statusLabel: String {
+        switch status {
+        case "pending":  return "等待处理"
+        case "accepted": return "已受理"
+        case "rejected": return "已驳回"
+        default:         return "已处理"
+        }
+    }
+
+    var targetKindLabel: String {
+        switch targetKind {
+        case "event":    return "日程"
+        case "calendar": return "日历"
+        case "user":     return "账号"
+        default:         return "内容"
+        }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, reason, detail, status, action
+        case targetKind = "target_kind"
+        case targetTitle = "target_title"
+        case reasonLabel = "reason_label"
+        case handleNote = "handle_note"
+        case createdAt = "created_at"
+        case handledAt = "handled_at"
+    }
+}
+
 // MARK: - 修改日程
 
 /// `PUT /api/events/{id}` 的请求体。

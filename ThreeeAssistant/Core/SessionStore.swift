@@ -286,6 +286,90 @@ final class SessionStore {
         return res
     }
 
+    // MARK: - 举报（内容安全）
+
+    /// 拉举报原因选项（`GET /api/moderation/meta`）。
+    ///
+    /// 只取 `reasons`，**不碰 `words`**：敏感词库是给服务端过滤用的，
+    /// 客户端拿它本地判违规只会造出「服务端放行、App 自己拦住」的怪事。
+    func loadReportReasons() async throws -> ReportReasonMap {
+        let res: ModerationMetaDTO = try await APIClient.shared.get("/api/moderation/meta")
+        return res.reasons
+    }
+
+    /// 举报一条日程。
+    ///
+    /// ⚠️ 服务端会**重新读一遍**这条日程并做权限校验（`canRead`），
+    ///    看不到的一律回 404「这条日程不存在，或你已看不到它」。
+    ///    所以「我举报了但对方删了」会得到 404 而不是成功 —— 这是对的，
+    ///    不用特殊处理，照实把这句话显示出来即可。
+    ///
+    /// 返回值里 `updated == true` 说明更新了上一次还没处理的举报。
+    @discardableResult
+    func reportEvent(eventID: String,
+                     calendarID: String?,
+                     reason: String,
+                     detail: String) async throws -> ReportCreatedDTO {
+        try await submitReport(
+            body: ReportBody(
+                targetKind: "event",
+                targetID: eventID,
+                calendarID: calendarID ?? "",
+                eventID: eventID,
+                reason: reason,
+                detail: detail
+            )
+        )
+    }
+
+    /// 举报一个账号。
+    ///
+    /// 「不能举报自己」是服务端唯一保留的自报校验（日程/日历那两条
+    /// 因为 events 表没有作者列已经去掉了，详见 `handleCreateReport` 的长注释）。
+    /// 客户端也顺手挡一下，省一次必然失败的请求。
+    @discardableResult
+    func reportUser(userID: String, reason: String, detail: String) async throws -> ReportCreatedDTO {
+        guard userID != user?.id else {
+            throw APIError.server(400, "不用举报自己")
+        }
+        return try await submitReport(
+            body: ReportBody(
+                targetKind: "user",
+                targetID: userID,
+                calendarID: "",
+                eventID: "",
+                reason: reason,
+                detail: detail
+            )
+        )
+    }
+
+    private func submitReport(body: ReportBody) async throws -> ReportCreatedDTO {
+        // 服务端要求「原因或说明至少给一个」，本地先挡一次，
+        // 免得用户点了提交才看到一句 400
+        guard !body.reason.isEmpty || !body.detail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw APIError.server(400, "请选择举报原因或填写说明")
+        }
+        guard body.detail.count <= 2000 else {
+            throw APIError.server(400, "补充说明太长了（最多 2000 字）")
+        }
+        let data = try JSONEncoder().encode(body)
+        return try await APIClient.shared.post("/api/reports", body: data)
+    }
+
+    /// 我提交过的举报及处理结果（`GET /api/reports/mine`）。
+    ///
+    /// ## 为什么必须有这个
+    ///
+    /// 举报提交完就石沉大海的话，用户下次就不报了。
+    /// 让他看到「已受理 / 已驳回 + 处理意见」，举报机制才立得住。
+    /// 服务端最多回 100 条（按时间倒序）。
+    func loadMyReports() async throws -> [MyReportDTO] {
+        struct Envelope: Decodable { let reports: [MyReportDTO] }
+        let res: Envelope = try await APIClient.shared.get("/api/reports/mine")
+        return res.reports
+    }
+
     // MARK: - 注册
 
     /// 问一下这台服务器是不是还空着（`GET /api/bootstrap`）。

@@ -194,6 +194,16 @@ struct SettingsView: View {
                     }
                 }
 
+                Section {
+                    NavigationLink {
+                        MyReportsView()
+                    } label: {
+                        Text("我的举报")
+                    }
+                } footer: {
+                    Text("你举报过的内容和管理员的处理结果。提交举报不影响你和对方现有的共享关系。")
+                }
+
                 Section("关于") {
                     LabeledContent("版本", value: "0.1 (1)")
                     Text("原生 iOS 版。日程支持新建、修改、重复、提醒、强提醒、全天、待办、稍后提醒，以及周/月视图；日历支持新建、改名改色、删除；课程表日历可打开节次网格；还能处理多人同时修改产生的字段级冲突。")
