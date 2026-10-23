@@ -246,6 +246,46 @@ final class SessionStore {
         return res
     }
 
+    // MARK: - 数据自检（管理员）
+
+    /// 只读扫描全库的引用完整性（`GET /api/maintenance/scan`）。
+    ///
+    /// ## 为什么这个接口值得放在 App 里
+    ///
+    /// 「日历删了、里面的日程还活着」这类问题，用户看到的现象是
+    /// **日程列表里冒出一些点不开、改不动的条目** —— 他没法自己查，
+    /// 只能觉得「这 App 坏了」。管理员在手机上跑一次自检就能确认，
+    /// 不用非得登录服务器敲命令。
+    ///
+    /// ⚠️ 它扫的是**整个库**，不只调用者自己的数据
+    ///    （库里层面的不一致，按用户过滤反而会漏）。
+    ///    所以只有管理员能调，非管理员必然吃 403 ——
+    ///    界面必须在按钮之外先判断 `user.isAdmin`，别让用户点了才知道。
+    func scanDataIntegrity() async throws -> RepairReportDTO {
+        try await APIClient.shared.get("/api/maintenance/scan")
+    }
+
+    /// 扫描并修复（`POST /api/maintenance/repair`）。
+    ///
+    /// ## 为什么单独一个方法、不跟扫描合并
+    ///
+    /// 扫描是只读的，随时能跑；修复**会写库**。
+    /// 合并成一个方法的话，「顺便点一下看看」就等于改了数据 ——
+    /// 这个接口动的是别人的日历行，不是只影响自己。
+    ///
+    /// `fixed` 是这次真正修好的条数。`applied == false` 表示只扫没修
+    /// （服务端保留了这种可能），界面要照实说，不能一律显示「已修复」。
+    @discardableResult
+    func repairDataIntegrity() async throws -> RepairReportDTO {
+        let res: RepairReportDTO = try await APIClient.shared.post(
+            "/api/maintenance/repair", body: Data("{}".utf8)
+        )
+        // 修完库里可能有变化（删了孤儿行、补了墓碑），
+        // 本机状态必须跟着刷新一次，否则「自检说修好了、列表还是坏的」
+        await refresh()
+        return res
+    }
+
     // MARK: - 注册
 
     /// 问一下这台服务器是不是还空着（`GET /api/bootstrap`）。

@@ -589,6 +589,74 @@ struct WipeResultDTO: Decodable {
     let note: String?
 }
 
+/// 一条数据自检发现的问题（`GET /api/maintenance/scan`）。
+struct RepairIssueDTO: Decodable, Identifiable, Hashable {
+    /// 机器可读的分类，见 `RepairIssueKind`
+    let kind: String
+    /// 出问题的那一行（成员行 / 事件 / 实例的 id）
+    let id: String
+    /// 附带的上下文（日历 id、事件 id 之类）。可能是空串
+    let extra: String?
+    /// 给人看的一句话。**界面只显示这个** —— 分类名对用户没有意义
+    let detail: String?
+
+    /// ⚠️ 用 kind + id + extra 拼出来的复合主键。
+    ///    `id` 单独不唯一：同一个事件可能同时挂在
+    ///    「会话不存在」和「强提醒孤儿」两类问题下。
+    var identity: String { "\(kind)|\(id)|\(extra ?? "")" }
+
+    enum CodingKeys: String, CodingKey {
+        case kind, id, extra, detail
+    }
+}
+
+/// `kinds` 的已知取值。**没列出来的分类不要当错误处理** ——
+/// 服务端新增一类问题时，客户端应该照常显示它的 detail，
+/// 而不是因为不认识就把它藏起来。
+enum RepairIssueKind {
+    static func label(_ kind: String) -> String {
+        switch kind {
+        case "orphan_calendar_member":      return "成员行指向已删的日历"
+        case "orphan_calendar_team":        return "团队共享行指向已删的日历"
+        case "event_without_calendar":      return "日程挂在不存在的日历上"
+        case "event_in_deleted_calendar":   return "日历已删、日程还活着"
+        case "orphan_event_child":          return "覆盖/提醒指向不存在的事件"
+        case "orphan_strong_reminder":      return "强提醒指向不存在的事件"
+        case "orphan_instance":             return "实例指向不存在的事件"
+        default:                            return kind
+        }
+    }
+}
+
+/// `GET /api/maintenance/scan`（只读）与
+/// `POST /api/maintenance/repair`（扫描 + 修复）**共用**这个响应结构。
+///
+/// ## 为什么共用一个结构
+///
+/// 修复接口返回的 `issues` 是**修复前**扫出来的那份清单，
+/// 外加 `fixed` / `applied` 两个字段。共用结构的话，
+/// 界面上「先看问题、再点修复、最后看到还剩几条」是同一条数据链，
+/// 不会出现「修复后又得重新扫一遍才看得到结果」。
+struct RepairReportDTO: Decodable {
+    let issues: [RepairIssueDTO]
+    /// 分类 → 条数。用来看「这台服务器主要是哪类坏」
+    let kinds: [String: Int]?
+    /// 总数。服务端明说等于 `issues.count`，客户端**不自己数** ——
+    /// 服务端如果以后截断列表，自己数就会显示一个偏小的数字
+    let total: Int
+    /// 只修复接口有：修好了几条
+    let fixed: Int?
+    /// 只修复接口有：是否真的写库了（`false` 表示只扫没修）
+    let applied: Bool?
+
+    /// 按分类分组的条数，按数量降序。用于「主要问题是哪类」那一节
+    var sortedKinds: [(kind: String, count: Int)] {
+        let map = kinds ?? [:]
+        return map.map { (kind: $0.key, count: $0.value) }
+            .sorted { $0.count > $1.count }
+    }
+}
+
 // MARK: - 修改日程
 
 /// `PUT /api/events/{id}` 的请求体。
