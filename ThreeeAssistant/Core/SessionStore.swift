@@ -1199,7 +1199,18 @@ final class SessionStore {
 
     // MARK: - 文案
 
-    func message(for error: Error) -> String {
+    /// 把任意 Error 翻成给用户看的一句话。
+    ///
+    /// ⚠️ `nonisolated` 是刻意的，不是省事。
+    ///    它是纯函数：只读 `APIError.errorDescription` 或 `localizedDescription`，
+    ///    完全不碰本类的任何状态。标成 nonisolated 后，它可以在任何线程、
+    ///    任何隔离域里被同步调用 —— 包括在 catch 块里。
+    ///
+    ///    如果不标，它就是 `@MainActor` 的：Xcode 15.4 + iOS 17.5 SDK 下
+    ///    SwiftUI 的 body 是**非隔离**上下文，于是每个 `catch { failure = store.message(for: error) }`
+    ///    都会报 `expression is 'async' but is not marked with 'await'`。
+    ///    云端第一次编译时这类错误一次报了 14 个。
+    nonisolated func message(for error: Error) -> String {
         if let api = error as? APIError {
             return api.errorDescription ?? "出错了"
         }

@@ -18,6 +18,7 @@ import SwiftUI
 /// 权威写入）。但这个 App 里没有任何本地库，一旦覆盖就是把服务端
 /// 别的设备的改动抹掉 —— 用户的原始数据，没有后悔药。
 /// 想重拉有 `resetSyncCursor`，那只是**丢掉本地读游标**，不动服务端任何数据。
+@MainActor
 struct SyncStatusView: View {
 
     @Environment(SessionStore.self) private var store

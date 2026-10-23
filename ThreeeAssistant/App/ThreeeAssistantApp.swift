@@ -1,5 +1,16 @@
 import SwiftUI
 
+/// ⚠️ `@MainActor` 标在 App 上是必需的，不是保险。
+///
+/// Xcode 15.4 + iOS 17.5 SDK 下，`App` 的 `body` 和属性初始化都**不在主线程域**，
+/// 因此下面这句
+///
+///     @State private var store = SessionStore()
+///
+/// 会报 `call to main actor-isolated initializer 'init()' in a synchronous
+/// nonisolated context` —— SessionStore 是 @MainActor 的。
+/// 标上 @MainActor 后整个类型都进入主线程域，初始化与 body 一起解决。
+@MainActor
 @main
 struct ThreeeAssistantApp: App {
 
@@ -16,6 +27,7 @@ struct ThreeeAssistantApp: App {
     }
 }
 
+@MainActor
 struct RootView: View {
 
     @Environment(SessionStore.self) private var store

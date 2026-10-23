@@ -7,6 +7,7 @@ import SwiftUI
 /// 日历是日程的"容器"，改它比改账号设置频繁得多。塞进设置页深处的话，
 /// 用户想给新课建个日历得翻三层，最后干脆全堆在默认日历里，
 /// 之后永远分不清哪些课在哪。
+@MainActor
 struct CalendarsView: View {
 
     @Environment(SessionStore.self) private var store
@@ -202,6 +203,7 @@ struct CalendarsView: View {
 /// 新建 / 编辑一个日历。
 ///
 /// `calendar == nil` 是新建，否则是修改。
+@MainActor
 struct CalendarEditSheet: View {
 
     let calendar: CalendarDTO?

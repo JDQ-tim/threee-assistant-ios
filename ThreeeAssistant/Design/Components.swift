@@ -1,6 +1,7 @@
 import SwiftUI
 
 /// 一条日程。列表里最小的单元。
+@MainActor
 struct EventRowView: View {
 
     let item: ScheduleInstance
@@ -102,6 +103,7 @@ struct EventRowView: View {
 
 /// 小标签。颜色是「语义」，不是「装饰」——
 /// 全天/待办/已改期三种状态各自固定一个色，别处不要再换。
+@MainActor
 struct PillView: View {
 
     enum Tone {
@@ -144,6 +146,7 @@ struct PillView: View {
 }
 
 /// 一天的标题行
+@MainActor
 struct DayHeaderView: View {
     let day: Date
 
@@ -180,6 +183,7 @@ struct DayHeaderView: View {
 }
 
 /// 错误提示条。文案可能很长（含排查步骤），所以不折行数
+@MainActor
 struct ErrorBanner: View {
     let message: String
 
@@ -201,6 +205,7 @@ struct ErrorBanner: View {
 }
 
 /// 空状态
+@MainActor
 struct EmptyHint: View {
     let icon: String
     let title: String

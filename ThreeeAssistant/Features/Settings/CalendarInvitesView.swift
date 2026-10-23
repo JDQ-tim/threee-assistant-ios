@@ -17,6 +17,7 @@ import SwiftUI
 ///    不静默降级（源码：「静默降级会让邀请人以为自己给的是 admin」）
 /// 2. **默认只能用 1 次**，上限 100（注意和团队邀请相反：那边 0 是「不限」）
 /// 3. **接受时角色取码里的值**，不接受请求里的值 —— 否则就是提权漏洞
+@MainActor
 struct CalendarInvitesView: View {
 
     let calendarID: String
@@ -196,6 +197,7 @@ struct CalendarInvitesView: View {
 
 // MARK: - 生成邀请码
 
+@MainActor
 struct CreateCalendarInviteSheet: View {
 
     let calendarID: String
@@ -295,6 +297,7 @@ struct CreateCalendarInviteSheet: View {
 ///
 /// 幂等：已经是成员就直接成功，不消耗次数。
 /// 角色取码里存的值 —— 这里没有任何「选权限」的控件，那是设计如此。
+@MainActor
 struct JoinCalendarSheet: View {
 
     @Environment(SessionStore.self) private var store

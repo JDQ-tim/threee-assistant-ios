@@ -17,6 +17,7 @@ import SwiftUI
 ///    - `PUT /api/events/{id}`            改整个系列，后续实例全部重算
 ///    - `PUT /api/events/{id}/occurrence` 只给这一次写一条补丁
 ///    选错的影响面差别很大，所以必须让用户明确选，不能替 ta 决定。
+@MainActor
 struct EditEventSheet: View {
 
     /// 从列表点进来的那个实例，用它的 eventID 去拉真实数据、
@@ -657,8 +658,13 @@ struct EditEventSheet: View {
         //    （它只保留 overridePatch 认的 7 个键），
         //    用户点了开关保存后毫无反应 —— 正是源码注释里警告的那个坑。
         let strongPatch = p.strong
-        var occurrencePatch = p
-        occurrencePatch.strong = nil
+        // ⚠️ 必须是 let，不能写成 `var occurrencePatch = p; occurrencePatch.strong = nil`。
+        //    下面 Task {} 的闭包会捕获它，而被捕获的 var 一旦跨并发域，
+        //    编译器会直接拒绝（"reference to captured var in concurrently-executing code"）。
+        //    改成「生成一个新值再赋给 let」既满足并发检查，也不改变语义。
+        var patched = p
+        patched.strong = nil
+        let occurrencePatch = patched
 
         Task {
             do {

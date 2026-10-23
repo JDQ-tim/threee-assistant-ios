@@ -15,6 +15,7 @@ import SwiftUI
 ///
 /// 全部复用 `store.instances`（当前周的实例），再按 `calendarID` 过滤出
 /// 这张课程表日历的课。不需要任何新接口。
+@MainActor
 struct CourseTableView: View {
 
     /// 要显示的课程表日历（`kind == "course"`）

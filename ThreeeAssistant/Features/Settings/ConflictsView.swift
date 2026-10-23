@@ -15,6 +15,7 @@ import SwiftUI
 /// `keep_both` 看着很怪（复制一条日程？），但源码里解释了原因：
 /// 一家两口都不小心订了同一时段，二选一必然丢掉一个人的记录。
 /// 复制成两条、改成不同标题，才是真实场景里最不伤人的做法。
+@MainActor
 struct ConflictsView: View {
 
     @Environment(SessionStore.self) private var store

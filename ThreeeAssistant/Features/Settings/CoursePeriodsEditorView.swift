@@ -18,6 +18,7 @@ import SwiftUI
 /// 而且要拆出 "HH:MM" 还得过一次 formatter，反而更容易在时区上出错。
 /// 直接让用户填 `08:00`，存什么发什么，最好核对。
 /// 服务端校验 `time.Parse("15:04")`，所以必须是两位补零的 24 小时制。
+@MainActor
 struct CoursePeriodsEditorView: View {
 
     @Environment(SessionStore.self) private var store

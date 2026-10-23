@@ -313,6 +313,67 @@ if store_path:
                               % (rel, line, fname, sorted(miss)))
 
 
+# 7d. ===== SwiftUI View 必须显式 @MainActor =====
+#
+# 云端 runner 是 **Xcode 15.4 + iOS 17.5 SDK**。该 SDK 里 SwiftUI 的
+# `View.body` 是**非隔离**上下文 —— 于是在 body（以及 body 里的按钮闭包）
+# 读 `@MainActor` 的 SessionStore 成员会直接编译失败：
+#
+#   error: main actor-isolated property 'isLoading' can not be referenced
+#          from a non-isolated context
+#
+# Xcode 16 起 SDK 给 body 补了 @MainActor，同样的代码就能过。
+# 这解释了「本地静态检查全绿、云端 35 个错」。
+#
+# 修法：每个 `struct Xxx: View` 前面加 `@MainActor`。
+# 这在语义上也是对的 —— SwiftUI 的 view 更新本来就只在主线程发生。
+#
+# 这个检查同时保证了「以后新加的 View 不会退化」。
+VIEW_DECL = re.compile(r"^(\s*)(?:public\s+|internal\s+)?(?:struct\s+\w+[^\n]*:\s*View\b)", re.M)
+
+for rel, src in ALL_SRC.items():
+    clean = strip_noise(src)
+    lines = clean.splitlines()
+    for i, line in enumerate(lines):
+        m = VIEW_DECL.match(line)
+        if not m:
+            continue
+        # 往上找 3 行，看是否有 @MainActor
+        has = any("@MainActor" in (lines[j] or "") for j in range(max(0, i - 3), i))
+        if not has:
+            errors.append("%s:%d 声明了 `: View` 但没标 @MainActor"
+                          "（Xcode 15.4 的 iOS 17.5 SDK 下 body 是非隔离上下文，"
+                          "读 store 会编译失败）: %s" % (rel, i + 1, line.strip()[:60]))
+
+# 7e. `Task { }` 里捕获可变 `var` —— 编译错误
+#     （"reference to captured var 'x' in concurrently-executing code"）
+#
+# 这个坑踩过：EditEventSheet 里
+#     var occurrencePatch = p
+#     occurrencePatch.strong = nil
+#     Task { ... patch: occurrencePatch ... }
+# 编译器拒绝。改法是造个新值再赋给 let。
+for rel, src in ALL_SRC.items():
+    clean = strip_noise(src)
+    lines = clean.split("\n")
+    for i, line in enumerate(lines):
+        dm = re.match(r"\s*var\s+(\w+)\s*[:=]", line)
+        if not dm:
+            continue
+        name = dm.group(1)
+        # 往后 40 行内找 Task {，再在 Task 体内找这个名字
+        for j in range(i + 1, min(i + 41, len(lines))):
+            if re.match(r"\s*(?:private\s+)?func\s+", lines[j]):
+                break
+            if re.search(r"\bTask\s*(?:<[^>]*>)?\s*\{", lines[j]):
+                body = "\n".join(lines[j: min(j + 60, len(lines))])
+                if re.search(r"\b%s\b" % re.escape(name), body):
+                    errors.append(
+                        "%s:%d var %s 被后面的 Task 闭包捕获"
+                        "（报 captured var in concurrently-executing code，需改成 let）"
+                        % (rel, i + 1, name))
+                break
+
 print("=" * 60)
 print("Swift 源码粗检（无类型检查）")
 print("=" * 60)

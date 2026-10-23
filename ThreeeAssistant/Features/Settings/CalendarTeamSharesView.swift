@@ -18,6 +18,7 @@ import SwiftUI
 /// ② **先加入、后共享**：`POST /api/calendars/{id}/teams` 会真的校验
 ///    「我是不是这个团队的成员」，不是只在界面上藏起来。
 ///    所以团队候选列表只列「我已经加入的团队」（`GET /api/teams` 本身就只回这些）。
+@MainActor
 struct CalendarTeamSharesView: View {
 
     let calendarID: String
@@ -187,6 +188,7 @@ struct CalendarTeamSharesView: View {
 // MARK: - 选团队
 
 /// 从「我加入的团队」里挑一个共享出去。
+@MainActor
 struct ShareToTeamSheet: View {
 
     let calendarID: String

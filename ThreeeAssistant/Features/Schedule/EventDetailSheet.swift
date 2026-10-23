@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct EventDetailSheet: View {
 
     let item: ScheduleInstance

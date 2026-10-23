@@ -7,6 +7,7 @@ import SwiftUI
 ///
 /// 状态用 `@Binding` 逐项传入而不是传一个结构体：
 /// SwiftUI 对结构体的 inout 绑定支持不好，拆成基本类型反而最直接。
+@MainActor
 struct RepeatRuleEditor: View {
 
     @Binding var kind: RepeatRule.Kind

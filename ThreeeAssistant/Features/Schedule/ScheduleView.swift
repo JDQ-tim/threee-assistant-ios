@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct ScheduleView: View {
 
     @Environment(SessionStore.self) private var store

@@ -11,6 +11,7 @@ import SwiftUI
 /// 3. **选中的是哪天**（描边）
 ///
 /// 点某一天 = 跳到那周的周视图 —— 在格子里展开列表会挤成一团，不如直接跳转。
+@MainActor
 struct MonthGrid: View {
 
     let anchor: Date

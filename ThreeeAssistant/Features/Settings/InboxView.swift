@@ -20,6 +20,7 @@ import SwiftUI
 /// 所以 `accept` 是两步：`createEvent` → `decideInboxItem(id:action:"accepted", eventID:)`。
 /// 顺序不能反：先改状态再建事件，中间失败的话这条就从收件箱里消失了，
 /// 而日历里也没有 —— 用户的东西凭空不见。
+@MainActor
 struct InboxView: View {
 
     @Environment(SessionStore.self) private var store
@@ -410,6 +411,7 @@ struct InboxView: View {
 ///
 /// 服务端 `status=all` 才会带上这些。这里只做只读展示 ——
 /// 已 accepted 的不能撤回（409：「它已经在你或对方的日历里了」）。
+@MainActor
 struct InboxArchiveView: View {
 
     @Environment(SessionStore.self) private var store

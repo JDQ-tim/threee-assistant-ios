@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct NewEventSheet: View {
 
     @Environment(SessionStore.self) private var store

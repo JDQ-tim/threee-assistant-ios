@@ -11,6 +11,7 @@ import SwiftUI
 /// 所以客户端这里**不做任何额外过滤**。做了反而有害：
 /// 万一哪天服务端漏了这个 WHERE，客户端过滤会把问题藏起来，
 /// 变成「界面上看不出来，但数据已经发出去了」。
+@MainActor
 struct TeamListView: View {
 
     @Environment(SessionStore.self) private var store
@@ -156,6 +157,7 @@ struct TeamListView: View {
 
 // MARK: - 建团队
 
+@MainActor
 struct CreateTeamSheet: View {
 
     let onCreated: () -> Void
@@ -234,6 +236,7 @@ struct CreateTeamSheet: View {
 ///
 /// 幂等：已经是成员时服务端返回 `already_member` 且成功、**不消耗次数**，
 /// 所以重复点是安全的。
+@MainActor
 struct JoinTeamSheet: View {
 
     /// 加入成功后回调（不传 team_id：调用方只需要刷新列表）

@@ -19,6 +19,7 @@ import SwiftUI
 ///
 /// 所以这里只需要挑人 + 点发送。挑人同样必须从 `GET /api/users` 点选，
 /// 因为接口认的是 `user_id`，不是用户名。
+@MainActor
 struct ShareEventSheet: View {
 
     let instance: ScheduleInstance

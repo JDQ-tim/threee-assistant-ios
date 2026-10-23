@@ -11,6 +11,7 @@ import SwiftUI
 ///
 /// 第 3 点是源码 `acl.go:631` 特意写明的，也是这个页面上最容易被误解的地方，
 /// 所以文案必须直说，不能写成「关闭共享 = 取消分享」。
+@MainActor
 struct CalendarMembersView: View {
 
     /// 要管理的日历
@@ -306,6 +307,7 @@ struct CalendarMembersView: View {
 ///
 /// ⚠️ **必须点选，不能手打名字**。加成员接口认的是 `user_id`，
 /// 传用户名服务端回 404「没有这个账号」，而用户明明输入的是正确的名字。
+@MainActor
 struct AddMemberSheet: View {
 
     let calendarID: String

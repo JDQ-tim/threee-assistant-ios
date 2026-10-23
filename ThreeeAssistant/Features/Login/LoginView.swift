@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct LoginView: View {
 
     @Environment(SessionStore.self) private var store

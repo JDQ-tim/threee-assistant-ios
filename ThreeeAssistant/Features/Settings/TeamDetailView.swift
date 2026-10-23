@@ -11,6 +11,7 @@ import SwiftUI
 /// ③ **admin 邀请只有创建者能发**。普通管理员只能生成 member 邀请。
 ///    这条要按 `team.ownerID` 判断，不能只看 `isAdmin` ——
 ///    否则普通管理员点了才吃 403。
+@MainActor
 struct TeamDetailView: View {
 
     let teamID: String
@@ -302,6 +303,7 @@ struct TeamDetailView: View {
 /// 源码（`teams.go:477`）：「一个管理员手上的『发 admin 邀请』能力 =
 /// 可以无限复制管理员身份：拿到码的人能踢成员、能再发邀请 ——
 /// 足以让爸妈看不到共享日历。所以升权这件事只能由创建者本人做。」
+@MainActor
 struct TeamInvitesView: View {
 
     let teamID: String
@@ -471,6 +473,7 @@ struct TeamInvitesView: View {
 }
 
 /// 生成团队邀请码。
+@MainActor
 struct CreateTeamInviteSheet: View {
 
     let teamID: String

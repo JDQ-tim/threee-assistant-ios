@@ -15,6 +15,7 @@ import SwiftUI
 /// 两者靠开始时间落在哪个节次区间来对应：`period.start <= 实例.start < period.end`。
 /// 一旦改过节次表，历史上排的课会自动跟着重新落格，
 /// 不用去改每一条日程 —— 这也是节次表要放服务端共享的原因。
+@MainActor
 struct CourseGridView: View {
 
     /// 只要课程表日历上的日程
