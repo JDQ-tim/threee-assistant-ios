@@ -138,7 +138,15 @@ struct RegisterView: View {
     }
 
     private func probeFailedBox(_ msg: String) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        // ⚠️ 每个用到 `$store` 的视图属性都要自己声明一次 `@Bindable`。
+        //
+        //    `body` 里那行 `@Bindable var store = store` 的作用域**只在 body 内**，
+        //    覆盖不到这里。所以下面 `TextField(text: $store.serverText)` 会报
+        //    `cannot find '$store' in scope` —— 这个错误踩过两次，
+        //    第二次就是因为以为 body 里声明过就够了。
+        @Bindable var store = store
+
+        return VStack(alignment: .leading, spacing: 12) {
             ErrorBanner(message: msg)
 
             FieldBox(label: "服务器地址") {
@@ -185,7 +193,11 @@ struct RegisterView: View {
     // MARK: - 表单
 
     private var form: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        // 同 `probeFailedBox`：这个属性的作用域独立于 body，
+        // `$store.serverText` 要的 Binding 得在这里自己拿一份
+        @Bindable var store = store
+
+        return VStack(alignment: .leading, spacing: 0) {
 
             FieldBox(label: "服务器地址") {
                 TextField("https://example.com:8443", text: $store.serverText)

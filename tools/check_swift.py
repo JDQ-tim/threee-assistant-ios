@@ -493,17 +493,73 @@ for rel, src in ALL_SRC.items():
 # 这条规则查得很死：只要文件里出现 `$store.`，就要求同文件里有
 # `@Bindable var store = store` 这一行。名字固定成 store 是刻意的 ——
 # 工程里 Observable 环境对象就叫这个，换名字等于换约定，届时规则要同步改。
+#
+# ⚠️ 按**作用域**判，不是按文件判。
+#
+#    第一版是按文件判的（「文件里有 @Bindable 就放行」），结果漏报：
+#    RegisterView 的 body 里有那一行，但 `$store` 出现在另外两个**计算属性**
+#    （probeFailedBox / form）里 —— body 内声明的局部变量作用域不覆盖它们，
+#    云端照样报 `cannot find '$store' in scope`。
+#
+#    所以现在改成：找出每个 `$store.` 所在的最内层声明块
+#    （`var body` / `var form` / `func xxx ... {`），
+#    再看那个块的**开头部分**有没有 `@Bindable var store = store`。
+#    块怎么找：从 `$store.` 往上扫，遇到「缩进更浅且以 { 结尾或以 func/var 开头的行」
+#    就认为是块头。
+
+def _enclosing_scope_start(lines, idx):
+    """从 idx 行往上找最内层**声明**块的头行号；找不到返回 0。
+
+    只认声明块（`var body {` / `func xxx(...) -> some View {`），
+    不认调用闭包（`FieldBox(label: "...") {` / `VStack {`）——
+    闭包在 Swift 里是会捕获外层局部变量的，`@Bindable` 声明在外面就够了。
+    第一版没区分，于是 `FieldBox { }` 里用 `$store` 全被误报。
+    """
+    cur = len(lines[idx]) - len(lines[idx].lstrip())
+    decl = re.compile(
+        r"^\s*(?:@\w+(?:\([^)]*\))?\s+)*"          # 可能带 @MainActor / @ViewBuilder
+        r"(?:private\s+|public\s+|internal\s+|fileprivate\s+)?"
+        r"(?:static\s+)?"
+        r"(?:func|var|let|init|subscript)\b")
+    for j in range(idx - 1, -1, -1):
+        s = lines[j]
+        if not s.strip():
+            continue
+        ind = len(s) - len(s.lstrip())
+        if ind < cur and s.rstrip().endswith("{") and decl.match(s):
+            return j
+    return 0
+
+
 for rel, src in ALL_SRC.items():
     clean = strip_noise(src)
     if "$store." not in clean:
         continue
-    if re.search(r"@Bindable\s+var\s+store\s*=\s*store\b", clean):
-        continue
-    errors.append(
-        "%s:%d 用了 `$store.xxx`，但文件里没有 `@Bindable var store = store` "
-        "（@Environment 注进来的是只读值，取不到 $ 投影；"
-        "在 var body 里加一行 `@Bindable var store = store`）"
-        % (rel, clean.index("$store.") and clean[:clean.index("$store.")].count("\n") + 1))
+    lines = clean.split("\n")
+
+    # 先把所有 `@Bindable var store = store` 的行号记下来
+    bindable_lines = {j for j, s in enumerate(lines)
+                      if re.search(r"@Bindable\s+var\s+store\s*=\s*store\b", s)}
+
+    reported = set()
+    for idx, line in enumerate(lines):
+        if "$store." not in line:
+            continue
+        head = _enclosing_scope_start(lines, idx)
+        # 这个块的头到 `$store.` 之间有没有那条 @Bindable
+        if any(head <= b < idx for b in bindable_lines):
+            continue
+        if head in reported:
+            continue
+        reported.add(head)
+        # 块头第一行的简短描述，方便一眼认出是哪个属性
+        head_text = lines[head].strip()[:60] if head < len(lines) else "（文件顶层）"
+        errors.append(
+            "%s:%d 用了 `$store.xxx`，但它所在的作用域「%s」里没有 "
+            "`@Bindable var store = store`。\n"
+            "         └ body 里声明的那份作用域只在 body 内；"
+            "在这个属性/函数的第一行加 `@Bindable var store = store`"
+            % (rel, idx + 1, head_text))
 
 print("=" * 60)
 print("Swift 源码粗检（无类型检查）")
