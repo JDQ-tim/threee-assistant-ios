@@ -18,6 +18,11 @@ struct CalendarsView: View {
     @State private var busy = false
     @State private var failure: String?
 
+    /// 点开成员页的那张日历。
+    /// 用 item 驱动 navigationDestination，这样行内那个小按钮
+    /// 不必被包进 NavigationLink（包进去整行点击都会被它抢走）
+    @State private var membersOf: CalendarDTO?
+
     var body: some View {
         NavigationStack {
             List {
@@ -92,6 +97,9 @@ struct CalendarsView: View {
             .sheet(isPresented: $creating) {
                 CalendarEditSheet(calendar: nil)
             }
+            .navigationDestination(item: $membersOf) { cal in
+                CalendarMembersView(calendarID: cal.id)
+            }
             .sheet(item: $editing) { cal in
                 CalendarEditSheet(calendar: cal)
             }
@@ -126,18 +134,30 @@ struct CalendarsView: View {
 
             Spacer(minLength: 0)
 
-            if cal.canManage {
-                Image(systemName: "chevron.right")
-                    .font(.caption2)
-                    .foregroundStyle(Theme.textTertiary)
-            } else {
-                Text("共享")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Theme.textTertiary)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 2)
+            // 成员入口单独一个按钮。
+            //
+            // 整行点击已经占给了「改名改色」，不能再塞一个动作进整行 ——
+            // 所以成员用行尾这个按钮进出。只有能管成员的（owner/admin）
+            // 才给入口；其他人点进去也只会看到一个只读列表，没有意义。
+            if cal.canManage || (cal.members?.count ?? 0) > 1 {
+                Button {
+                    membersOf = cal
+                } label: {
+                    HStack(spacing: 3) {
+                        Image(systemName: "person.2")
+                            .font(.system(size: 12))
+                        if let n = cal.members?.count, n > 0 {
+                            Text("\(n)")
+                                .font(.system(size: 11, weight: .medium))
+                        }
+                    }
+                    .foregroundStyle(Theme.textSecondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
                     .background(Theme.surfaceAlt)
                     .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
             }
         }
         .padding(.vertical, 2)

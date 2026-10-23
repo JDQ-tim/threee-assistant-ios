@@ -96,6 +96,94 @@ struct MemberDTO: Codable, Hashable, Identifiable {
         case name, role
         case userID = "user_id"
     }
+
+    /// 能不能在 UI 上改这个人的权限。
+    /// owner 不能被"改成别的角色"—— 转让所有权是另一个动作（服务端也没开这个口）。
+    var canChangeRole: Bool { role != "owner" }
+
+    var roleLabel: String {
+        switch role {
+        case "owner": return "创建者"
+        case "admin": return "管理员"
+        case "editor": return "可编辑"
+        case "viewer": return "只读"
+        default: return role
+        }
+    }
+}
+
+// MARK: - 日历共享
+
+/// `POST /api/calendars/{id}/members` 的请求体。
+///
+/// ## ⚠️ 认的是 user_id，不是用户名
+///
+/// 服务端拿它去 `SELECT COUNT(*) FROM users WHERE id=?` 校验存在性，
+/// 传用户名会得到 404「没有这个账号」—— 而用户会以为「人也存在啊」。
+/// 所以 UI 上必须先从 `GET /api/users` 拉出名单让用户挑，
+/// 不能让用户手打。
+///
+/// ## 角色
+///
+/// - `editor` 能改日程
+/// - `admin`  还能管成员
+/// - `owner`  **不能通过这个接口设置**：服务端收到 owner 会静默降成 admin
+///   （`if role == RoleOwner { role = RoleAdmin }`），因为转让所有权是另一个动作
+struct AddMemberBody: Encodable {
+    let userID: String
+    let role: String
+
+    enum CodingKeys: String, CodingKey {
+        case role
+        case userID = "user_id"
+    }
+
+    static let editor = "editor"
+    static let admin = "admin"
+}
+
+/// `PUT /api/calendars/{id}/permissions` 的请求体。
+struct SetPermissionsBody: Encodable {
+    let userID: String
+    let role: String
+
+    enum CodingKeys: String, CodingKey {
+        case role
+        case userID = "user_id"
+    }
+}
+
+/// `POST /api/calendars/{id}/share` 的请求体 —— 界面上那个「共享」开关。
+///
+/// ## 它和成员名单互不干涉
+///
+/// 源码注释（`acl.go:631`）写得很明确：
+/// 「关掉共享只是让『以后再加人』需要重新打开，已经分享出去的同学会继续看到这张日历」。
+/// 所以 UI 上不能把它写成「关闭共享 = 收回权限」——
+/// 那是两件事，收回要单独移除成员。
+struct ShareBody: Encodable {
+    let shared: Bool
+}
+
+/// 返回单个日历的响应（加成员 / 删成员都会回整条日历）。
+struct CalendarEnvelopeDTO: Decodable {
+    let calendar: CalendarDTO?
+}
+
+/// `GET /api/users` 里的一项 —— 加成员时的候选名单。
+///
+/// ⚠️ 和 `APIUser` 不是一回事：这里的 `id` 是加成员要传的 `user_id`。
+struct DirectoryUser: Decodable, Identifiable, Hashable {
+    let id: String
+    let name: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, name
+    }
+}
+
+struct UsersResponse: Decodable {
+    let users: [DirectoryUser]
 }
 
 /// 新建 / 修改日历的请求体。

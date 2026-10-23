@@ -462,6 +462,72 @@ final class SessionStore {
         await refresh()
     }
 
+    // MARK: - 日历共享
+
+    /// 加成员时的候选名单。
+    ///
+    /// ⚠️ 必须用这个列表让人**点选**，不能让用户手打：
+    /// 加成员接口认的是 `user_id`（`usr_xxx` 这种），不是用户名。
+    /// 让用户打名字的话，服务端会回 404「没有这个账号」，
+    /// 而用户看到的明明就是那个名字，只会以为程序坏了。
+    func loadDirectory() async throws -> [DirectoryUser] {
+        let res: UsersResponse = try await APIClient.shared.get("/api/users")
+        return res.users
+    }
+
+    /// 把某人加进日历（或改他的角色）。
+    ///
+    /// 服务端要求 **owner**（`canManageMembers`），且：
+    /// - 加自己 → 400「你自己已经在名单里了」
+    /// - 用户不存在 → 404
+    /// - 传 `owner` 会被**静默降成 admin**（转让所有权是另一个动作）
+    func addMember(calendarID: String, userID: String, role: String) async throws {
+        // 先挡掉那个静默降级：与其让用户以为设成了创建者，不如直接说清楚
+        guard role != "owner" else {
+            throw APIError.server(400, "不能把别人设成创建者。想转让日历请用别的入口。")
+        }
+        let data = try JSONEncoder().encode(AddMemberBody(userID: userID, role: role))
+        _ = try await APIClient.shared.postRaw("/api/calendars/\(calendarID)/members", body: data)
+        await refresh()
+    }
+
+    /// 把某人移出日历。
+    ///
+    /// 服务端不允许移自己（400「不能移除自己」）—— 自己想退出请用 `leaveCalendar`。
+    func removeMember(calendarID: String, userID: String) async throws {
+        try await APIClient.shared.delete("/api/calendars/\(calendarID)/members/\(userID)")
+        await refresh()
+    }
+
+    /// 改某个成员的角色。同样要 owner。
+    func setPermissions(calendarID: String, userID: String, role: String) async throws {
+        guard role != "owner" else {
+            throw APIError.server(400, "不能把别人设成创建者。")
+        }
+        let data = try JSONEncoder().encode(SetPermissionsBody(userID: userID, role: role))
+        _ = try await APIClient.shared.putRaw("/api/calendars/\(calendarID)/permissions", body: data)
+        await refresh()
+    }
+
+    /// 「共享」开关。
+    ///
+    /// ⚠️ 这**不是**收回权限。源码注释（`acl.go:631`）：
+    /// 「关掉共享只是让『以后再加人』需要重新打开，已经分享出去的同学会继续看到这张日历」。
+    /// UI 上必须照实说明，否则用户会以为关掉就收回了。
+    func setShared(calendarID: String, shared: Bool) async throws {
+        let data = try JSONEncoder().encode(ShareBody(shared: shared))
+        _ = try await APIClient.shared.postRaw("/api/calendars/\(calendarID)/share", body: data)
+        await refresh()
+    }
+
+    /// 退出别人分享给我的日历。
+    ///
+    /// 这是**唯一**由非 owner 发起的成员变更 —— owner 想收回权限得移除别人。
+    func leaveCalendar(id: String) async throws {
+        _ = try await APIClient.shared.postRaw("/api/calendars/\(id)/leave", body: nil)
+        await refresh()
+    }
+
     // MARK: - 课程表节次
 
     /// 课表的「节次表」—— 网格有哪几行、每行几点到几点。

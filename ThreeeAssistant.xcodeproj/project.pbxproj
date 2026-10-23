@@ -27,10 +27,11 @@
 		DFDC7BAC000000000000003E /* NewEventSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99F7D524000000000000003D /* NewEventSheet.swift */; };
 		5BED02010000000000000040 /* RepeatRuleEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6936430B000000000000003F /* RepeatRuleEditor.swift */; };
 		1FDDB8B40000000000000042 /* ScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 348F838B0000000000000041 /* ScheduleView.swift */; };
-		3B2F09DB0000000000000044 /* CalendarsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90C535C90000000000000043 /* CalendarsView.swift */; };
-		4A06B0CB0000000000000046 /* ConflictsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C7FA7D00000000000000045 /* ConflictsView.swift */; };
-		5C5533820000000000000048 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCDE70B10000000000000047 /* SettingsView.swift */; };
-		14A5319A0000000000000049 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E684DE92000000000000001A /* Assets.xcassets */; };
+		8F2E8E9A0000000000000044 /* CalendarMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 464C2B7A0000000000000043 /* CalendarMembersView.swift */; };
+		3B2F09DB0000000000000046 /* CalendarsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90C535C90000000000000045 /* CalendarsView.swift */; };
+		4A06B0CB0000000000000048 /* ConflictsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C7FA7D00000000000000047 /* ConflictsView.swift */; };
+		5C553382000000000000004A /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCDE70B10000000000000049 /* SettingsView.swift */; };
+		14A5319A000000000000004B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E684DE92000000000000001A /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -55,9 +56,10 @@
 		99F7D524000000000000003D /* NewEventSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewEventSheet.swift; sourceTree = "<group>"; };
 		6936430B000000000000003F /* RepeatRuleEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepeatRuleEditor.swift; sourceTree = "<group>"; };
 		348F838B0000000000000041 /* ScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleView.swift; sourceTree = "<group>"; };
-		90C535C90000000000000043 /* CalendarsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarsView.swift; sourceTree = "<group>"; };
-		4C7FA7D00000000000000045 /* ConflictsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConflictsView.swift; sourceTree = "<group>"; };
-		BCDE70B10000000000000047 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		464C2B7A0000000000000043 /* CalendarMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarMembersView.swift; sourceTree = "<group>"; };
+		90C535C90000000000000045 /* CalendarsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarsView.swift; sourceTree = "<group>"; };
+		4C7FA7D00000000000000047 /* ConflictsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConflictsView.swift; sourceTree = "<group>"; };
+		BCDE70B10000000000000049 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		0FE0F9C30000000000000019 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		E684DE92000000000000001A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = ThreeeAssistant/Resources/Assets.xcassets; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -152,9 +154,10 @@
 		940B1924000000000000000B /* Settings */ = {
 			isa = PBXGroup;
 			children = (
-				90C535C90000000000000043 /* CalendarsView.swift */,
-				4C7FA7D00000000000000045 /* ConflictsView.swift */,
-				BCDE70B10000000000000047 /* SettingsView.swift */,
+				464C2B7A0000000000000043 /* CalendarMembersView.swift */,
+				90C535C90000000000000045 /* CalendarsView.swift */,
+				4C7FA7D00000000000000047 /* ConflictsView.swift */,
+				BCDE70B10000000000000049 /* SettingsView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -252,7 +255,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				14A5319A0000000000000049 /* Assets.xcassets in Resources */,
+				14A5319A000000000000004B /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -283,9 +286,10 @@
 				DFDC7BAC000000000000003E /* NewEventSheet.swift in Sources */,
 				5BED02010000000000000040 /* RepeatRuleEditor.swift in Sources */,
 				1FDDB8B40000000000000042 /* ScheduleView.swift in Sources */,
-				3B2F09DB0000000000000044 /* CalendarsView.swift in Sources */,
-				4A06B0CB0000000000000046 /* ConflictsView.swift in Sources */,
-				5C5533820000000000000048 /* SettingsView.swift in Sources */,
+				8F2E8E9A0000000000000044 /* CalendarMembersView.swift in Sources */,
+				3B2F09DB0000000000000046 /* CalendarsView.swift in Sources */,
+				4A06B0CB0000000000000048 /* ConflictsView.swift in Sources */,
+				5C553382000000000000004A /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
