@@ -485,6 +485,8 @@ struct CreateTeamInviteSheet: View {
     @State private var days = 7
     /// 0 = 不限次数
     @State private var maxUses = 0
+    /// 「不限次数」关掉时恢复成这个数（记住用户上次填的值，而不是每次都退回 30）
+    @State private var lastFiniteUses = 30
     @State private var busy = false
     @State private var failure: String?
 
@@ -514,7 +516,16 @@ struct CreateTeamInviteSheet: View {
                 Section {
                     Toggle("不限使用次数", isOn: Binding(
                         get: { maxUses == 0 },
-                        set: { maxUses = $0 ? 0 : 30 }
+                        set: { unlimited in
+                            if unlimited {
+                                // 关掉之前先记住用户填过的数，下次打开还给他。
+                                // 直接重置成 30 的话，他填的 200 就白填了。
+                                if maxUses > 0 { lastFiniteUses = maxUses }
+                                maxUses = 0
+                            } else {
+                                maxUses = lastFiniteUses
+                            }
+                        }
                     ))
                     if maxUses > 0 {
                         Stepper("最多 \(maxUses) 人", value: $maxUses, in: 1...500)
