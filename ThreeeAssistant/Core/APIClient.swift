@@ -80,6 +80,48 @@ final class APIClient: NSObject, @unchecked Sendable {
         try await send("GET", path, query: query, body: nil)
     }
 
+    // MARK: - 独立端口（背词同步 8446）
+
+    /// 背词同步跑在**另一个端口**上（服务端 `defaultWordbookPort = 8446`）。
+    ///
+    /// ## 为什么不复用主端口的路径
+    ///
+    /// 服务端 `registerWordbookRoutes` 是**单独**挂在一个新 mux 上的，
+    /// 主服务（8443）上**根本没有** `/api/wordbook/*` 这三条路由 ——
+    /// 源码注释：「这样 8446 那个 listener 能只挂这一组，
+    /// 不用把主服务的全部接口再暴露一遍」。
+    ///
+    /// 所以这里只能对着 `https://<host>:8446` 发请求。
+    /// 端口写死 8446 是照服务端的端口分配来的
+    /// （8443 主服务 · 8444 网页 · 8445 实时协作 · **8446 背词同步**）。
+    /// 服务器主人改过 `WORDBOOK_PORT` 的话这里连不上，
+    /// UI 上会表现为「未开启」，不会误报成「同步成功」。
+    ///
+    /// ## 证书
+    ///
+    /// 8446 复用主服务**同一张证书**（同一个 `CertDir`）。
+    /// 所以已经信任过主服务的这台设备不会再多弹一次警告 ——
+    /// 前提是 `TrustStore` 是按 host 而不是按 host:port 记指纹的。
+    static let wordbookPort = 8446
+
+    func getOnPort<T: Decodable>(_ path: String, port: Int) async throws -> T {
+        let data = try await sendRaw("GET", path, query: [], body: nil, port: port)
+        do {
+            return try JSONDecoder().decode(T.self, from: data)
+        } catch {
+            throw APIError.decoding(error.localizedDescription)
+        }
+    }
+
+    func postOnPort<T: Decodable>(_ path: String, port: Int, body: Data?) async throws -> T {
+        let data = try await sendRaw("POST", path, query: [], body: body, port: port)
+        do {
+            return try JSONDecoder().decode(T.self, from: data)
+        } catch {
+            throw APIError.decoding(error.localizedDescription)
+        }
+    }
+
     /// `query` 默认空 —— 绝大多数 POST 的入参都在 body 里。
     ///
     /// 例外是 `POST /api/maintenance/dedupe`：服务端读的是
@@ -142,7 +184,10 @@ final class APIClient: NSObject, @unchecked Sendable {
         _ method: String,
         _ path: String,
         query: [URLQueryItem],
-        body: Data?
+        body: Data?,
+        /// 非 nil 时**替换** baseURL 的端口。目前只有背词同步（8446）用。
+        /// 传 nil（默认）保持 baseURL 原样，所有原有调用不受影响。
+        port: Int? = nil
     ) async throws -> Data {
         guard let base = baseURL else { throw APIError.notConfigured }
 
@@ -154,6 +199,7 @@ final class APIClient: NSObject, @unchecked Sendable {
         }
         comps.path = path.hasPrefix("/") ? path : "/" + path
         if !query.isEmpty { comps.queryItems = query }
+        if let p = port { comps.port = p }
         guard let url = comps.url else { throw APIError.badURL(path) }
 
         var req = URLRequest(url: url)

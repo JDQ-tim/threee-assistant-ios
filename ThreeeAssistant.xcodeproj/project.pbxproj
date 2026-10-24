@@ -48,8 +48,10 @@
 		9CD7BA4E0000000000000068 /* TeamListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87AE298B0000000000000067 /* TeamListView.swift */; };
 		7BC736B6000000000000006A /* TierView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB7E78DE0000000000000069 /* TierView.swift */; };
 		EBB57185000000000000006C /* WeatherLocationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FD0D5A9000000000000006B /* WeatherLocationView.swift */; };
-		8F96758C000000000000006E /* WipeDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53EC557C000000000000006D /* WipeDataView.swift */; };
-		14A5319A000000000000006F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E684DE92000000000000001A /* Assets.xcassets */; };
+		588C7A10000000000000006E /* WeatherView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 524A1E97000000000000006D /* WeatherView.swift */; };
+		8F96758C0000000000000070 /* WipeDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53EC557C000000000000006F /* WipeDataView.swift */; };
+		866C3D210000000000000072 /* WordbookSyncView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A0F668B0000000000000071 /* WordbookSyncView.swift */; };
+		14A5319A0000000000000073 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E684DE92000000000000001A /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -95,7 +97,9 @@
 		87AE298B0000000000000067 /* TeamListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamListView.swift; sourceTree = "<group>"; };
 		AB7E78DE0000000000000069 /* TierView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TierView.swift; sourceTree = "<group>"; };
 		7FD0D5A9000000000000006B /* WeatherLocationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherLocationView.swift; sourceTree = "<group>"; };
-		53EC557C000000000000006D /* WipeDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WipeDataView.swift; sourceTree = "<group>"; };
+		524A1E97000000000000006D /* WeatherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherView.swift; sourceTree = "<group>"; };
+		53EC557C000000000000006F /* WipeDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WipeDataView.swift; sourceTree = "<group>"; };
+		7A0F668B0000000000000071 /* WordbookSyncView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordbookSyncView.swift; sourceTree = "<group>"; };
 		0FE0F9C30000000000000019 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		E684DE92000000000000001A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = ThreeeAssistant/Resources/Assets.xcassets; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -211,7 +215,9 @@
 				87AE298B0000000000000067 /* TeamListView.swift */,
 				AB7E78DE0000000000000069 /* TierView.swift */,
 				7FD0D5A9000000000000006B /* WeatherLocationView.swift */,
-				53EC557C000000000000006D /* WipeDataView.swift */,
+				524A1E97000000000000006D /* WeatherView.swift */,
+				53EC557C000000000000006F /* WipeDataView.swift */,
+				7A0F668B0000000000000071 /* WordbookSyncView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -309,7 +315,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				14A5319A000000000000006F /* Assets.xcassets in Resources */,
+				14A5319A0000000000000073 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -361,7 +367,9 @@
 				9CD7BA4E0000000000000068 /* TeamListView.swift in Sources */,
 				7BC736B6000000000000006A /* TierView.swift in Sources */,
 				EBB57185000000000000006C /* WeatherLocationView.swift in Sources */,
-				8F96758C000000000000006E /* WipeDataView.swift in Sources */,
+				588C7A10000000000000006E /* WeatherView.swift in Sources */,
+				8F96758C0000000000000070 /* WipeDataView.swift in Sources */,
+				866C3D210000000000000072 /* WordbookSyncView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

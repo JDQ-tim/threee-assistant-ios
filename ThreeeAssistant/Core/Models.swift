@@ -1901,3 +1901,235 @@ struct DayGroup: Identifiable {
     let items: [ScheduleInstance]
     var id: Date { day }
 }
+
+// MARK: - 背词同步（独立端口 8446）
+
+/// 一张卡的学习状态（`GET /api/wordbook/pull` 的 `cards[]`）。
+///
+/// ## ⚠️ 字段名是单字母，不要"美化"成 readable 的
+///
+/// 服务端 `wordbookCard` 的结构体标签就是 `w` / `d` / `s` / `due` / `ph` /
+/// `r` / `l` / `lr` / `u`，源码注释解释了为什么：
+/// 「一个重度用户可能有一两万张卡，每次同步都是全量比对」，
+/// 所以省流量优先。这里必须**逐个 CodingKeys 映射**，
+/// 猜错一个字母就是整份响应解码失败。
+///
+/// ## ⚠️ 这里只有"学习状态"，没有"单词本身"
+///
+/// 词库本体（拼写、释义、例句）**永远不上服务器**。服务端注释写明这是硬约束：
+/// 「用户自己导入的词库有版权问题 —— 那是他自己提供的教材数据，
+/// 传到服务器上性质就变了」。所以 `wordID` 只是一个本地主键，
+/// 离开那台设备就没有意义。
+struct WordbookCardDTO: Codable, Hashable, Identifiable {
+    /// 本地词库里的词条 id。**不是**单词拼写。
+    let wordID: String
+    /// FSRS difficulty
+    let difficulty: Double
+    /// FSRS stability
+    let stability: Double
+    /// 到期时间（epoch 秒）
+    let dueAt: Int64
+    /// `New` / `Learning` / `Review` / `Relearning`
+    let phase: String
+    /// 复习次数
+    let reps: Int
+    /// 遗忘次数（点「不认识」的次数）
+    let lapses: Int
+    /// 上次复习时间（epoch 秒）
+    let lastReview: Int64
+    /// 本地最后修改时间（epoch 秒）。**冲突就靠它，后写胜。**
+    let updatedAt: Int64
+
+    var id: String { wordID }
+
+    enum CodingKeys: String, CodingKey {
+        case wordID = "w"
+        case difficulty = "d"
+        case stability = "s"
+        case dueAt = "due"
+        case phase = "ph"
+        case reps = "r"
+        case lapses = "l"
+        case lastReview = "lr"
+        case updatedAt = "u"
+    }
+}
+
+/// 某一天的完成量（`daily[]`）。打卡连续天数、今日进度都靠它。
+struct WordbookDailyDTO: Codable, Hashable, Identifiable {
+    /// `YYYY-MM-DD`
+    let day: String
+    /// 当天新学的张数
+    let newDone: Int
+    /// 当天复习的张数
+    let reviewDone: Int
+
+    var id: String { day }
+
+    enum CodingKeys: String, CodingKey {
+        case day
+        case newDone = "nd"
+        case reviewDone = "rd"
+    }
+
+    var total: Int { newDone + reviewDone }
+}
+
+/// `GET /api/wordbook/pull` 的响应。
+///
+/// 服务端刻意做成**全量**而不是「自 since 以来的增量」：
+/// 「卡的数量级是万，一次 JSON 也就几百 KB —— 而增量协议要维护 since 游标，
+/// 一旦客户端时钟不对就会静默漏掉数据。能用笨办法做对的，
+/// 不要用聪明办法做错的。」
+struct WordbookPullResponse: Decodable {
+    let ok: Bool
+    let cards: [WordbookCardDTO]
+    let daily: [WordbookDailyDTO]
+    /// 服务器当前时间（epoch 秒）。用来发现设备时钟漂移。
+    let now: Int64
+}
+
+/// `POST /api/wordbook/push` 的请求体。
+struct WordbookPushRequest: Encodable {
+    let cards: [WordbookCardDTO]
+    let daily: [WordbookDailyDTO]
+}
+
+/// `POST /api/wordbook/push` 的响应。
+///
+/// ⚠️ `applied + skipped` 才是收到的一共多少张，
+/// 只报 `applied` 会让人以为「推了 500 张只成功了 30 张」。
+struct WordbookPushResponse: Decodable {
+    let ok: Bool
+    /// 真正写进去的（本地版本比服务器新）
+    let applied: Int
+    /// 服务器上有更新版本，跳过不写
+    let skipped: Int
+}
+
+/// `GET /api/wordbook/health` 的响应（**匿名**，不需要 token）。
+struct WordbookHealthDTO: Decodable {
+    let ok: Bool
+    let service: String
+    /// 服务器当前时间
+    let time: Int64
+    /// 服务端明写 false：它不存词库本体。展示出来能少一堆疑问。
+    let storesWordlibs: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case ok, service, time
+        case storesWordlibs = "stores_wordlibs"
+    }
+}
+
+// MARK: - 天气预报（`GET /api/weather`）
+
+/// 逐时预报（`hours[]`）。
+///
+/// 字段名和 Service 的 Go 结构体一样是短名（`t`/`temp`/…），
+/// 只有时间是最短的两个字母 —— 24 小时 × N 天的数据，省一点是一点。
+struct WeatherHourDTO: Decodable, Hashable, Identifiable {
+    /// epoch 秒
+    let time: Int64
+    /// 摄氏度
+    let temp: Double
+    /// 相对湿度 %
+    let humidity: Double
+    /// 风速 m/s
+    let wind: Double
+    /// 风向（度，0 = 北）
+    let windDir: Double
+    /// 云量 %
+    let cloud: Double
+    /// 降水量 mm
+    let precip: Double
+    /// met.no 的天气代码，比如 `clearsky_day` / `heavyrainshowers_night`
+    let symbol: String
+    /// 中文描述。**服务端已经翻好了**（`weatherLabels` 表），
+    /// 客户端不要再自己映射一遍 —— 两处维护必然分叉。
+    let label: String
+    /// 白天 / 夜里。图标要跟着换（晴天白天是太阳，夜里是月亮）
+    let isDay: Bool
+
+    var id: Int64 { time }
+
+    enum CodingKeys: String, CodingKey {
+        case time = "t"
+        case temp, humidity, wind, symbol, label
+        case windDir = "wind_dir"
+        case cloud, precip
+        case isDay = "is_day"
+    }
+}
+
+/// 逐日预报（`days[]`）。
+struct WeatherDayDTO: Decodable, Hashable, Identifiable {
+    /// `YYYY-MM-DD`
+    let date: String
+    let tempMin: Double
+    let tempMax: Double
+    /// 当天累计降水 mm
+    let precipSum: Double
+    let symbol: String
+    let label: String
+
+    var id: String { date }
+
+    enum CodingKeys: String, CodingKey {
+        case date, symbol, label
+        case tempMin = "tmin"
+        case tempMax = "tmax"
+        case precipSum = "precip_sum"
+    }
+}
+
+/// `GET /api/weather` 的响应。
+///
+/// ## ⚠️ `stale` 和 `note` 一定要显示出来
+///
+/// 上游（met.no）挂掉时，服务端会把**上一次成功的那份**继续端出来，
+/// 同时把 `stale` 置 true、`note` 写成「上游暂时不可用，显示的是上一次获取的预报」。
+///
+/// 这时候如果界面照常显示「现在 18°」，用户会拿它当实时天气用 ——
+/// 而它可能是六小时前的。所以这两个字段不是装饰，是**必须传达的信息**。
+struct WeatherDocDTO: Decodable {
+    /// 地点名。由服务端的「天气城市」设置决定，可能和你的定位不一样
+    let place: String
+    let lat: Double
+    let lon: Double
+    /// `met.no` / `open-meteo` / `none`
+    let source: String
+    /// 数据获取时间（epoch 秒）
+    let updatedAt: Int64
+    /// 缓存过期时间（epoch 秒）
+    let expiresAt: Int64
+    let hours: [WeatherHourDTO]
+    let days: [WeatherDayDTO]
+    /// true = 这份是旧数据，上游暂时取不到
+    let stale: Bool?
+    /// 给用户看的说明（降级原因、错误原因）
+    let note: String?
+
+    enum CodingKeys: String, CodingKey {
+        case place, lat, lon, source, hours, days, stale, note
+        case updatedAt = "updated_at"
+        case expiresAt = "expires_at"
+    }
+
+    var isStale: Bool { stale ?? false }
+}
+
+// MARK: - 设备上报
+
+/// `POST /api/device/report` 的请求体。
+///
+/// 服务端字段（`updates.go:409`）：`id` / `name` / `platform` / `version`。
+/// `id` 留空时服务端会自己生成一个 `dev_xxx` 并回在响应里 ——
+/// 但我们总是带上本机的 `deviceID`，这样「同一台设备」在
+/// 冲突记录（`client_device`）和设备列表里是同一个标识。
+struct DeviceReportRequest: Encodable {
+    let id: String
+    let name: String
+    let platform: String
+    let version: String
+}

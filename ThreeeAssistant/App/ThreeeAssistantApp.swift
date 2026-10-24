@@ -48,6 +48,19 @@ struct RootView: View {
         .onChange(of: store.isLoggedIn) { _, loggedIn in
             if loggedIn {
                 store.weekStart = Date.now.startOfWeekMonday
+                // 登录这一下也要上报一次设备（冷启动那条路走 .task，
+                // 因为 restore() 在 init 里跑、onChange 不会为初始值触发）
+                Task { await store.reportDevice() }
+            }
+        }
+        // 冷启动时 store 可能已经是登录态（token 从 Keychain 恢复的），
+        // 这种情况 onChange 不会触发 —— 补一条。
+        //
+        // ⚠️ 上报失败静默。它是纯统计用途，
+        //    为了它弹错误横幅，用户会以为登录出了问题。
+        .task {
+            if store.isLoggedIn {
+                await store.reportDevice()
             }
         }
     }

@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import UIKit
 
 /// 全部界面状态。视图不持有数据、不自己发请求 —— 都从这里拿。
 ///
@@ -404,6 +405,112 @@ final class SessionStore {
     func loadSiteInvite() async throws -> String {
         let res: SiteInviteDTO = try await APIClient.shared.get("/api/invite")
         return res.inviteCode
+    }
+
+    // MARK: - 设备上报
+
+    /// 告诉服务器「这台设备在用这个版本」（`POST /api/device/report`）。
+    ///
+    /// ## 为什么客户端要主动上报
+    ///
+    /// 管理端的「设备列表」（`GET /api/devices`）读的就是这张表。
+    /// 不上报的话，管理员只能看到 Web 端和背词插件的设备，
+    /// **iOS 客户端等于不存在** —— 发版之后没法判断有没有人在用新版。
+    ///
+    /// ## 上报时机
+    ///
+    /// 登录成功后报一次就够。它是「最后一次出现」而不是「流水账」——
+    /// 服务端 `ON CONFLICT(id) DO UPDATE` 只保留每台设备最新那一行，
+    /// 所以重复上报不会把表撑大，但也没必要每次启动都报。
+    /// 这里在 `refresh()` 里带一次，冷启动 + 手动下拉都会刷新时间。
+    ///
+    /// ⚠️ 失败必须**静默**：这是纯统计用途，为了它弹错误横幅，
+    ///    用户会以为登录出了问题。
+    func reportDevice() async {
+        let info = Bundle.main.infoDictionary
+        let ver = (info?["CFBundleShortVersionString"] as? String) ?? "?"
+        let build = (info?["CFBundleVersion"] as? String) ?? "?"
+        let body = DeviceReportRequest(
+            id: deviceID,
+            name: UIDevice.current.name,
+            platform: "ios",
+            version: "\(ver) (\(build))"
+        )
+        guard let data = try? JSONEncoder().encode(body) else { return }
+        // 用 get 的返回类型不方便（响应是 {"ok":true,"device_id":"..."}），
+        // 这里只关心成不成，用 postRaw 丢掉响应体
+        _ = try? await APIClient.shared.postRaw("/api/device/report", body: data)
+    }
+
+    // MARK: - 天气预报
+
+    /// 拉天气预报（`GET /api/weather`）。
+    ///
+    /// ## 坐标由服务端决定，不是设备定位
+    ///
+    /// 服务端用的是它在「天气城市」里配置的坐标（默认取启动参数，
+    /// 管理员可以在设置里改）。所以这台设备在 A 市、服务器配的是 B 市，
+    /// 看到的就是 B 市的天气 —— 页面上要把 `place` 显示出来，
+    /// 否则用户只会觉得「天气预报不准」。
+    ///
+    /// ## `hours` / `days` 是**裁剪参数**
+    ///
+    /// 服务端把整份缓存裁到你要的条数再返回（`trimWeather`），
+    /// 不传就是全部。这里各要 24 小时、7 天 —— 正好放得下一屏。
+    func loadWeather(hours: Int = 24, days: Int = 7) async throws -> WeatherDocDTO {
+        try await APIClient.shared.get(
+            "/api/weather",
+            query: [
+                URLQueryItem(name: "hours", value: "\(hours)"),
+                URLQueryItem(name: "days", value: "\(days)")
+            ]
+        )
+    }
+
+    // MARK: - 背词同步（独立端口 8446）
+
+    /// 探活（`GET /api/wordbook/health`）。
+    ///
+    /// ## ⚠️ 这个端点在**另一个端口**上，而且主端口上没有它
+    ///
+    /// 服务端把词书同步单独挂了一个 listener（8446），主服务（8443）
+    /// 上**不存在** `/api/wordbook/*`。所以这里必须走 `getOnPort`。
+    ///
+    /// ## 为什么先探活再同步
+    ///
+    /// 词书同步是**可选**服务端功能：`WORDBOOK_PORT=off` 时它压根不启动，
+    /// 没放证书时也拒绝启动。直接去 pull 的话，用户看到的会是
+    /// 「连接超时 / 证书错误」—— 而那看起来像是**整个 App 连不上**。
+    /// 先打 health，就能明确说「主服务是好的，只是背词同步没开」。
+    func wordbookHealth() async throws -> WordbookHealthDTO {
+        try await APIClient.shared.getOnPort(
+            "/api/wordbook/health", port: APIClient.wordbookPort
+        )
+    }
+
+    /// 拉全量学习状态（`GET /api/wordbook/pull`）。
+    ///
+    /// 服务端刻意做成全量：卡的数量级是万，一次几百 KB，
+    /// 比维护 `since` 游标安全得多（游标遇上时钟不对会静默漏数据）。
+    func pullWordbook() async throws -> WordbookPullResponse {
+        try await APIClient.shared.getOnPort(
+            "/api/wordbook/pull", port: APIClient.wordbookPort
+        )
+    }
+
+    /// 推本地改动（`POST /api/wordbook/push`）。
+    ///
+    /// 服务端逐卡比 `updated`，**后写胜**，不是整表替换。
+    /// 所以多台设备各学各的最后会并起来，不会互相覆盖。
+    ///
+    /// 单次上限 50000 张（服务端硬限制），超了会 400。
+    func pushWordbook(cards: [WordbookCardDTO],
+                      daily: [WordbookDailyDTO]) async throws -> WordbookPushResponse {
+        let req = WordbookPushRequest(cards: cards, daily: daily)
+        let body = try JSONEncoder().encode(req)
+        return try await APIClient.shared.postOnPort(
+            "/api/wordbook/push", port: APIClient.wordbookPort, body: body
+        )
     }
 
     // MARK: - 重复日程清理

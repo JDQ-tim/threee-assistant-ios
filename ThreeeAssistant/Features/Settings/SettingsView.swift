@@ -74,6 +74,13 @@ struct SettingsView: View {
                                 .foregroundStyle(Theme.textTertiary)
                         }
                     }
+                    // 背词同步是**另一个端口**上的独立服务，不在上面那个「同步」里。
+                    // 分开放而不是塞进去：日程同步是主服务的 /api/changes，
+                    // 背词同步是 8446 上的 /api/wordbook/*，两件事挂一起会让人以为
+                    // 「日程同步好了，背词也就好了」。
+                    NavigationLink("背词同步") {
+                        WordbookSyncView()
+                    }
                 }
 
                 Section("数据") {
@@ -168,12 +175,17 @@ struct SettingsView: View {
 
                 Section {
                     NavigationLink {
+                        WeatherView()
+                    } label: {
+                        Text("天气")
+                    }
+                    NavigationLink {
                         WeatherLocationView()
                     } label: {
                         Text("天气城市")
                     }
                 } footer: {
-                    Text("服务端生成天气预报用的坐标。默认由部署时的启动参数决定。")
+                    Text("「天气」是服务器按配置的坐标去取的预报，不是手机定位。「天气城市」改的就是那个坐标，默认由部署时的启动参数决定。")
                 }
 
                 Section {
