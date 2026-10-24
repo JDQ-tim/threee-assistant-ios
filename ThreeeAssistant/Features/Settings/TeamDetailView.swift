@@ -29,7 +29,7 @@ struct TeamDetailView: View {
 
     private var team: TeamDTO? { detail?.team }
     private var members: [TeamMemberDTO] { detail?.members ?? [] }
-    private var calendars: [TeamCalendarShareDTO] { detail?.calendars ?? [] }
+    private var calendars: [TeamCalendarDTO] { detail?.calendars ?? [] }
 
     /// 我是不是这支团队的管理员（能邀人、能移除人）
     private var isAdmin: Bool { team?.isAdmin ?? false }

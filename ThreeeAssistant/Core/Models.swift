@@ -1281,7 +1281,41 @@ struct TeamMemberDTO: Codable, Identifiable, Hashable {
 /// 团队详情里「这个团队能看到哪些日历」的一行。
 ///
 /// 只有名字和角色 —— 日历内容本身走同步流，不从这里下发。
+/// 「这张日历共享给了哪些团队」—— `GET /api/calendars/{id}/teams` 的一项。
+///
+/// ## 为什么这个要跟 `TeamCalendarDTO` 分成两个类型
+///
+/// 服务端两个方向的接口返回的字段是**互补**的，不是同一份数据：
+///
+///     GET /api/calendars/{id}/teams  →  {"team_id": ..., "role": ..., "name": ...}
+///     GET /api/teams/{id}            →  {"calendar_id": ..., "role": ..., "name": ...}
+///
+/// 之前用一个类型吃两种响应，于是要么缺 `team_id`（取消共享时拿不到 id，
+/// 请求打到 `/teams/` 末尾没 id 的路径上），要么缺 `calendar_id`
+/// （字段非 Optional 时 decode 直接抛 keyNotFound，整个响应解析失败）。
+///
+/// 拆开之后两边都只有自己真正拿得到的字段，不需要 Optional，
+/// 也不会出现「空串当成有效 id」这种静默错误。
 struct TeamCalendarShareDTO: Codable, Identifiable, Hashable {
+    /// 取消共享要它：`DELETE /api/calendars/{id}/teams/{teamId}`
+    let teamID: String
+    let role: String
+    let name: String
+
+    var id: String { teamID }
+
+    enum CodingKeys: String, CodingKey {
+        case role, name
+        case teamID = "team_id"
+    }
+}
+
+/// 「这支团队绑了哪些日历」—— `GET /api/teams/{id}` 里 `calendars` 的一项。
+///
+/// 只用于展示（团队详情页列一下绑了哪些日历、什么角色）。
+/// 解绑走的是另一条路径（由日历拥有者在日历侧操作），
+/// 所以这里不需要 team_id —— 当前的 team id 页面本来就知道。
+struct TeamCalendarDTO: Codable, Identifiable, Hashable {
     let calendarID: String
     let role: String
     let name: String
@@ -1356,7 +1390,9 @@ struct TeamEnvelopeDTO: Decodable {
 struct TeamDetailResponse: Decodable {
     let team: TeamDTO
     let members: [TeamMemberDTO]
-    let calendars: [TeamCalendarShareDTO]
+    /// 注意是 `TeamCalendarDTO` 而不是 `TeamCalendarShareDTO` ——
+    /// 这个接口只下发 `calendar_id`，不下发 `team_id`。见两个类型的注释。
+    let calendars: [TeamCalendarDTO]
 }
 
 struct TeamInvitesResponse: Decodable {
