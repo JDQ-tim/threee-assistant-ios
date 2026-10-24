@@ -143,14 +143,13 @@ jobs:
       #      每编完一个文件就落盘，被掐掉时**已经编过的文件结论仍在**，
       #      下次能看到真实的错误分布，而不是「什么都没编完」。
       #
-      #  -quiet
-      #      不要刷屏。日志少九十多倍，上传快，也更容易看出错在哪。
-      #      （`-quiet` 不会隐藏 error:/warning: 行。）
-      #
-      #  ⚠️ 没有用 `-derivedDataPath ./DerivedData` 之外的缓存。
-      #     之前看到过一份「BUILD SUCCEEDED」但整份日志 0 条 Swift 编译记录
-      #     —— 那是 DerivedData 被复用后的增量构建，什么都没重编。
-      #     每次 job 都是新机器，所以这里天然是干净的。
+      #  ⚠️ 不要加 `-quiet`。
+      #     试过一次，代价很具体：`-quiet` 只放 warning/error，
+      #     它把 `** BUILD SUCCEEDED **` 和所有 `SwiftCompile` 行一起吞了。
+      #     结果编译明明成功（退出码 0），日志里一个字都没有，
+      #     「结论」判定看到「既没有 SUCCEEDED 也没有 FAILED」，
+      #     于是报成「被掐断」—— 白白多推一次。
+      #     完整日志压缩后只有几十 KB，不值得为省这点体积牺牲可判断性。
       # ============================================================
       - name: 编译（模拟器架构，不签名）
         id: build
@@ -175,7 +174,6 @@ jobs:
             CODE_SIGN_IDENTITY=
             ONLY_ACTIVE_ARCH=YES
             SWIFT_COMPILATION_MODE=singlefile
-            -quiet
           )
 
           # 分片编译：把 --only-files 传给 swiftc 的话不行，
@@ -188,10 +186,24 @@ jobs:
 
           # 计时，方便和 902 秒那条线对照
           START=$(date +%s)
-          xcodebuild "${ARGS[@]}" build 2>&1 | tee build-logs/full.log
-          RC=${PIPESTATUS[0]}
+          # ⚠️ 用 `> 文件 2>&1` 而不是 `| tee`：tee 之后 PIPESTATUS
+          #    在某些 executor 上取不到，退出码会变成空串，
+          #    `exit $RC` 就变成了 `exit`（退出码由上条命令决定）。
+          #    直接重定向 + `$?` 最稳。
+          xcodebuild "${ARGS[@]}" build > build-logs/full.log 2>&1
+          RC=$?
           END=$(date +%s)
-          echo "编译耗时 $((END-START)) 秒（退出码 $RC）" | tee -a build-logs/full.log
+
+          echo "" >> build-logs/full.log
+          echo "===== 编译耗时 $((END-START)) 秒，退出码 $RC =====" >> build-logs/full.log
+
+          # 退出码不是 0 但日志里没有结论行时，补一行 —— 
+          # 「提炼报错」那步靠它区分「正常失败」和「被掐断」
+          if [ "$RC" -ne 0 ] && ! grep -q "BUILD FAILED" build-logs/full.log; then
+            echo "** BUILD FAILED **（按退出码补写，日志里没有原生结论行）" >> build-logs/full.log
+          fi
+
+          cat build-logs/full.log
           exit $RC
 
       - name: 提炼报错
@@ -203,11 +215,18 @@ jobs:
             | sed -E 's|^.*/(ThreeeAssistant/[^:]+)|\1|' \
             > build-logs/problems.txt || true
 
-          ERR=$(grep -c ': error:' build-logs/problems.txt || echo 0)
-          WARN=$(grep -c ': warning:' build-logs/problems.txt || echo 0)
+          # ⚠️ 用 `|| true` 而不是 `|| echo 0`。
+          #    `grep -c` 在 0 命中时会**先输出 0，再以退出码 1 结束**，
+          #    后面接 `|| echo 0` 就会得到 "0\n0" —— SUMMARY 里会看到两行。
+          ERR=$(grep -c ': error:' build-logs/problems.txt 2>/dev/null || true)
+          WARN=$(grep -c ': warning:' build-logs/problems.txt 2>/dev/null || true)
           # 编译记录条数 —— 用来区分「真编了」和「DerivedData 复用没编」
           SWIFT_HITS=$(grep -cE "^(SwiftCompile|CompileSwiftSources|SwiftDriver|CompileSwift)" \
-                       build-logs/full.log || echo 0)
+                       build-logs/full.log 2>/dev/null || true)
+          # 空文件时 grep -c 什么都不输出，兜个默认值
+          ERR=${ERR:-0}
+          WARN=${WARN:-0}
+          SWIFT_HITS=${SWIFT_HITS:-0}
 
           {
             echo "# 编译结果"
