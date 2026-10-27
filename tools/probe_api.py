@@ -18,6 +18,10 @@ import urllib.error
 import urllib.request
 
 # Swift 结构体名 -> (方法, 路径)
+#
+# 路径里可以带 query（服务端会按 hours/days 裁剪天气）。
+# 端口写在路径前用 "|" 分隔：主机沿用 base_url，只换端口。
+#   背词同步是**独立的 8446**，主服务 8443 上没有 /api/wordbook/*。
 TARGETS = [
     ("HealthDTO", "GET", "/api/health"),
     ("BootstrapResponse", "GET", "/api/bootstrap"),
@@ -29,10 +33,22 @@ TARGETS = [
     ("ModerationMetaDTO", "GET", "/api/moderation/meta"),
     ("WeatherLocationDTO", "GET", "/api/weather/location"),
     ("CoursePeriodsResponse", "GET", "/api/course/periods"),
+    # ---- 新补的功能，逐个验 ----
+    ("WeatherDocDTO", "GET", "/api/weather?hours=24&days=7"),
+    ("WordbookHealthDTO", "GET", "8446|/api/wordbook/health"),
+    ("WordbookPullResponse", "GET", "8446|/api/wordbook/pull"),
 ]
 
 
 def fetch(base, path, token, method="GET", body=None):
+    # 端口覆盖：`8446|/api/wordbook/health`
+    if "|" in path:
+        port, real_path = path.split("|", 1)
+        scheme, _, host = base.partition("://")
+        host = host.split(":")[0]
+        base = f"{scheme}://{host}:{port}"
+        path = real_path
+
     ctx = ssl.create_default_context()
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
