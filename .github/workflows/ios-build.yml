@@ -142,10 +142,19 @@ jobs:
       #  这里每个参数都是为了让「编译在 900 秒内出结论」
       #  ------------------------------------------------------------
       #  ONLY_ACTIVE_ARCH=YES
-      #      只编 arm64（runner 自己就是 arm64）。不留这个的话
-      #      xcodebuild 会同时编 arm64 和 x86_64 两份 —— 时间直接翻倍。
-      #      原来的日志里能看到 `SwiftCompile normal x86_64`，
-      #      说明它当时就在编 x86_64，而 runner 是 arm64 M 系列。
+      #      **实测在这里是空操作，别指望它省时间。**
+      #      这里的 destination 是 `generic/platform=iOS Simulator`，
+      #      generic 目标没有「活动架构」的概念，ARCHS 仍然展开成
+      #      arm64 + x86_64 两份，最后 lipo 成胖二进制。
+      #      证据：run 40450531367 产出的可执行文件
+      #      magic=0xcafebabe、nfat_arch=2（x86_64 13.5MB + arm64 13.2MB）。
+      #
+      #      以前这里写着「不留这个的话会同时编两份，时间直接翻倍」——
+      #      因果说反了：留了它也在编两份。真想让编译时间减半，
+      #      得写 `ARCHS=arm64`（代价：Intel Mac 的模拟器跑不了）。
+      #      目前**故意保留双架构**，因为产物要能装进任何一台 Mac 的模拟器。
+      #
+      #      实测代价：双架构全量编译 71~87 秒，可以接受。
       #
       #  SWIFT_COMPILATION_MODE=singlefile
       #      默认是全模块优化（对 Debug 是 incremental）。singlefile
