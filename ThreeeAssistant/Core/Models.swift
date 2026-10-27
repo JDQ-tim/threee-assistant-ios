@@ -356,7 +356,16 @@ struct ScheduleInstance: Codable, Identifiable, Hashable {
     let occurrenceKey: Int64
 
     enum CodingKeys: String, CodingKey {
-        case id, allDay, title, notes, location
+        case id, title, notes, location
+        // ⚠️ `allDay` 必须显式映射成 "all_day"。
+        //    原来写的是 `case id, allDay, title, notes, location` ——
+        //    没给映射时 Codable 拿**属性名**当 JSON key，也就是找 "allDay"，
+        //    而服务端发的是 "all_day"。
+        //    下面 `allDay = try c.decode(...)` 又没兜底，于是 keyNotFound，
+        //    **整个 SyncSnapshotResponse 解析失败** —— 表现是登录后一片空白，
+        //    但编译期、以及任何"能不能编过"的检查都发现不了。
+        //    （2026-10-27 用真实 1.3.16 服务端联调时抓到。）
+        case allDay = "all_day"
         case eventID = "event_id"
         case calendarID = "calendar_id"
         case startUTC = "start_utc"
@@ -792,7 +801,18 @@ struct MyReportDTO: Decodable, Identifiable, Hashable {
 struct HealthDTO: Decodable {
     let ok: Bool
     let version: String?
-    /// 模块摘要（部署时启用了哪些模块），一般是哈希串。不展示
+    /// 模块摘要（部署时启用了哪些模块）。不展示，只在排障时看。
+    ///
+    /// ⚠️ 这个字段有**两种形态**，绝不能声明成 `String?`：
+    ///   - 1.3.x：对象，`{"club":"missing","labdata":"missing"}`
+    ///   - 某些部署/老版本：字符串
+    ///
+    /// 声明成 `String?` 时，`decodeIfPresent` 碰到对象会抛 `typeMismatch` ——
+    /// **Optional 只表示"键缺失或为 null"，不表示"类型不对就给 nil"**。
+    /// 结果就是整个 `/api/health` 解析失败，登录页「测试连接」明明服务器
+    /// 活着却报错。这个坑实测过（本机跑起 1.3.16 源码包，返回的就是对象）。
+    ///
+    /// 所以这里拍平成字符串，两种形态都能吃下。
     let modules: String?
     /// 当前同步水位
     let seq: Int64?
@@ -807,6 +827,29 @@ struct HealthDTO: Decodable {
     enum CodingKeys: String, CodingKey {
         case ok, version, modules, seq, users, events, instances, time
         case pendingUpdate = "pending_update"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        ok = (try? c.decode(Bool.self, forKey: .ok)) ?? false
+        version = try? c.decodeIfPresent(String.self, forKey: .version)
+        seq = try? c.decodeIfPresent(Int64.self, forKey: .seq)
+        users = try? c.decodeIfPresent(Int.self, forKey: .users)
+        events = try? c.decodeIfPresent(Int.self, forKey: .events)
+        instances = try? c.decodeIfPresent(Int.self, forKey: .instances)
+        pendingUpdate = try? c.decodeIfPresent(Bool.self, forKey: .pendingUpdate)
+        time = try? c.decodeIfPresent(Int64.self, forKey: .time)
+
+        // modules：先试字符串，再试 [String: String] 拍平
+        if let s = try? c.decodeIfPresent(String.self, forKey: .modules) {
+            modules = s
+        } else if let dict = try? c.decodeIfPresent([String: String].self, forKey: .modules) {
+            modules = dict.sorted { $0.key < $1.key }
+                .map { "\($0.key)=\($0.value)" }
+                .joined(separator: ", ")
+        } else {
+            modules = nil
+        }
     }
 }
 

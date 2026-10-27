@@ -202,7 +202,13 @@ if theme_path:
                 errors.append("%s:%d 引用了不存在的 Theme.%s" % (rel, line, name))
 
 
-# 7b. 手写了 init(from:) 的 Codable 类型，必须也有 encode(to:)
+# 7b. 手写了 init(from:) 的 **Codable** 类型，必须也有 encode(to:)
+#
+# ⚠️ 只对 `Codable` 成立，不能套到 `Decodable` 上。
+#    `Codable = Encodable & Decodable`：一旦自己写了 init(from:)，
+#    Swift 不再自动合成 encode(to:)，两边都得有。
+#    但 `Decodable` 只有一个方向，写了 init(from:) 就完整了 ——
+#    早先这里把 Decodable 也算进来，HealthDTO 因此被误报成编译错误。
 for rel, src in ALL_SRC.items():
     if "init(from decoder:" not in src:
         continue
@@ -213,13 +219,15 @@ for rel, src in ALL_SRC.items():
         # 粗略取到下一个 struct 开头
         nxt = src.find("\nstruct ", start)
         body = src[start: nxt if nxt != -1 else len(src)]
-        # 只关心声明了 Codable / Decodable 的
         decl = src[m.start(): m.end()]
-        if "Codable" not in decl and "Decodable" not in decl and "Decodable" not in body[:200]:
+        # 只关心真正要求双向的类型：Codable / Encodable
+        needs_both = ("Codable" in decl) or ("Encodable" in decl)
+        if not needs_both:
             continue
         if "init(from decoder:" in body and "func encode(to encoder:" not in body:
-            errors.append("%s: struct %s 手写了 init(from:) 但没有 encode(to:)"
-                          "（编译器不再自动合成，Codable 要求两个都有）" % (rel, name))
+            errors.append("%s: struct %s 是 Codable 又手写了 init(from:)，"
+                          "但没有 encode(to:)（编译器不再自动合成，两个都得有）"
+                          % (rel, name))
 
 
 # 7c. SessionStore 方法调用点的**参数标签**校验
