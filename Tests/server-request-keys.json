@@ -1,0 +1,1071 @@
+{
+ "BannedWord": [
+  "category",
+  "created_at",
+  "created_by",
+  "enabled",
+  "id",
+  "note",
+  "raw",
+  "severity",
+  "updated_at",
+  "word"
+ ],
+ "Calendar": [
+  "color",
+  "created_at",
+  "deleted_at",
+  "field_seqs",
+  "id",
+  "kind",
+  "members",
+  "name",
+  "owner_id",
+  "owner_name",
+  "role",
+  "seq",
+  "updated_at"
+ ],
+ "Conflict": [
+  "base_seq",
+  "client_device",
+  "client_value",
+  "created_at",
+  "entity",
+  "entity_id",
+  "field",
+  "id",
+  "resolution",
+  "resolved_at",
+  "server_value"
+ ],
+ "DocMeta": [
+  "id",
+  "lines",
+  "myRole",
+  "owner",
+  "rev",
+  "title",
+  "updatedAt"
+ ],
+ "Entitlements": [
+  "club",
+  "ext_api",
+  "live_collab",
+  "market",
+  "max_api_keys",
+  "max_devices",
+  "max_events",
+  "tier",
+  "tier_label"
+ ],
+ "Event": [
+  "all_day",
+  "calendar_id",
+  "created_at",
+  "deleted_at",
+  "done_at",
+  "dtstart_utc",
+  "duration_sec",
+  "exdate",
+  "field_seqs",
+  "id",
+  "is_task",
+  "location",
+  "notes",
+  "rdate",
+  "reminders",
+  "rrule",
+  "seq",
+  "strong",
+  "title",
+  "tzid",
+  "uid",
+  "updated_at"
+ ],
+ "InboxItem": [
+  "accepted_event_id",
+  "all_day",
+  "confidence",
+  "created_at",
+  "decided_at",
+  "dtstart_utc",
+  "duration_sec",
+  "field_seqs",
+  "from_name",
+  "from_user_id",
+  "id",
+  "kind",
+  "location",
+  "notes",
+  "origin_calendar_id",
+  "remind_minutes_before",
+  "seq",
+  "source",
+  "source_excerpt",
+  "status",
+  "title",
+  "user_id"
+ ],
+ "Instance": [
+  "all_day",
+  "calendar_id",
+  "deleted_at",
+  "done_at",
+  "end_utc",
+  "event_id",
+  "id",
+  "is_override",
+  "is_task",
+  "location",
+  "notes",
+  "occurrence_key",
+  "seq",
+  "start_utc",
+  "title"
+ ],
+ "Line": [
+  "at",
+  "by",
+  "id",
+  "ord",
+  "rev",
+  "text"
+ ],
+ "LiveMember": [
+  "id",
+  "role"
+ ],
+ "LoginLog": [
+  "created_at",
+  "device",
+  "event",
+  "event_text",
+  "id",
+  "ip",
+  "real_ip",
+  "reason",
+  "result",
+  "ua",
+  "user_id",
+  "user_name"
+ ],
+ "Member": [
+  "name",
+  "role",
+  "user_id"
+ ],
+ "Peer": [
+  "id",
+  "name"
+ ],
+ "Reminder": [
+  "channel",
+  "deleted_at",
+  "event_id",
+  "id",
+  "minutes_before",
+  "seq"
+ ],
+ "RepairIssue": [
+  "detail",
+  "extra",
+  "id",
+  "kind"
+ ],
+ "RepairReport": [
+  "applied",
+  "fixed",
+  "issues",
+  "kinds"
+ ],
+ "Report": [
+  "action",
+  "auto_hits",
+  "calendar_id",
+  "content_exists",
+  "created_at",
+  "detail",
+  "event_id",
+  "handle_note",
+  "handled_at",
+  "handler_id",
+  "handler_name",
+  "id",
+  "reason",
+  "reason_label",
+  "reporter_id",
+  "reporter_name",
+  "status",
+  "target_excerpt",
+  "target_id",
+  "target_kind",
+  "target_owner",
+  "target_owner_name",
+  "target_title"
+ ],
+ "Snooze": [
+  "deleted_at",
+  "device_id",
+  "event_id",
+  "id",
+  "occurrence_key",
+  "remind_at_utc",
+  "seq",
+  "user_id"
+ ],
+ "Team": [
+  "calendar_count",
+  "created_at",
+  "id",
+  "member_count",
+  "my_role",
+  "name",
+  "note",
+  "owner_id"
+ ],
+ "TeamInvite": [
+  "code",
+  "created_at",
+  "created_by",
+  "exhausted",
+  "expired",
+  "expires_at",
+  "id",
+  "max_uses",
+  "revoked",
+  "revoked_at",
+  "role",
+  "team_id",
+  "used_count"
+ ],
+ "TeamMember": [
+  "joined_at",
+  "name",
+  "role",
+  "team_id",
+  "user_id"
+ ],
+ "User": [
+  "created_at",
+  "id",
+  "is_admin",
+  "name"
+ ],
+ "WordHit": [
+  "category",
+  "raw",
+  "severity",
+  "word"
+ ],
+ "adminUserRow": [
+  "ban_reason",
+  "ban_until",
+  "banned",
+  "banned_at",
+  "created_at",
+  "id",
+  "is_admin",
+  "name"
+ ],
+ "aiVerdict": [
+  "category",
+  "confidence",
+  "elapsed_ms",
+  "error_text",
+  "model",
+  "reason",
+  "source",
+  "terms",
+  "violation"
+ ],
+ "apiACL": [
+  "admin_only",
+  "allow_groups",
+  "allow_users",
+  "created_at",
+  "enabled",
+  "id",
+  "method",
+  "min_tier",
+  "mode",
+  "note",
+  "prefix",
+  "updated_at"
+ ],
+ "apiACLReq": [
+  "admin_only",
+  "allow_groups",
+  "allow_users",
+  "enabled",
+  "id",
+  "method",
+  "min_tier",
+  "mode",
+  "note",
+  "prefix"
+ ],
+ "artifact": [
+  "id",
+  "installed",
+  "kind",
+  "path",
+  "running",
+  "sha256",
+  "version"
+ ],
+ "artifactView": [
+  "download_url",
+  "file_exists",
+  "file_size"
+ ],
+ "bBrief": [
+  "alias",
+  "floors",
+  "id",
+  "lat",
+  "lng",
+  "name",
+  "rooms",
+  "type"
+ ],
+ "calBrief": [
+  "can_write",
+  "color",
+  "id",
+  "kind",
+  "name"
+ ],
+ "calendarReq": [
+  "color",
+  "device_id",
+  "field_base_seqs",
+  "id",
+  "kind",
+  "member_ids",
+  "name"
+ ],
+ "coursePeriod": [
+  "end",
+  "index",
+  "label",
+  "start"
+ ],
+ "dayBrief": [
+  "date",
+  "label",
+  "precip_sum",
+  "tmax",
+  "tmin"
+ ],
+ "debugDumpMeta": [
+  "android",
+  "app_version",
+  "created_at",
+  "device",
+  "download_key",
+  "entries",
+  "expires_at",
+  "has_manifest",
+  "id",
+  "log_level",
+  "name",
+  "note",
+  "sha256",
+  "size",
+  "user_id",
+  "user_name"
+ ],
+ "debugEntry": [
+  "kind",
+  "lines",
+  "name",
+  "plugin_id",
+  "role",
+  "size",
+  "title"
+ ],
+ "debugLine": [
+  "n",
+  "text"
+ ],
+ "debugManifest": [
+  "account",
+  "app",
+  "entries",
+  "generated_at",
+  "generator",
+  "log_level",
+  "log_level_label",
+  "schema",
+  "server",
+  "summary"
+ ],
+ "dedupeGroup": [
+  "calendar_id",
+  "calendar_name",
+  "count",
+  "duration_sec",
+  "kept",
+  "removed",
+  "start_utc",
+  "title"
+ ],
+ "dedupeResult": [
+  "dry",
+  "duplicates",
+  "groups",
+  "ok",
+  "orphans",
+  "removed",
+  "sample",
+  "scanned",
+  "skipped_groups"
+ ],
+ "eventReq": [
+  "all_day",
+  "calendar_id",
+  "device_id",
+  "done_at",
+  "dtstart_utc",
+  "duration_sec",
+  "exdate",
+  "field_base_seqs",
+  "id",
+  "is_task",
+  "location",
+  "notes",
+  "rdate",
+  "reminders",
+  "rrule",
+  "strong",
+  "title",
+  "tzid"
+ ],
+ "federationSnapshot": [
+  "exported_at",
+  "kind",
+  "notice",
+  "peers",
+  "routes",
+  "server",
+  "settings",
+  "updates",
+  "version"
+ ],
+ "geoItem": [
+  "display",
+  "lat",
+  "lng",
+  "name",
+  "type"
+ ],
+ "geoResp": [
+  "items"
+ ],
+ "handleReportReq": [
+  "action",
+  "note",
+  "status"
+ ],
+ "homeStyle": [
+  "css_dark",
+  "css_light",
+  "desc",
+  "id",
+  "name"
+ ],
+ "inboxCreateReq": [
+  "all_day",
+  "confidence",
+  "dtstart_utc",
+  "duration_sec",
+  "from_user_id",
+  "kind",
+  "location",
+  "notes",
+  "origin_calendar_id",
+  "remind_minutes_before",
+  "source",
+  "source_excerpt",
+  "title",
+  "to_user_id"
+ ],
+ "inboxDecisionReq": [
+  "action",
+  "event_id"
+ ],
+ "inviteRow": [
+  "calendar_id",
+  "code",
+  "created_at",
+  "created_by",
+  "exhausted",
+  "expired",
+  "expires_at",
+  "id",
+  "kind",
+  "max_uses",
+  "revoked",
+  "revoked_at",
+  "role",
+  "used_count"
+ ],
+ "item": [
+  "all_day",
+  "calendar",
+  "color",
+  "date",
+  "done",
+  "event_id",
+  "is_task",
+  "location",
+  "notes",
+  "time",
+  "title"
+ ],
+ "lastLogin": [
+  "created_at",
+  "days_ago",
+  "ip",
+  "real_ip",
+  "user_id",
+  "user_name"
+ ],
+ "liveTicketPayload": [
+  "e",
+  "i",
+  "n",
+  "u"
+ ],
+ "localAddr": [
+  "addr",
+  "cidr",
+  "link_local",
+  "loopback",
+  "name",
+  "private"
+ ],
+ "loginReq": [
+  "name",
+  "pass"
+ ],
+ "memberReq": [
+  "add",
+  "role",
+  "user_id"
+ ],
+ "metResponse": [
+  "air_temperature",
+  "cloud_area_fraction",
+  "data",
+  "details",
+  "instant",
+  "meta",
+  "next_1_hours",
+  "next_6_hours",
+  "precipitation_amount",
+  "properties",
+  "relative_humidity",
+  "summary",
+  "symbol_code",
+  "time",
+  "timeseries",
+  "ultraviolet_index_clear_sky",
+  "updated_at",
+  "wind_from_direction",
+  "wind_speed"
+ ],
+ "mine": [
+  "action",
+  "created_at",
+  "detail",
+  "handle_note",
+  "handled_at",
+  "id",
+  "reason",
+  "reason_label",
+  "status",
+  "target_kind",
+  "target_title"
+ ],
+ "moderationAuditRow": [
+  "category",
+  "confidence",
+  "created_at",
+  "elapsed_ms",
+  "error_text",
+  "excerpt",
+  "field",
+  "hits",
+  "id",
+  "model",
+  "reason",
+  "source",
+  "user_id",
+  "user_name",
+  "violation"
+ ],
+ "navPackArtifact": [
+  "buildings",
+  "downloads",
+  "file",
+  "floors",
+  "format_version",
+  "has_origin",
+  "key_carried",
+  "name",
+  "note",
+  "pack_id",
+  "published_at",
+  "rooms",
+  "sha256",
+  "size",
+  "updated_at",
+  "version",
+  "with_coord"
+ ],
+ "navPackDoc": [
+  "buildings",
+  "floors",
+  "format",
+  "formatVersion",
+  "id",
+  "lat",
+  "lng",
+  "name",
+  "note",
+  "origin",
+  "packId",
+  "rooms",
+  "updatedAt",
+  "version"
+ ],
+ "navPackIndex": [
+  "packs"
+ ],
+ "navPackListItem": [
+  "buildings",
+  "download_url",
+  "key_carried",
+  "name",
+  "note",
+  "pack_id",
+  "updated_at",
+  "version",
+  "with_coord"
+ ],
+ "nomItem": [
+  "boundingbox",
+  "class",
+  "display_name",
+  "lat",
+  "lon",
+  "name",
+  "type"
+ ],
+ "occurrenceReq": [
+  "cancelled",
+  "device_id",
+  "occurrence_key",
+  "patch"
+ ],
+ "omResponse": [
+  "cloud_cover",
+  "hourly",
+  "is_day",
+  "precipitation",
+  "relative_humidity_2m",
+  "temperature_2m",
+  "time",
+  "weather_code",
+  "wind_direction_10m",
+  "wind_speed_10m"
+ ],
+ "overridePatch": [
+  "all_day",
+  "done_at",
+  "dtstart_utc",
+  "duration_sec",
+  "location",
+  "notes",
+  "title"
+ ],
+ "passwordReq": [
+  "new_pass",
+  "old_pass"
+ ],
+ "peer": [
+  "base_url",
+  "created_at",
+  "enabled",
+  "has_token",
+  "id",
+  "insecure",
+  "last_error",
+  "last_ok_at",
+  "name",
+  "token"
+ ],
+ "pluginArtifact": [
+  "ai_tools",
+  "api_version",
+  "desc",
+  "enabled",
+  "file",
+  "icon",
+  "id",
+  "name",
+  "notes",
+  "order",
+  "pages",
+  "platform",
+  "published_at",
+  "services",
+  "sha256",
+  "size",
+  "version",
+  "widgets"
+ ],
+ "pluginIndex": [
+  "plugins"
+ ],
+ "pluginListItem": [
+  "download_url"
+ ],
+ "pluginManifestProbe": [
+  "ai",
+  "apiVersion",
+  "desc",
+  "icon",
+  "id",
+  "label",
+  "name",
+  "pages",
+  "permissions",
+  "services",
+  "tools",
+  "version",
+  "views",
+  "widgets"
+ ],
+ "pluginNamedBrief": [
+  "id",
+  "label"
+ ],
+ "pluginPageBrief": [
+  "icon",
+  "id",
+  "label",
+  "views"
+ ],
+ "pluginRule": [
+  "group_ids",
+  "min_tier"
+ ],
+ "pluginSubmission": [
+  "review_note",
+  "reviewed_at",
+  "reviewer_name",
+  "status",
+  "submitted_at",
+  "submitter_id",
+  "submitter_name"
+ ],
+ "pluginSubmissionIndex": [
+  "items"
+ ],
+ "poiItem": [
+  "category",
+  "distance",
+  "lat",
+  "lng",
+  "name"
+ ],
+ "poiResp": [
+  "from",
+  "items"
+ ],
+ "pubWord": [
+  "category",
+  "raw",
+  "severity",
+  "word"
+ ],
+ "pushOp": [
+  "data",
+  "device_id",
+  "entity",
+  "field_base_seqs",
+  "id",
+  "op"
+ ],
+ "pushReq": [
+  "device_id",
+  "ops"
+ ],
+ "qqPoiEnvelope": [
+  "_distance",
+  "category",
+  "count",
+  "data",
+  "lat",
+  "lng",
+  "location",
+  "message",
+  "status",
+  "title"
+ ],
+ "recentPath": [
+  "count",
+  "last_at",
+  "method",
+  "path"
+ ],
+ "registerReq": [
+  "calendar_invite",
+  "invite_code",
+  "name",
+  "pass"
+ ],
+ "reminderReq": [
+  "channel",
+  "id",
+  "minutes_before"
+ ],
+ "reminderView": [
+  "channel",
+  "event_id",
+  "id",
+  "mine",
+  "minutes_before",
+  "user_id"
+ ],
+ "remoteDownload": [
+  "fallback",
+  "file",
+  "href",
+  "label",
+  "platform",
+  "ready",
+  "size",
+  "web"
+ ],
+ "remoteDownloads": [
+  "downloads",
+  "ok"
+ ],
+ "reportReq": [
+  "calendar_id",
+  "detail",
+  "event_id",
+  "reason",
+  "target_id",
+  "target_kind"
+ ],
+ "resolveReq": [
+  "resolution"
+ ],
+ "routeRule": [
+  "created_at",
+  "enabled",
+  "id",
+  "kind",
+  "match_key",
+  "mode",
+  "peer_id",
+  "peer_name",
+  "priority"
+ ],
+ "setTierReq": [
+  "days",
+  "expires_at",
+  "tier"
+ ],
+ "shareReq": [
+  "kind",
+  "shared"
+ ],
+ "skinPackArtifact": [
+  "author",
+  "dark",
+  "downloads",
+  "file",
+  "format_version",
+  "home_blocks",
+  "name",
+  "note",
+  "pack_id",
+  "page_count",
+  "published_at",
+  "role_count",
+  "seed",
+  "sha256",
+  "size",
+  "updated_at",
+  "version"
+ ],
+ "skinPackDoc": [
+  "author",
+  "dark",
+  "format",
+  "formatVersion",
+  "name",
+  "note",
+  "packId",
+  "seed",
+  "skin",
+  "updatedAt",
+  "version"
+ ],
+ "skinPackIndex": [
+  "packs"
+ ],
+ "skinPackListItem": [
+  "author",
+  "dark",
+  "download_url",
+  "home_blocks",
+  "name",
+  "note",
+  "pack_id",
+  "page_count",
+  "role_count",
+  "updated_at",
+  "version"
+ ],
+ "snoozeReq": [
+  "device_id",
+  "minutes",
+  "occurrence_key"
+ ],
+ "syncPayload": [
+  "calendars",
+  "conflicts",
+  "events",
+  "inbox",
+  "instances",
+  "snoozes",
+  "users"
+ ],
+ "tierGrantReq": [
+  "days",
+  "expires_at",
+  "name",
+  "note",
+  "order_id",
+  "source",
+  "tier",
+  "user_id"
+ ],
+ "u": [
+  "id",
+  "isAdmin",
+  "isMe",
+  "name"
+ ],
+ "updateArtifact": [
+  "enabled",
+  "file",
+  "mandatory",
+  "notes",
+  "platform",
+  "published_at",
+  "series",
+  "sha256",
+  "size",
+  "source",
+  "version",
+  "version_code"
+ ],
+ "updateManifest": [
+  "android",
+  "windows"
+ ],
+ "userCalendarRow": [
+  "created_at",
+  "events",
+  "id",
+  "kind",
+  "mine",
+  "name",
+  "owner_id"
+ ],
+ "userGroup": [
+  "created_at",
+  "id",
+  "member_count",
+  "name",
+  "note",
+  "updated_at"
+ ],
+ "weatherDay": [
+  "date",
+  "label",
+  "precip_sum",
+  "symbol",
+  "tmax",
+  "tmin"
+ ],
+ "weatherDoc": [
+  "days",
+  "expires_at",
+  "hours",
+  "lat",
+  "lon",
+  "note",
+  "place",
+  "source",
+  "stale",
+  "updated_at"
+ ],
+ "weatherHour": [
+  "cloud",
+  "humidity",
+  "is_day",
+  "label",
+  "precip",
+  "symbol",
+  "t",
+  "temp",
+  "wind",
+  "wind_dir"
+ ],
+ "weatherLocationReq": [
+  "lat",
+  "lon",
+  "place"
+ ],
+ "wipeResult": [
+  "calendars",
+  "events",
+  "memberships"
+ ],
+ "wordUpsertReq": [
+  "category",
+  "enabled",
+  "note",
+  "raw",
+  "severity"
+ ],
+ "wordbookCard": [
+  "d",
+  "due",
+  "l",
+  "lr",
+  "ph",
+  "r",
+  "s",
+  "u",
+  "w"
+ ],
+ "wordbookDaily": [
+  "day",
+  "nd",
+  "rd"
+ ],
+ "wordbookPushReq": [
+  "cards",
+  "daily"
+ ]
+}

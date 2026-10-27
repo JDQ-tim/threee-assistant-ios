@@ -226,6 +226,32 @@ jobs:
           echo "契约检查退出码：$RC"
           exit $RC
 
+      # ============================================================
+      #  请求契约：客户端会发的键 vs 服务端会读的键
+      #  ------------------------------------------------------------
+      #  和上面的「契约回归」是两个方向，不能互相替代：
+      #    · 契约回归 = 服务端发 → 客户端解（错了会抛 keyNotFound，响亮的失败）
+      #    · 请求契约 = 客户端发 → 服务端读（错了服务端当没传，**静默失效**）
+      #
+      #  典型事故：客户端把 `minutes_before` 写成 `offset_sec`，
+      #  服务端读到空值按 0 处理，HTTP 200、不报错、提醒永远不响。
+      #  这种问题只有对着两边的字段名逐个比才看得见。
+      #
+      #  CI 拿不到服务端 Go 源码，所以比的是仓库里的字段快照
+      #  Tests/server-request-keys.json（由 `--dump` 生成）。
+      #  服务端改了请求字段要记得重新 dump，否则这里比的是旧契约。
+      # ============================================================
+      - name: 请求契约（发的键 vs 读的键）
+        id: reqcontract
+        continue-on-error: true
+        timeout-minutes: 3
+        run: |
+          set +e
+          python3 tools/check_request_contract.py > build-logs/request-contract.log 2>&1
+          RC=$?
+          cat build-logs/request-contract.log
+          exit $RC
+
       # 关键步骤：先生成模拟器架构的构建，不做代码签名。
       # 这样即使没有苹果开发者账号也能验证「代码能否编译通过」。
       #
@@ -377,6 +403,16 @@ jobs:
             fi
             echo ""
 
+            echo "## 请求契约（发的键 vs 读的键）"
+            if [ -f build-logs/request-contract.log ]; then
+              echo '```'
+              tail -n 14 build-logs/request-contract.log
+              echo '```'
+            else
+              echo "没有产出 request-contract.log"
+            fi
+            echo ""
+
             echo "## 结论"
             if grep -q "BUILD SUCCEEDED" build-logs/full.log; then
               if [ "$SWIFT_HITS" -eq 0 ]; then
@@ -466,6 +502,20 @@ jobs:
             echo "⚠️ 没有 contract.log，契约这一关视为未通过"
           fi
 
+          # 请求契约：全对齐才算过。工具最后一行是「全部对齐」或「发现 N 组不一致」。
+          REQ_OK=1
+          if [ -f build-logs/request-contract.log ]; then
+            if grep -q "全部对齐" build-logs/request-contract.log; then
+              echo "✅ 请求契约对齐"
+              REQ_OK=0
+            else
+              echo "❌ 请求契约不一致 —— 客户端发的键服务端不读，或反之（静默失效）"
+              grep "^❌" build-logs/request-contract.log || true
+            fi
+          else
+            echo "⚠️ 没有 request-contract.log，请求契约这一关视为未通过"
+          fi
+
           if grep -q "BUILD SUCCEEDED" build-logs/full.log 2>/dev/null; then
             # 见到过「SUCCEEDED 但一条 Swift 编译记录都没有」的增量构建。
             # 那种结果不能当通过 —— 等于这一趟什么都没验证。
@@ -480,7 +530,12 @@ jobs:
               echo "   不能证明字段名/类型对。请修完 DTO 再发版。"
               exit 1
             fi
-            echo "✅ BUILD SUCCEEDED 且契约回归通过"
+            if [ "$REQ_OK" -ne 0 ]; then
+              echo "⚠️ BUILD SUCCEEDED，但请求契约不一致 —— 这类错**不会报错**，"
+              echo "   只会让功能悄悄失效（服务端当那个字段没传）。请核对字段名。"
+              exit 1
+            fi
+            echo "✅ BUILD SUCCEEDED 且双向契约都通过"
             exit 0
           fi
           if ! grep -q "BUILD FAILED" build-logs/full.log 2>/dev/null; then
