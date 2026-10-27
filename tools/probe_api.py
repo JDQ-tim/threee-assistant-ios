@@ -37,6 +37,13 @@ TARGETS = [
     ("WeatherDocDTO", "GET", "/api/weather?hours=24&days=7"),
     ("WordbookHealthDTO", "GET", "8446|/api/wordbook/health"),
     ("WordbookPullResponse", "GET", "8446|/api/wordbook/pull"),
+    # ---- 需要真实 ID 的接口。占位符从快照里取（见 resolve_ids）----
+    ("InboxListResponse", "GET", "/api/inbox"),
+    ("TeamsResponse", "GET", "/api/teams"),
+    ("TeamDetailResponse", "GET", "/api/teams/$TEAM"),
+    ("TeamInvitesResponse", "GET", "/api/teams/$TEAM/invites"),
+    ("CalendarInvitesResponse", "GET", "/api/calendars/$CAL/invites"),
+    ("CalendarTeamSharesResponse", "GET", "/api/calendars/$CAL/teams"),
 ]
 
 
@@ -70,6 +77,27 @@ def fetch(base, path, token, method="GET", body=None):
         return 0, {"__error__": f"{type(e).__name__}: {e}"}
 
 
+def resolve_ids(base, token):
+    """从快照里取真实 ID，供 $CAL / $TEAM / $EVENT 占位符替换。
+
+    不这么做的话，带 ID 的接口（邀请列表、团队详情、日历↔团队）只能跳过，
+    而它们恰恰是嵌套 DTO 最容易写错的地方。
+    """
+    ids = {}
+    st, snap = fetch(base, "/api/sync/snapshot", token)
+    if st == 200 and isinstance(snap, dict):
+        for key, ph in (("calendars", "$CAL"), ("events", "$EVENT"), ("instances", "$INSTANCE")):
+            arr = snap.get(key) or []
+            if arr and isinstance(arr[0], dict):
+                ids[ph] = arr[0].get("id", "")
+    st, teams = fetch(base, "/api/teams", token)
+    if st == 200 and isinstance(teams, dict):
+        arr = teams.get("teams") or []
+        if arr and isinstance(arr[0], dict):
+            ids["$TEAM"] = arr[0].get("id", "")
+    return {k: v for k, v in ids.items() if v}
+
+
 def main() -> None:
     if len(sys.argv) < 3:
         raise SystemExit("用法: probe_api.py <base_url> <token> [out.json]")
@@ -77,11 +105,23 @@ def main() -> None:
     token = sys.argv[2]
     out_path = sys.argv[3] if len(sys.argv) > 3 else "responses.json"
 
+    ids = resolve_ids(base, token)
+    if ids:
+        print("解析到 ID：", ", ".join(f"{k}={v[:12]}" for k, v in ids.items()))
+        print()
+
     collected = {}
     for dto, method, path in TARGETS:
-        status, payload = fetch(base, path, token, method)
+        real = path
+        for ph, val in ids.items():
+            real = real.replace(ph, val)
+        if "$" in real:
+            print(f"—  {dto:24s} 跳过（缺占位符 ID）")
+            continue
+        status, payload = fetch(base, real, token, method)
+        shown = path.replace("|", " 端口:")
         flag = "✅" if status == 200 and "__error__" not in payload else "❌"
-        print(f"{flag} {dto:24s} {method} {path:26s} HTTP:{status}")
+        print(f"{flag} {dto:24s} {method} {shown:34s} HTTP:{status}")
         if status == 200 and "__error__" not in payload:
             collected[dto] = payload
         elif "__error__" in payload:

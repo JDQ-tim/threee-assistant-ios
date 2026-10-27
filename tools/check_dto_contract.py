@@ -135,6 +135,23 @@ def main() -> None:
     total = bad = 0
     seen = set()
 
+    def pick_richest(items):
+        """从数组里挑「非空字段最多」的那条当样本。
+
+        ⚠️ 不能只取 items[0]。快照里 events 的第一条恰好是没有提醒的待办，
+        而 `reminders: [ReminderDTO]` 这个嵌套类型只在另一条事件里才有数据 ——
+        取首元素就永远递归不到它，等于把最该验的地方跳过了。
+        空数组/空对象也算"贫瘠"，一条有 3 条提醒的记录会赢过它。
+        """
+        best, best_score = None, -1
+        for it in items[:30]:
+            if not isinstance(it, dict):
+                continue
+            score = sum(1 for v in it.values() if v not in (None, "", [], {}))
+            if score > best_score:
+                best, best_score = it, score
+        return best
+
     def check_struct(dto_name: str, payload, indent: str = "") -> None:
         nonlocal total, bad
         info = structs.get(dto_name)
@@ -177,9 +194,10 @@ def main() -> None:
             if inner.startswith("[") and inner.endswith("]"):
                 inner = inner[1:-1].strip().rstrip("?").strip()
                 items = value if isinstance(value, list) else []
-                if items and isinstance(items[0], dict) and inner in structs and inner not in seen:
+                sample = pick_richest(items)
+                if sample is not None and inner in structs and inner not in seen:
                     seen.add(inner)
-                    check_struct(inner, items[0], indent + "    ")
+                    check_struct(inner, sample, indent + "    ")
             elif inner in structs and isinstance(value, dict) and inner not in seen:
                 seen.add(inner)
                 check_struct(inner, value, indent + "    ")
