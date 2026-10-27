@@ -53,7 +53,7 @@ struct EventDetailSheet: View {
                             .fill(Color(hexString: calendar?.displayColor ?? "#185FA5"))
                             .frame(width: 4, height: 30)
 
-                        Text(item.title?.isEmpty == false ? item.title! : "（无标题）")
+                        Text(item.title.nonEmpty(or: "（无标题）"))
                             .font(.system(size: 22, weight: .semibold))
                             .foregroundStyle(Theme.textPrimary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -78,8 +78,8 @@ struct EventDetailSheet: View {
                             infoRow("强提醒", "已开启")
                         }
                     }
-                    infoRow("地点", item.location?.isEmpty == false ? item.location! : "—")
-                    infoRow("备注", item.notes?.isEmpty == false ? item.notes! : "—")
+                    infoRow("地点", item.location.nonEmpty(or: "—"))
+                    infoRow("备注", item.notes.nonEmpty(or: "—"))
 
                     snoozeSection
 

@@ -1,0 +1,14 @@
+{
+  "teams": [
+    {
+      "id": "tm_27cce76a48d1c4ff08c095d5",
+      "name": "测试团队",
+      "owner_id": "u_4d4ceaaac8c9540e7f7e9c5b",
+      "note": "",
+      "created_at": 1793080578,
+      "my_role": "admin",
+      "member_count": 1,
+      "calendar_count": 2
+    }
+  ]
+}

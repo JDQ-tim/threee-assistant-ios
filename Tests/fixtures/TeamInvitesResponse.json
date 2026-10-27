@@ -1,0 +1,19 @@
+{
+  "invites": [
+    {
+      "id": "ti_9f1953d3ef5690c4c79086cd",
+      "code": "fst_fWtTJMDxOTRy5CStC3B6kcS87tdh7ACgM2jKBq5SXIk",
+      "team_id": "tm_27cce76a48d1c4ff08c095d5",
+      "role": "member",
+      "created_by": "u_4d4ceaaac8c9540e7f7e9c5b",
+      "expires_at": 1793253378,
+      "max_uses": 3,
+      "used_count": 0,
+      "revoked_at": 0,
+      "created_at": 1793080578,
+      "expired": false,
+      "revoked": false,
+      "exhausted": false
+    }
+  ]
+}

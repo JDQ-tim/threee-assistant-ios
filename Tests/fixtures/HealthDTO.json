@@ -1,0 +1,15 @@
+{
+  "events": 4,
+  "instances": 17,
+  "modules": {
+    "club": "missing",
+    "labdata": "missing"
+  },
+  "ok": true,
+  "pending_update": false,
+  "seq": 48,
+  "staged": "",
+  "time": 1793080669,
+  "users": 2,
+  "version": "1.3.16-local"
+}

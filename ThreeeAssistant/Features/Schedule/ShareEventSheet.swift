@@ -74,7 +74,7 @@ struct ShareEventSheet: View {
         List {
             Section {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(instance.title?.isEmpty == false ? instance.title! : "（无标题）")
+                    Text(instance.title.nonEmpty(or: "（无标题）"))
                         .font(.system(size: 15, weight: .medium))
                         .foregroundStyle(Theme.textPrimary)
                     Text(subtitle)

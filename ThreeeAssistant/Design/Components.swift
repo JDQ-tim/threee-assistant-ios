@@ -1,5 +1,22 @@
 import SwiftUI
 
+extension Optional where Wrapped == String {
+    /// 取「非空值」，空串和 nil 一律换成兜底文案。
+    ///
+    /// 存在的理由：以前四处都写成
+    /// ```
+    /// item.title?.isEmpty == false ? item.title! : "（无标题）"
+    /// ```
+    /// 靠 `nil == false` 走 else 分支来保证安全 —— **确实不会崩**，
+    /// 但每多一处就是一颗地雷：哪天有人把条件改成 `!= true`
+    /// 或者把 `?` 去掉，`!` 立刻变成真崩溃，而编译器不会拦。
+    /// 换成 flatMap 之后根本没有强解，条件改了也崩不了。
+    func nonEmpty(or fallback: String) -> String {
+        guard let self, !self.isEmpty else { return fallback }
+        return self
+    }
+}
+
 /// 一条日程。列表里最小的单元。
 @MainActor
 struct EventRowView: View {
@@ -61,7 +78,7 @@ struct EventRowView: View {
                     }
                 }
 
-                Text(item.title?.isEmpty == false ? item.title! : "（无标题）")
+                Text(item.title.nonEmpty(or: "（无标题）"))
                     .font(.system(size: 16, weight: .medium))
                     .foregroundStyle(item.isDone ? Theme.textTertiary : Theme.textPrimary)
                     // 完成的划掉。这是"完成"最不需要解释的表达方式

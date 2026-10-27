@@ -1,0 +1,16 @@
+{
+  "users": [
+    {
+      "id": "u_4d4ceaaac8c9540e7f7e9c5b",
+      "name": "tester",
+      "is_admin": true,
+      "created_at": 1793077428
+    },
+    {
+      "id": "u_bec0ff32cddf8a98ceccc516",
+      "name": "teammate",
+      "is_admin": false,
+      "created_at": 1793080578
+    }
+  ]
+}

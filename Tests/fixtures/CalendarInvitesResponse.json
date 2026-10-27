@@ -1,0 +1,20 @@
+{
+  "invites": [
+    {
+      "id": "iv_44bba7b1581d1a1055bd8f9c",
+      "code": "fsi_EKyWB85nzVrVZIUgYIojS0Lj1RALi9274dMoY2O4GhU",
+      "kind": "invite",
+      "calendar_id": "c_5c7cea37eaff146aaf56ce6c",
+      "role": "editor",
+      "created_by": "u_4d4ceaaac8c9540e7f7e9c5b",
+      "expires_at": 1793339863,
+      "max_uses": 5,
+      "used_count": 0,
+      "revoked_at": 0,
+      "created_at": 1793080663,
+      "expired": false,
+      "revoked": false,
+      "exhausted": false
+    }
+  ]
+}

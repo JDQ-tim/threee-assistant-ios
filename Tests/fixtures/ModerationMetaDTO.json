@@ -1,0 +1,1473 @@
+{
+  "categories": {
+    "gang": "涉黑违法",
+    "other": "其他违规",
+    "politics": "涉政",
+    "porn": "涉黄",
+    "violence": "涉暴"
+  },
+  "count": 242,
+  "reasons": {
+    "abuse": "辱骂骚扰",
+    "gang": "涉黑违法",
+    "other": "其他",
+    "politics": "涉政",
+    "porn": "涉黄",
+    "spam": "广告垃圾",
+    "violence": "涉暴"
+  },
+  "words": [
+    {
+      "word": "法轮功",
+      "raw": "法轮功",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "法轮大法",
+      "raw": "法轮大法",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "falundafa",
+      "raw": "falundafa",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "falungong",
+      "raw": "falungong",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "全能神",
+      "raw": "全能神",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "门徒会",
+      "raw": "门徒会",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "呼喊派",
+      "raw": "呼喊派",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "实际神",
+      "raw": "实际神",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "血水圣灵",
+      "raw": "血水圣灵",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "观音法门",
+      "raw": "观音法门",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "三退",
+      "raw": "三退",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "退党保平安",
+      "raw": "退党保平安",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "九评共产党",
+      "raw": "九评共产党",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "大纪元",
+      "raw": "大纪元",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "新唐人",
+      "raw": "新唐人",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "希望之声",
+      "raw": "希望之声",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "神韵演出",
+      "raw": "神韵演出",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "活摘器官",
+      "raw": "活摘器官",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "藏独",
+      "raw": "藏独",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "疆独",
+      "raw": "疆独",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "东突厥斯坦",
+      "raw": "东突厥斯坦",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "台独",
+      "raw": "台独",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "港独",
+      "raw": "港独",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "蒙独",
+      "raw": "蒙独",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "两国论",
+      "raw": "两国论",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "一中一台",
+      "raw": "一中一台",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "台湾共和国",
+      "raw": "台湾共和国",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "一边一国",
+      "raw": "一边一国",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "西藏独立",
+      "raw": "西藏独立",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "新疆独立",
+      "raw": "新疆独立",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "香港独立",
+      "raw": "香港独立",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "台湾独立",
+      "raw": "台湾独立",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "tibetindependence",
+      "raw": "tibet independence",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "freetibet",
+      "raw": "free tibet",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "东突",
+      "raw": "东突",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "世维会",
+      "raw": "世维会",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "热比娅",
+      "raw": "热比娅",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "六四事件",
+      "raw": "六四事件",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "六四天安门",
+      "raw": "六四天安门",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "八九民运",
+      "raw": "八九民运",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "天安门事件",
+      "raw": "天安门事件",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "民运分子",
+      "raw": "民运分子",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "法轮",
+      "raw": "法轮",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "打倒共产党",
+      "raw": "打倒共产党",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "推翻政府",
+      "raw": "推翻政府",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "颠覆国家政权",
+      "raw": "颠覆国家政权",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "反共",
+      "raw": "反共",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "共产党下台",
+      "raw": "共产党下台",
+      "category": "politics",
+      "severity": 2
+    },
+    {
+      "word": "色情",
+      "raw": "色情",
+      "category": "porn",
+      "severity": 1
+    },
+    {
+      "word": "黄片",
+      "raw": "黄片",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "毛片",
+      "raw": "毛片",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "成人电影",
+      "raw": "成人电影",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "av女优",
+      "raw": "av女优",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "无码",
+      "raw": "无码",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "有码",
+      "raw": "有码",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "三级片",
+      "raw": "三级片",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "裸聊",
+      "raw": "裸聊",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "一夜情",
+      "raw": "一夜情",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "包养",
+      "raw": "包养",
+      "category": "porn",
+      "severity": 1
+    },
+    {
+      "word": "援交",
+      "raw": "援交",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "楼凤",
+      "raw": "楼凤",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "约炮",
+      "raw": "约炮",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "一夜情服务",
+      "raw": "一夜情服务",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "成人网站",
+      "raw": "成人网站",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "情色",
+      "raw": "情色",
+      "category": "porn",
+      "severity": 1
+    },
+    {
+      "word": "淫秽",
+      "raw": "淫秽",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "淫乱",
+      "raw": "淫乱",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "卖淫",
+      "raw": "卖淫",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "嫖娼",
+      "raw": "嫖娼",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "招嫖",
+      "raw": "招嫖",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "打炮",
+      "raw": "打炮",
+      "category": "porn",
+      "severity": 1
+    },
+    {
+      "word": "炮友",
+      "raw": "炮友",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "性服务",
+      "raw": "性服务",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "色情服务",
+      "raw": "色情服务",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "上门服务小姐",
+      "raw": "上门服务小姐",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "同城约",
+      "raw": "同城约",
+      "category": "porn",
+      "severity": 1
+    },
+    {
+      "word": "性爱",
+      "raw": "性爱",
+      "category": "porn",
+      "severity": 1
+    },
+    {
+      "word": "做爱",
+      "raw": "做爱",
+      "category": "porn",
+      "severity": 1
+    },
+    {
+      "word": "口交",
+      "raw": "口交",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "肛交",
+      "raw": "肛交",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "群交",
+      "raw": "群交",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "乱伦",
+      "raw": "乱伦",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "兽交",
+      "raw": "兽交",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "恋童",
+      "raw": "恋童",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "幼齿",
+      "raw": "幼齿",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "萝莉资源",
+      "raw": "萝莉资源",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "儿童色情",
+      "raw": "儿童色情",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "porn",
+      "raw": "porn",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "pornhub",
+      "raw": "pornhub",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "xvideos",
+      "raw": "xvideos",
+      "category": "porn",
+      "severity": 2
+    },
+    {
+      "word": "onlyfans",
+      "raw": "onlyfans",
+      "category": "porn",
+      "severity": 1
+    },
+    {
+      "word": "杀人",
+      "raw": "杀人",
+      "category": "violence",
+      "severity": 1
+    },
+    {
+      "word": "杀了他",
+      "raw": "杀了他",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "杀了你",
+      "raw": "杀了你",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "弄死你",
+      "raw": "弄死你",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "打死你",
+      "raw": "打死你",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "砍死",
+      "raw": "砍死",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "捅死",
+      "raw": "捅死",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "炸死",
+      "raw": "炸死",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "血洗",
+      "raw": "血洗",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "灭门",
+      "raw": "灭门",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "屠杀",
+      "raw": "屠杀",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "虐杀",
+      "raw": "虐杀",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "分尸",
+      "raw": "分尸",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "碎尸",
+      "raw": "碎尸",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "肢解",
+      "raw": "肢解",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "自残",
+      "raw": "自残",
+      "category": "violence",
+      "severity": 1
+    },
+    {
+      "word": "自杀教程",
+      "raw": "自杀教程",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "自杀方法",
+      "raw": "自杀方法",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "怎么自杀",
+      "raw": "怎么自杀",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "安乐死方法",
+      "raw": "安乐死方法",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "虐待",
+      "raw": "虐待",
+      "category": "violence",
+      "severity": 1
+    },
+    {
+      "word": "虐待儿童",
+      "raw": "虐待儿童",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "家暴教程",
+      "raw": "家暴教程",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "枪支买卖",
+      "raw": "枪支买卖",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "买枪",
+      "raw": "买枪",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "卖枪",
+      "raw": "卖枪",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "枪支弹药",
+      "raw": "枪支弹药",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "军火",
+      "raw": "军火",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "土制炸弹",
+      "raw": "土制炸弹",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "自制炸弹",
+      "raw": "自制炸弹",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "爆炸物制作",
+      "raw": "爆炸物制作",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "制作炸药",
+      "raw": "制作炸药",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "tnt配方",
+      "raw": "tnt配方",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "管制刀具",
+      "raw": "管制刀具",
+      "category": "violence",
+      "severity": 2
+    },
+    {
+      "word": "弓弩买卖",
+      "raw": "弓弩买卖",
+      "category": "violence",
+      "severity": 1
+    },
+    {
+      "word": "黑社会",
+      "raw": "黑社会",
+      "category": "gang",
+      "severity": 1
+    },
+    {
+      "word": "帮派",
+      "raw": "帮派",
+      "category": "gang",
+      "severity": 1
+    },
+    {
+      "word": "砍人",
+      "raw": "砍人",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "收保护费",
+      "raw": "收保护费",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "打手",
+      "raw": "打手",
+      "category": "gang",
+      "severity": 1
+    },
+    {
+      "word": "杀手",
+      "raw": "杀手",
+      "category": "gang",
+      "severity": 1
+    },
+    {
+      "word": "买凶",
+      "raw": "买凶",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "悬赏人头",
+      "raw": "悬赏人头",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "地下钱庄",
+      "raw": "地下钱庄",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "洗钱",
+      "raw": "洗钱",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "高利贷",
+      "raw": "高利贷",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "套路贷",
+      "raw": "套路贷",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "暴力催收",
+      "raw": "暴力催收",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "校园贷",
+      "raw": "校园贷",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "裸条",
+      "raw": "裸条",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "赌博",
+      "raw": "赌博",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "博彩",
+      "raw": "博彩",
+      "category": "gang",
+      "severity": 1
+    },
+    {
+      "word": "网络赌场",
+      "raw": "网络赌场",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "线上赌场",
+      "raw": "线上赌场",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "真人荷官",
+      "raw": "真人荷官",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "百家乐",
+      "raw": "百家乐",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "六合彩",
+      "raw": "六合彩",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "时时彩",
+      "raw": "时时彩",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "赌球",
+      "raw": "赌球",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "澳门赌场",
+      "raw": "澳门赌场",
+      "category": "gang",
+      "severity": 1
+    },
+    {
+      "word": "菠菜代理",
+      "raw": "菠菜代理",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "包赢",
+      "raw": "包赢",
+      "category": "gang",
+      "severity": 1
+    },
+    {
+      "word": "稳赚不赔",
+      "raw": "稳赚不赔",
+      "category": "gang",
+      "severity": 1
+    },
+    {
+      "word": "电信诈骗",
+      "raw": "电信诈骗",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "刷单返利",
+      "raw": "刷单返利",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "兼职刷单",
+      "raw": "兼职刷单",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "日赚千元",
+      "raw": "日赚千元",
+      "category": "gang",
+      "severity": 1
+    },
+    {
+      "word": "代开发票",
+      "raw": "代开发票",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "办假证",
+      "raw": "办假证",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "假学历",
+      "raw": "假学历",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "出售个人信息",
+      "raw": "出售个人信息",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "数据出售",
+      "raw": "数据出售",
+      "category": "gang",
+      "severity": 1
+    },
+    {
+      "word": "银行卡出售",
+      "raw": "银行卡出售",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "跑分平台",
+      "raw": "跑分平台",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "毒品",
+      "raw": "毒品",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "吸毒",
+      "raw": "吸毒",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "贩毒",
+      "raw": "贩毒",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "冰毒",
+      "raw": "冰毒",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "海洛因",
+      "raw": "海洛因",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "大麻",
+      "raw": "大麻",
+      "category": "gang",
+      "severity": 1
+    },
+    {
+      "word": "摇头丸",
+      "raw": "摇头丸",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "k粉",
+      "raw": "k粉",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "氯胺酮",
+      "raw": "氯胺酮",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "麻古",
+      "raw": "麻古",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "开心水",
+      "raw": "开心水",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "笑气",
+      "raw": "笑气",
+      "category": "gang",
+      "severity": 1
+    },
+    {
+      "word": "制毒",
+      "raw": "制毒",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "毒品交易",
+      "raw": "毒品交易",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "毒品货源",
+      "raw": "毒品货源",
+      "category": "gang",
+      "severity": 2
+    },
+    {
+      "word": "传销",
+      "raw": "传销",
+      "category": "other",
+      "severity": 2
+    },
+    {
+      "word": "拉人头",
+      "raw": "拉人头",
+      "category": "other",
+      "severity": 1
+    },
+    {
+      "word": "非法集资",
+      "raw": "非法集资",
+      "category": "other",
+      "severity": 2
+    },
+    {
+      "word": "荐股群",
+      "raw": "荐股群",
+      "category": "other",
+      "severity": 1
+    },
+    {
+      "word": "代考",
+      "raw": "代考",
+      "category": "other",
+      "severity": 2
+    },
+    {
+      "word": "作弊神器",
+      "raw": "作弊神器",
+      "category": "other",
+      "severity": 2
+    },
+    {
+      "word": "答案出售",
+      "raw": "答案出售",
+      "category": "other",
+      "severity": 2
+    },
+    {
+      "word": "论文代写",
+      "raw": "论文代写",
+      "category": "other",
+      "severity": 1
+    },
+    {
+      "word": "翻墙软件",
+      "raw": "翻墙软件",
+      "category": "other",
+      "severity": 2
+    },
+    {
+      "word": "vpn账号出售",
+      "raw": "vpn账号出售",
+      "category": "other",
+      "severity": 2
+    },
+    {
+      "word": "黑产",
+      "raw": "黑产",
+      "category": "other",
+      "severity": 2
+    },
+    {
+      "word": "接码平台",
+      "raw": "接码平台",
+      "category": "other",
+      "severity": 2
+    },
+    {
+      "word": "猫池",
+      "raw": "猫池",
+      "category": "other",
+      "severity": 2
+    },
+    {
+      "word": "接码",
+      "raw": "接码",
+      "category": "other",
+      "severity": 3
+    },
+    {
+      "word": "荐股",
+      "raw": "荐股",
+      "category": "other",
+      "severity": 3
+    },
+    {
+      "word": "原始股",
+      "raw": "原始股",
+      "category": "other",
+      "severity": 3
+    },
+    {
+      "word": "内幕消息",
+      "raw": "内幕消息",
+      "category": "other",
+      "severity": 3
+    },
+    {
+      "word": "一键翻墙",
+      "raw": "一键翻墙",
+      "category": "other",
+      "severity": 3
+    },
+    {
+      "word": "轮子功",
+      "raw": "轮子功",
+      "category": "politics",
+      "severity": 3
+    },
+    {
+      "word": "大法弟子",
+      "raw": "大法弟子",
+      "category": "politics",
+      "severity": 3
+    },
+    {
+      "word": "加群",
+      "raw": "加群",
+      "category": "other",
+      "severity": 3
+    },
+    {
+      "word": "私聊我",
+      "raw": "私聊我",
+      "category": "other",
+      "severity": 3
+    },
+    {
+      "word": "棋牌室",
+      "raw": "棋牌室",
+      "category": "gang",
+      "severity": 3
+    },
+    {
+      "word": "假证",
+      "raw": "假证",
+      "category": "gang",
+      "severity": 3
+    },
+    {
+      "word": "催收",
+      "raw": "催收",
+      "category": "other",
+      "severity": 3
+    },
+    {
+      "word": "代骂",
+      "raw": "代骂",
+      "category": "other",
+      "severity": 3
+    },
+    {
+      "word": "人肉搜索",
+      "raw": "人肉搜索",
+      "category": "other",
+      "severity": 3
+    },
+    {
+      "word": "开盒",
+      "raw": "开盒",
+      "category": "other",
+      "severity": 3
+    },
+    {
+      "word": "珐輪功",
+      "raw": "珐輪功",
+      "category": "politics",
+      "severity": 3
+    },
+    {
+      "word": "珐轮功",
+      "raw": "珐轮功",
+      "category": "politics",
+      "severity": 3
+    },
+    {
+      "word": "法伦功",
+      "raw": "法伦功",
+      "category": "politics",
+      "severity": 3
+    },
+    {
+      "word": "法仑功",
+      "raw": "法仑功",
+      "category": "politics",
+      "severity": 3
+    },
+    {
+      "word": "法lun功",
+      "raw": "法lun功",
+      "category": "politics",
+      "severity": 3
+    },
+    {
+      "word": "falun",
+      "raw": "falun",
+      "category": "politics",
+      "severity": 3
+    },
+    {
+      "word": "法轮大fa",
+      "raw": "法轮大fa",
+      "category": "politics",
+      "severity": 3
+    },
+    {
+      "word": "转法轮",
+      "raw": "转法轮",
+      "category": "politics",
+      "severity": 3
+    },
+    {
+      "word": "真善忍",
+      "raw": "真善忍",
+      "category": "politics",
+      "severity": 3
+    },
+    {
+      "word": "真shan忍",
+      "raw": "真shan忍",
+      "category": "politics",
+      "severity": 3
+    },
+    {
+      "word": "明慧网",
+      "raw": "明慧网",
+      "category": "politics",
+      "severity": 3
+    },
+    {
+      "word": "活摘",
+      "raw": "活摘",
+      "category": "politics",
+      "severity": 3
+    },
+    {
+      "word": "退dang",
+      "raw": "退dang",
+      "category": "politics",
+      "severity": 3
+    },
+    {
+      "word": "退团保平安",
+      "raw": "退团保平安",
+      "category": "politics",
+      "severity": 3
+    },
+    {
+      "word": "台du",
+      "raw": "台du",
+      "category": "politics",
+      "severity": 3
+    },
+    {
+      "word": "藏du",
+      "raw": "藏du",
+      "category": "politics",
+      "severity": 3
+    },
+    {
+      "word": "疆du",
+      "raw": "疆du",
+      "category": "politics",
+      "severity": 3
+    },
+    {
+      "word": "港du",
+      "raw": "港du",
+      "category": "politics",
+      "severity": 3
+    },
+    {
+      "word": "台毒",
+      "raw": "台毒",
+      "category": "politics",
+      "severity": 3
+    },
+    {
+      "word": "跑分",
+      "raw": "跑分",
+      "category": "gang",
+      "severity": 3
+    },
+    {
+      "word": "四件套",
+      "raw": "四件套",
+      "category": "gang",
+      "severity": 3
+    },
+    {
+      "word": "卡商",
+      "raw": "卡商",
+      "category": "gang",
+      "severity": 3
+    },
+    {
+      "word": "水房",
+      "raw": "水房",
+      "category": "gang",
+      "severity": 3
+    },
+    {
+      "word": "上头电子烟",
+      "raw": "上头电子烟",
+      "category": "gang",
+      "severity": 3
+    },
+    {
+      "word": "小树枝",
+      "raw": "小树枝",
+      "category": "gang",
+      "severity": 3
+    },
+    {
+      "word": "莞式服务",
+      "raw": "莞式服务",
+      "category": "porn",
+      "severity": 3
+    },
+    {
+      "word": "外围女",
+      "raw": "外围女",
+      "category": "porn",
+      "severity": 3
+    },
+    {
+      "word": "私彩",
+      "raw": "私彩",
+      "category": "gang",
+      "severity": 3
+    },
+    {
+      "word": "带单",
+      "raw": "带单",
+      "category": "other",
+      "severity": 3
+    },
+    {
+      "word": "刷单",
+      "raw": "刷单",
+      "category": "other",
+      "severity": 3
+    },
+    {
+      "word": "点赞员",
+      "raw": "点赞员",
+      "category": "other",
+      "severity": 3
+    },
+    {
+      "word": "背债",
+      "raw": "背债",
+      "category": "other",
+      "severity": 3
+    },
+    {
+      "word": "社工库",
+      "raw": "社工库",
+      "category": "other",
+      "severity": 3
+    },
+    {
+      "word": "查全家",
+      "raw": "查全家",
+      "category": "other",
+      "severity": 3
+    }
+  ]
+}

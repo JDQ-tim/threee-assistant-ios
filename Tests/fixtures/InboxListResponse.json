@@ -1,0 +1,28 @@
+{
+  "count": 1,
+  "items": [
+    {
+      "id": "ib_fc0f5963b3e47d1ee2a3d29d",
+      "user_id": "u_4d4ceaaac8c9540e7f7e9c5b",
+      "kind": "capture",
+      "status": "pending",
+      "source": "share",
+      "from_user_id": "u_4d4ceaaac8c9540e7f7e9c5b",
+      "from_name": "tester",
+      "origin_calendar_id": "",
+      "title": "收件箱里的草稿",
+      "notes": "从别处分享进来",
+      "location": "线上",
+      "all_day": false,
+      "dtstart_utc": 1793685378,
+      "duration_sec": 1800,
+      "remind_minutes_before": "[30,10]",
+      "source_excerpt": "原文片段…",
+      "confidence": "0.82",
+      "accepted_event_id": "",
+      "created_at": 1793080578,
+      "decided_at": 0,
+      "seq": 24
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "calendars": [
+    {
+      "id": "c_5c7cea37eaff146aaf56ce6c",
+      "owner_id": "u_4d4ceaaac8c9540e7f7e9c5b",
+      "name": "测试日历",
+      "color": "#378ADD",
+      "kind": "private",
+      "role": "owner",
+      "members": [
+        {
+          "user_id": "u_4d4ceaaac8c9540e7f7e9c5b",
+          "name": "tester",
+          "role": "owner"
+        }
+      ],
+      "seq": 42,
+      "field_seqs": {
+        "color": 42,
+        "kind": 42,
+        "name": 42
+      },
+      "updated_at": 1793080663,
+      "created_at": 1793077461,
+      "deleted_at": null,
+      "owner_name": "tester"
+    },
+    {
+      "id": "c_87239f0ccddf27276b894feb",
+      "owner_id": "u_4d4ceaaac8c9540e7f7e9c5b",
+      "name": "复杂数据日历",
+      "color": "#378ADD",
+      "kind": "private",
+      "role": "owner",
+      "members": [
+        {
+          "user_id": "u_4d4ceaaac8c9540e7f7e9c5b",
+          "name": "tester",
+          "role": "owner"
+        }
+      ],
+      "seq": 26,
+      "field_seqs": {
+        "color": 26,
+        "kind": 26,
+        "name": 26
+      },
+      "updated_at": 1793080578,
+      "created_at": 1793080578,
+      "deleted_at": null,
+      "owner_name": "tester"
+    }
+  ]
+}

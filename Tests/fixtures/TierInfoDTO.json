@@ -1,0 +1,17 @@
+{
+  "entitlements": {
+    "tier": "free",
+    "tier_label": "普通用户",
+    "max_devices": 0,
+    "max_api_keys": 0,
+    "max_events": 0,
+    "live_collab": true,
+    "ext_api": true,
+    "market": true,
+    "club": false
+  },
+  "tier": "free",
+  "tier_expired": false,
+  "tier_expires_at": 0,
+  "tier_label": "普通用户"
+}
