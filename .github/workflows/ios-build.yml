@@ -58,27 +58,36 @@ concurrency:
   cancel-in-progress: false
 
 # ============================================================
-#  ⚠️ 902 秒：为什么这里要写死 35 分钟
+#  ⚠️ 902 秒：这个数字不是 timeout 造成的
 #  ------------------------------------------------------------
-#  实测这个仓库有 4 次运行，从 job 开始到结束**恰好 902 秒**，
-#  结论都是 `cancelled`，而且都没有任何 artifact、没有步骤记录：
+#  实测有 4 次运行，从 job 开始到结束**恰好 902 秒**，结论 `cancelled`，
+#  没有 artifact、没有步骤记录：
 #
 #     01:23:19 -> 01:38:21   902s  cancelled
 #     01:51:33 -> 02:06:35   902s  cancelled
 #     01:53:44 -> 02:08:46   902s  cancelled
 #     02:12:03 -> 02:27:05   902s  cancelled
 #
-#  两次 push 之间相差不到 2 秒、结论却一样，所以**不是** concurrency
-#  互相取消（那个已经改成带 run_id、cancel-in-progress: false 了）。
-#  是外面有东西在 902 秒时把 job 掐掉。
+#  **订正**：以前这里写着「改成 20 分钟，主动地在自己这边收工，
+#  而不是被动地被外面砍掉」。这个因果是错的 —— 902 秒是平台侧在掐，
+#  不是本文件里任何 timeout 生效。下面 `timeout-minutes: 20` 保留，
+#  但它保证不了什么：job 拿到机器之前，被掐与否完全由平台决定。
 #
-#  这意味着原来那行 `timeout-minutes: 40` 从来没有生效过 ——
-#  job 活不到 40 分钟。下面改成 20 分钟：**主动地**在自己这边收工，
-#  而不是被动地被外面砍掉。被外面砍掉的那次连 artifact 都不会上传，
-#  拿到手的是一份「什么都没有」的日志，根本不知道错在哪。
+#  真正的机制是：job 排队**耗满 15 分钟仍分配不到 runner**，
+#  平台就把这次运行判成 `completed / cancelled`，`steps` 为 0。
+#  2026-10-26 那次连着 4 次触发全这样（macos-14 两次、macos-15、macos-13
+#  那次更是一直挂着 21 小时不出结果）。同一时段换到北美深夜（北京时间中午）
+#  再试，**秒分配到机器**，全程 94 秒跑完。
 #
-#  同时保证：编译步骤的 timeout 一定小于 job 的 timeout，
-#  这样即使编译真卡住，后面的「上传日志」「提炼报错」还能跑。
+#  怎么区分「排队超时」和「编译失败」：
+#      看 `actions/runs/{id}/jobs` 返回的每步记录 —— 
+#      steps 为 0 → 排队超时，跟代码无关，别去改 Swift；
+#      steps 有记录且编译步骤红 → 才是真错误。
+#
+#  配额与时段：公开仓库走的是全平台共享的 macOS 池，
+#  免费额度按 macOS 分钟 ×10 折算进 2000 分钟/月。
+#  额度耗尽的表现也是「一直 queued 然后超时」，API 读不到，只能去
+#  https://github.com/settings/billing 看。
 # ============================================================
 
 jobs:
@@ -169,6 +178,14 @@ jobs:
             -configuration Debug
             -sdk iphonesimulator
             -destination 'generic/platform=iOS Simulator'
+            # ⚠️ 必须显式指定产物目录。
+            #    不指定的话 xcodebuild 会把产物丢到
+            #    ~/Library/Developer/Xcode/DerivedData/ThreeeAssistant-<随机hash>/
+            #    那个 hash 每次都不一样，下面的 upload-artifact 路径**永远匹配不上**，
+            #    而 `if-no-files-found: ignore` 又会把这个失败静默吞掉 ——
+            #    结果是「步骤显示 success，但附件里只有日志、没有 .app」。
+            #    （2026-10-27 run 40449753874 就是这么丢的。）
+            -derivedDataPath build/DerivedData
             CODE_SIGNING_ALLOWED=NO
             CODE_SIGNING_REQUIRED=NO
             CODE_SIGN_IDENTITY=
@@ -306,12 +323,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ThreeeAssistant-simulator-app
-          # ⚠️ 必须和上面的构建参数一致：现在只编 arm64，
-          #    产物在 arm64 子目录下，不再是 Debug-iphonesimulator/
-          path: |
-            DerivedData/Build/Products/Debug-iphonesimulator/*.app
-            build/DerivedData/Build/Products/Debug-iphonesimulator/*.app
-            build/Build/Products/Debug-iphonesimulator/*.app
+          # 路径必须跟上面 ARGS 里的 `-derivedDataPath build/DerivedData` 一致。
+          # 以前这里只写了 `DerivedData/...` 和 `build/Build/Products/...`，
+          # 全都不匹配真实的 `~/Library/Developer/Xcode/DerivedData/ThreeeAssistant-<hash>/`，
+          # 于是每次都「上传成功但什么都没传」—— 附件里一直只有日志。
+          path: build/DerivedData/Build/Products/Debug-iphonesimulator/*.app
           if-no-files-found: ignore
           retention-days: 30
 
