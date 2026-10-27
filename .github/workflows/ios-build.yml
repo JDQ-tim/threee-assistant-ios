@@ -192,6 +192,37 @@ jobs:
           ./decode-check Tests/fixtures > build-logs/contract.log 2>&1
           RC=$?
           cat build-logs/contract.log
+
+          # ---- 自检：确认这个检查器真的会报错 ----
+          #
+          # 不做这一步的话，「契约通过」可能只是因为**它从来没检查到东西** ——
+          # 路径写错、fixture 没带上、case 清单空了，都会让程序
+          # 平静地输出「失败 0 个」然后退 0。
+          # 所以这里故意改坏一份 fixture，要求它必须被拒绝。
+          #
+          # 改的是 "all_day" 这个键名：ScheduleInstance 那边是
+          # `c.decode(Bool.self, forKey: .allDay)`，非可选、没兜底，
+          # 键一改名就是 keyNotFound，必然失败。
+          mkdir -p build-logs/negative
+          cp Tests/fixtures/SyncSnapshotResponse.json build-logs/negative/
+          sed -i '' 's/"all_day"/"all_day_moved"/g' \
+            build-logs/negative/SyncSnapshotResponse.json
+          ./decode-check build-logs/negative > build-logs/contract-negative.log 2>&1
+          NEG_RC=$?
+          if [ "$NEG_RC" -eq 0 ]; then
+            {
+              echo ""
+              echo "❌❌ 自检失败：故意改坏的 fixture 居然解码成功了。"
+              echo "     这说明契约检查**形同虚设**，通过也不代表什么。"
+              echo "     要么 case 清单里没有对应类型，要么 fixture 根本没被读到。"
+            } | tee -a build-logs/contract.log
+            RC=1
+          else
+            echo "" >> build-logs/contract.log
+            echo "自检：改坏的 fixture 被正确拒绝 ✅" >> build-logs/contract.log
+            echo "自检通过（故意改坏的 fixture 被拒绝，退出码 $NEG_RC）"
+          fi
+
           echo "契约检查退出码：$RC"
           exit $RC
 
@@ -421,12 +452,15 @@ jobs:
           # 编译过了但契约挂了，是**不能发**的状态，必须让任务红。
           CONTRACT_OK=1
           if [ -f build-logs/contract.log ]; then
-            if grep -q "失败 0 个" build-logs/contract.log; then
+            # 必须同时满足「解码数 ≥ 1」和「失败 0 个」。
+            # 只判「失败 0 个」会假通过：fixture 目录没带上时程序输出
+            # 「解码 0 个，失败 0 个」，照样能 grep 到。
+            if grep -qE "解码 [1-9][0-9]* 个，失败 0 个" build-logs/contract.log; then
               echo "✅ 契约回归通过"
               CONTRACT_OK=0
             else
               echo "❌ 契约回归失败 —— DTO 和服务端对不上，真机会整包解析失败"
-              grep "^❌" build-logs/contract.log || true
+              grep "^❌" build-logs/contract.log || echo "   （日志里没有 ❌ 行，可能是解码数为 0）"
             fi
           else
             echo "⚠️ 没有 contract.log，契约这一关视为未通过"

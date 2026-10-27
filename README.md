@@ -15,19 +15,36 @@ SwiftUI 原生实现，**iPhone 和 iPad 通用**。第一版只做日程这条�
 
 ## ✅ 云端编译已验证通过
 
-2026-10-23 首次真实编译结果：
+2026-10-27 最新一次真实编译（run `40493917433`）：
 
 | 项目 | 结果 |
 |---|---|
 | 仓库 | https://github.com/JDQ-tim/threee-assistant-ios |
-| 编译机器 | macOS 15 + Xcode 16.4 |
-| SDK | iPhoneSimulator 18.5 |
+| 编译机器 | macOS 14 + Xcode 15.4 |
+| SDK | iPhoneSimulator 17.5 |
 | 结果 | **`** BUILD SUCCEEDED **`** |
-| 错误 | 0 |
-| 警告 | 0 |
-| 产物 | `ThreeeAssistant.app`（0.9 MB，Mach-O Universal） |
+| 代码量 | 44 个 Swift 文件 / 约 15200 行 |
+| 编译记录 | 110 条（说明确实全量编译了，不是复用旧产物） |
+| 错误 / 警告 | 0 / 0 |
+| 产物 | `ThreeeAssistant.app`（6.0 MB，模拟器版，x86_64 + arm64） |
+| 接口契约 | 19 个接口逐字段对过真实响应，0 处不兼容 |
 
-也就是说 **1822 行 Swift 代码一行未改就编译通过了**，不需要"先修一堆错"。
+> ⚠️ **「编译通过」不等于「能用」。** 这一点踩过两次：
+>
+> 1. `ScheduleInstance.allDay` 的 CodingKeys 漏了 `= "all_day"`，
+>    服务端发 `all_day`、客户端找 `allDay` → `keyNotFound` →
+>    **整个 `SyncSnapshotResponse` 解析失败**，登录后一片空白。
+> 2. `HealthDTO.modules` 把服务端的对象声明成 `String?` →
+>    `typeMismatch` → 登录页「测试连接」明明服务器活着却报错。
+>
+> 两处都是**编译 100% 通过**、静态检查也过，只有真连服务端才炸。
+> 现在 CI 里加了「契约回归」步骤：拿真实响应喂给 DTO 逐个解码，
+> 并且带**自检**（故意改坏一份 fixture，要求检查器必须报错）——
+> 避免出现「一直绿但什么都没检查」的假通过。
+>
+> 剩下的唯一盲区：**App 从没在任何设备上启动过**。
+> 怎么在 Mac 上跑起来、卡在哪一步算什么问题，见
+> [`docs/运行验证.md`](docs/运行验证.md)。
 
 > 第一次失败的原因值得记下来：`project.pbxproj` 里「ThreeeAssistant」父组
 > 和「App」子组共用了同一个对象 ID。Xcode 遇到重复 ID **不会报错**，

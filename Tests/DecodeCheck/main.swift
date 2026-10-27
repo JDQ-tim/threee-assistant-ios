@@ -94,6 +94,18 @@ for (name, decode) in cases {
 print(String(repeating: "-", count: 58))
 print("解码 \(checked) 个，失败 \(failed) 个")
 
+// ⚠️ 一个 fixture 都没找到时必须失败。
+//
+// 否则会假通过：目录改名、路径写错、忘了带 fixtures 上传，
+// 程序都会平静地输出「解码 0 个，失败 0 个」然后退出码 0 ——
+// 判定那一步 grep 到「失败 0 个」就放行了，等于这一关不存在。
+// 「什么都没检查」和「检查了都没问题」必须区分开。
+if checked == 0 {
+    print("❌ 一个 fixture 都没读到，路径是 \(base.path)")
+    print("   这不代表契约没问题，代表这一关根本没跑起来。")
+    exit(1)
+}
+
 if failed > 0 {
     print("""
     
