@@ -161,16 +161,31 @@ jobs:
           mkdir -p build-logs
           set +e
           # ⚠️ 和编译步骤同样的理由：不要用 `| tee` 取退出码。
+          #
+          # 文件清单只放**纯 Foundation** 的：Models / SyncModels / DateHelp。
+          #   带 UIKit 的（SessionStore、Keychain、TrustStore）不能进 ——
+          #   macOS 上没有 UIKit，会直接编不过。
+          #   DateHelp 是必须的：Models 里 `date.yearMonthDay` 用到了它。
+          #   这种「扩展方法」依赖按类型名 grep 是搜不到的，
+          #   第一次漏了它，CI 报的是 `Date has no member 'yearMonthDay'`。
           swiftc -O -o decode-check \
             ThreeeAssistant/Core/Models.swift \
             ThreeeAssistant/Core/SyncModels.swift \
+            ThreeeAssistant/Core/DateHelp.swift \
             Tests/DecodeCheck/main.swift \
             > build-logs/contract-build.log 2>&1
           BUILD_RC=$?
           cat build-logs/contract-build.log
 
           if [ "$BUILD_RC" -ne 0 ]; then
-            echo "❌ 契约检查程序本身没编过（不是 DTO 的问题，是 harness 缺了依赖）"
+            {
+              echo "❌ 契约检查程序本身没编过 —— 这一关等于没验。"
+              echo "   常见原因：swiftc 的文件清单漏了某个纯 Foundation 的依赖"
+              echo "   （比如扩展方法定义在别的文件里，按类型名 grep 搜不到）。"
+              echo "   详细编译错误："
+              echo ""
+              cat build-logs/contract-build.log
+            } > build-logs/contract.log
             exit 1
           fi
 
