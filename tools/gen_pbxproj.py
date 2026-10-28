@@ -375,7 +375,12 @@ for cfg_id, cfg_name in ((TGT_DEBUG, "Debug"), (TGT_RELEASE, "Release")):
     w("\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = cn.threees.assistant.ios;")
     w("\t\t\t\tPRODUCT_NAME = \"$(TARGET_NAME)\";")
     w("\t\t\t\tSWIFT_EMIT_LOC_STRINGS = YES;")
-    w("\t\t\t\tSWIFT_VERSION = 5.0;")
+    # 5.0 是 Xcode 12 时代的默认值，早该改了。
+    # 代码里大量用了 Swift 5.7 的 `if let x {` / `guard let self` 简写
+    # （编译器其实不看这个值也能编，但它会出现在「Swift Language Version」
+    #   设置项里，跟实际情况对不上，将来谁按这个值去判断能不能用新语法就会判断错）。
+    # 5.9 需要 Xcode 15+ —— 工程的 iOS 17 最低版本本来就要求 Xcode 15。
+    w("\t\t\t\tSWIFT_VERSION = 5.9;")
     w("\t\t\t\tTARGETED_DEVICE_FAMILY = \"1,2\";")
     w("\t\t\t};")
     w("\t\t\tname = %s;" % cfg_name)

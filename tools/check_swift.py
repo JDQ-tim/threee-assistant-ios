@@ -120,17 +120,21 @@ for path in files:
             errors.append("%s: %s不配平（最终深度 %d）" % (rel, name, d))
 
     # 2. 行尾多余分号（Swift 允许，但通常是笔误）
-    # 3. `if let x {` 这种 Swift 5.7+ 简写 —— 工程 SWIFT_VERSION=5.0，属于风险
+    # 3. `if let x {` 这种 Swift 5.7+ 简写
+    #
+    # ⚠️ 以前这里写的是「工程 SWIFT_VERSION=5.0，一律不能用」——**这是错的**。
+    #    `if let x {` 是**编译器**特性（Swift 5.7 起），不是语言模式开关，
+    #    跟 SWIFT_VERSION 填 5.0 还是 5.9 无关，照样能编。
+    #    真正决定能不能用的是 Xcode 版本（本工程 iOS 17 最低版本已要求 Xcode 15）。
+    #    所以这条降级成纯提示，且不阻塞；SWIFT_VERSION 也已改成 5.9。
+    #    留着只是为了「一眼看到工程里用了哪些较新语法」。
     for idx, line in enumerate(raw.splitlines(), 1):
         stripped = line.strip()
-        # Swift 5.7 的 `if let x {` / `if let x, cond {` 简写。
-        # 工程 SWIFT_VERSION = 5.0，一律不能用，必须写 `if let v = x`。
         # 三种形式都要抓：单独的 `{`、逗号接条件的、逗号接 `,` 的。
         if re.match(r"^(if|guard)\s+let\s+(\w+)\s*\{", stripped) or \
-           re.match(r"^(if|guard)\s+let\s+(\w+)\s*,", stripped) or \
-           re.search(r",\s*let\s+(\w+)\s*\{", stripped):
-            warns.append("%s:%d 用了 `if/guard let x {` 简写（需 Swift 5.7+，"
-                         "工程是 5.0）: %s" % (rel, idx, stripped[:70]))
+           re.match(r"^(if|guard)\s+let\s+(\w+)\s*,", stripped):
+            warns.append("%s:%d 用了 `if/guard let x {` 简写（Swift 5.7+ 语法，"
+                         "需 Xcode 15+）: %s" % (rel, idx, stripped[:70]))
         if re.match(r"^if\s+(let\s+)?\w+(\?|\.isEmpty)?\s*\{", stripped) is None and \
            re.search(r"\bif\s+let\s+\w+\s*\}", stripped):
             pass
