@@ -1,21 +1,21 @@
 # 3e 学习助手 · 原生 iOS 版
 
-SwiftUI 原生实现，**iPhone 和 iPad 通用**。第一版只做日程这条主线（查看 / 新建 / 删除），
-目的是先把「能不能连上你自己的服务器、界面手感对不对」验证掉，再往上铺功能。
+SwiftUI 原生实现，**iPhone 和 iPad 通用**。日程主线（查看 / 新建 / 修改 / 删除 / 重复规则 /
+课程表 / 分享 / 冲突检测）已经完整，团队、收件箱、背词、天气这些独立模块也接上了。
 
-> ⚠️ **重要前提**：这份代码是在 Windows 上写的，**没有经过 Xcode 编译**。
-> 第一次编译可能有一批报错（多半是拼写、可选值解包、API 签名这类），
-> 把报错整段发我，我改完你再重新跑一次。这不是「大概能用」，是「还没被验证过」——
-> 说清楚比让你白折腾好。
+> ⚠️ **最重要的一句话：这个 App 到今天为止，从没在任何设备或模拟器上启动过一次。**
+> 代码是在 Windows 上写的，只在 GitHub 的 macOS 机器上编过。
+> 编译通过、契约对过，都只能说明「它应该能跑」，不等于「它真的能跑」。
+> 想验一次，看 [`docs/运行验证.md`](docs/运行验证.md)。
 >
-> **好消息：你不需要 Mac。** 下面这套流程用 GitHub 的免费 macOS 机器编译，
-> 全程在浏览器里点几下就行（有额度限制：公开仓库免费不限量，私有仓库每月 2000 分钟）。
+> **好消息：你不需要 Mac 也能编。** 下面这套流程用 GitHub 的免费 macOS 机器编译，
+> 全程在浏览器里点几下就行（公开仓库免费不限量，私有仓库每月 2000 分钟）。
 
 ---
 
 ## ✅ 云端编译已验证通过
 
-2026-10-27 最新一次真实编译（run `40493917433`）：
+最近一次成功编译（run `40495037322`，head `fd49ea0`）：
 
 | 项目 | 结果 |
 |---|---|
@@ -23,11 +23,14 @@ SwiftUI 原生实现，**iPhone 和 iPad 通用**。第一版只做日程这条�
 | 编译机器 | macOS 14 + Xcode 15.4 |
 | SDK | iPhoneSimulator 17.5 |
 | 结果 | **`** BUILD SUCCEEDED **`** |
-| 代码量 | 44 个 Swift 文件 / 约 15200 行 |
-| 编译记录 | 110 条（说明确实全量编译了，不是复用旧产物） |
+| 代码量 | 44 个 Swift 文件 / 约 15300 行 |
 | 错误 / 警告 | 0 / 0 |
-| 产物 | `ThreeeAssistant.app`（6.0 MB，模拟器版，x86_64 + arm64） |
-| 接口契约 | 19 个接口逐字段对过真实响应，0 处不兼容 |
+| 产物 | `ThreeeAssistant.app`（模拟器版，x86_64 + arm64） |
+| 响应契约 | 19 个接口 / 199 个字段，逐字段对过真实响应，**0 处不兼容** |
+| 请求契约 | 15 组「客户端发的键 vs 服务端读的键」，**全部对齐** |
+| 写操作实测 | 37 个 POST/PUT/DELETE 打真服务端，**37/37 通过** |
+
+> ⚠️ **「编译通过」不等于「能用」。** 这一点踩过两次：
 
 > ⚠️ **「编译通过」不等于「能用」。** 这一点踩过两次：
 >
@@ -127,23 +130,36 @@ bash tools/push_to_github.sh 你的GitHub用户名 threee-assistant-ios
 
 ## 做了什么
 
+### 日程主线
+
 | 功能 | 状态 |
 |---|---|
-| 登录（真实 `/api/auth/login`） | ✅ |
+| 登录 / 注册（真实 `/api/auth/login`、`/api/auth/register`） | ✅ |
 | Token 存钥匙串（不是 UserDefaults） | ✅ |
-| 周视图、前后翻周、回到今天 | ✅ |
+| 周视图、前后翻周、回到今天 / 月视图 | ✅ |
 | 按天分组、全天置顶、按时间排序 | ✅ |
 | 全天 / 待办 / 已改期 标记 | ✅ |
 | 日历颜色（读服务端 `calendar.color`） | ✅ |
-| 详情页 | ✅ |
-| 新建日程（真实 `POST /api/events`） | ✅ |
-| 删除日程（真实 `DELETE /api/events/{id}`） | ✅ |
-| 下拉刷新 | ✅ |
-| 深色模式 | ✅ 跟随系统 |
-| iPad 两栏 | ✅ 前半周左栏、后半周右栏 |
-| 修改日程 | ❌ 未做 |
-| 重复日程编辑（改单次 / 改全部） | ❌ 未做 |
-| 团队 / 收件箱 / 笔记 / AI / 小组件 | ❌ 未做 |
+| 详情页 / 新建 / 修改 / 删除 | ✅ |
+| 重复规则（新建与编辑共用一个规则编辑器） | ✅ |
+| 改单次 vs 改全部（`occurrence_key`） | ✅ |
+| 课程表网格 + 课程节次编辑 | ✅ |
+| 日程分享 / 举报 | ✅ |
+| 冲突检测 | ✅ |
+| 下拉刷新 / 深色模式 / iPad 两栏 | ✅ |
+
+### 独立模块
+
+| 模块 | 状态 |
+|---|---|
+| 收件箱（邀请处理） | ✅ |
+| 团队 / 成员 / 共享 | ✅ |
+| 日历管理 / 邀请 / 站点邀请 | ✅ |
+| 背词同步（独立端口 8446） | ✅ |
+| 天气位置 | ✅ |
+| 改密码 / 分级信息 / 同步状态 | ✅ |
+| 数据完整性检查 / 清空数据 | ✅ |
+| 笔记 / AI / 小组件 | ❌ 未做 |
 
 ---
 
@@ -178,32 +194,44 @@ Swift 的 `Date.timeIntervalSince1970` 本身就是秒，但**别再乘 1000**�
 
 ```
 ios-native/
-├── .github/workflows/ios-build.yml  GitHub 云端编译配置（不需要改）
+├── .github/workflows/ios-build.yml  GitHub 云端编译 + 契约回归 + 负向自检
+├── Tests/
+│   ├── DecodeCheck/main.swift      swiftc 编的命令行程序，逐份 fixture 解码
+│   ├── fixtures/*.json             19 份从真服务端抓下来的响应
+│   └── server-request-keys.json    服务端 115 个结构体字段快照
 ├── tools/
-│   ├── push_to_github.sh            一键推送脚本
-│   ├── gen_pbxproj.py               生成 Xcode 工程文件
-│   └── check_pbxproj.py             工程文件静态校验
+│   ├── push_via_api.py             走 api.github.com 推送（git 协议在本机不通）
+│   ├── probe_api.py                打真服务端抓响应 → fixtures
+│   ├── probe_writes.py             37 个写操作实测
+│   ├── seed_data.py                灌复杂数据（重复 / 全天 / 待办 / 邀请）
+│   ├── check_dto_contract.py       声明类型 vs 真实 JSON（响应方向）
+│   ├── check_request_contract.py   发的键 vs 服务端读的键（请求方向）
+│   ├── check_route_coverage.py     服务端路由 vs 已接线接口
+│   ├── gen_pbxproj.py              生成 Xcode 工程文件
+│   ├── check_pbxproj.py            工程文件静态校验
+│   └── check_swift.py              本地机械性错误粗检
 ├── ThreeeAssistant.xcodeproj/      Xcode 工程（Xcode 14+ 全兼容，显式文件引用）
 ├── Config/Info.plist               Bundle 信息 + ATS 例外 + 本地网络权限说明
 └── ThreeeAssistant/
     ├── App/ThreeeAssistantApp.swift    @main + 登录态切换
     ├── Core/
-    │   ├── Models.swift               服务端 JSON 模型
+    │   ├── Models.swift               服务端 JSON 模型（日程 / 团队 / 收件箱…）
+    │   ├── SyncModels.swift           同步快照模型
     │   ├── APIClient.swift            网络层 + 自签证书校验
     │   ├── SessionStore.swift         全局状态（@Observable）
-    │   ├── TrustStore.swift           证书指纹记忆
+    │   ├── RepeatRule.swift           重复规则 ↔ RRULE
+    │   ├── TrustStore.swift           证书指纹记忆（TOFU）
     │   ├── Keychain.swift             令牌存取
     │   ├── DateHelp.swift             时间显示 / 拼接
     │   └── APIError.swift             错误 → 人话
-    ├── Design/
-    │   ├── Theme.swift                配色
-    │   └── Components.swift           日程条目 / 标签 / 空状态
+    ├── Design/                        Theme / Components
     └── Features/
-        ├── Login/LoginView.swift
-        ├── Schedule/ScheduleView.swift
-        ├── Schedule/EventDetailSheet.swift
-        ├── Schedule/NewEventSheet.swift
-        └── Settings/SettingsView.swift
+        ├── Login/                     登录、注册
+        ├── Schedule/                  周视图、月视图、课程表、详情、新建/编辑、
+        │                              重复规则编辑器、分享、举报
+        └── Settings/                  日历、邀请、成员、共享、团队、收件箱、
+                                       背词、天气、冲突、改密码、分级、同步状态、
+                                       数据完整性、清空数据、站点邀请
 ```
 
 工程用的是最保守的**显式文件引用**写法的 `project.pbxproj`（`objectVersion = 56`），
@@ -235,10 +263,12 @@ python tools/check_pbxproj.py
 
 ## 下一步建议
 
-按「一次只验证一件事」的顺序：
+代码这边能做的**基本做完了**，剩下的按优先级：
 
-1. **先让它编译通过、能登录** —— 这一步过了，架构就是对的
-2. 补「修改日程」（`PUT /api/events/{id}`，服务端是局部合并，只传改的字段）
-3. 补「重复日程」—— 这块最难：服务端用 `occurrence_key` 区分单次，
-   改单次走 `PUT /api/events/{id}/occurrence`，别自己算
-4. 最后才是团队 / 收件箱 / 笔记那些独立模块
+1. **在 Mac 上真的跑一次。** 这是唯一还不知道答案的事，也是唯一能证伪前面所有结论的事。
+   步骤见 [`docs/运行验证.md`](docs/运行验证.md)。
+2. **补接口覆盖的空白。** 服务端 182 个路由，客户端已接线 56 个（31%）。
+   剩下的 126 个里有一多半**本来就不该在手机上做**（管理后台 63、第三方 12、
+   实时协作 10、内部 6、调试 6、部署 4）；真正还缺的约 15~22 个：
+   插件市场 6、主题皮肤 2、导航 2、API Key 2，以及自更新 5（iOS 走 App Store，可跳过）。
+3. **笔记 / AI / 小组件** 三块整块没做。
