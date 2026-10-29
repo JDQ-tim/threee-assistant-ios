@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 /// ⚠️ `@MainActor` 标在 App 上是必需的，不是保险。
 ///
@@ -18,6 +19,13 @@ struct ThreeeAssistantApp: App {
     /// 用 @State 持有是 @Observable 的固定写法（不是 @StateObject，那是 ObservableObject 那套）。
     @State private var store = SessionStore()
 
+    init() {
+        // 通知的 delegate 必须在这里设 —— 晚于第一次投递的话，
+        // 那之前前台到达的提醒会被系统直接吞掉（前台默认不展示）。
+        // 放在 init 里是因为它在 body 之前、且只跑一次。
+        UNUserNotificationCenter.current().delegate = NotificationPresenter.shared
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()
@@ -31,6 +39,7 @@ struct ThreeeAssistantApp: App {
 struct RootView: View {
 
     @Environment(SessionStore.self) private var store
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         Group {
@@ -61,7 +70,17 @@ struct RootView: View {
         .task {
             if store.isLoggedIn {
                 await store.reportDevice()
+                await store.prepareReminders()
             }
+        }
+        // 回到前台补排一次。
+        //
+        // 为什么必须有这条：iOS 只保留最多 64 条待发通知，而排出去的那些
+        // 一旦触发就从队列里消失了。用户在后台待了一周再打开，
+        // 如果不补排，接下来几天就是"一条提醒都不响"。
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active, store.isLoggedIn else { return }
+            Task { await store.prepareReminders(forceRules: false) }
         }
     }
 }

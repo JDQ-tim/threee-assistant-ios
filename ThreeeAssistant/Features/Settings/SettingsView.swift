@@ -1,4 +1,6 @@
 import SwiftUI
+import UIKit
+import UserNotifications
 
 @MainActor
 struct SettingsView: View {
@@ -17,6 +19,19 @@ struct SettingsView: View {
     @State private var inboxCount = 0
     /// 自己的用户组（拿不到就保持 nil，行尾显示「—」）
     @State private var tier: TierInfoDTO?
+
+    /// 通知权限状态。必须显示出来 ——
+    /// 用户拒过一次之后系统不会再弹框，界面上没有任何提示的话，
+    /// 他会一直以为「设了提醒」，直到某天真的误事才发现根本没响过。
+    @State private var notifyStatus: UNAuthorizationStatus = .notDetermined
+    /// 当前排进系统的提醒条数。
+    @State private var armedCount = 0
+    /// 有多少条日程配了提醒。
+    ///
+    /// ⚠️ 不能直接在 `body` 里读 `ReminderRuleCache.shared.count` ——
+    ///    那个属性会触发一次磁盘读取，而 `body` 每次刷新都会跑。
+    ///    存在 `@State` 里、进页面时读一次。
+    @State private var reminderRuleCount = 0
 
     var body: some View {
         NavigationStack {
@@ -152,6 +167,8 @@ struct SettingsView: View {
                     }
                 }
 
+                notificationSection
+
                 Section {
                     Button("忘记已信任的服务器证书") {
                         confirmingForget = true
@@ -262,8 +279,80 @@ struct SettingsView: View {
                 await loadTeamCount()
                 await loadInboxCount()
                 await loadTier()
+                await loadNotificationState()
             }
         }
+    }
+
+    // MARK: - 提醒
+
+    /// 通知权限 + 已排条数。
+    ///
+    /// 这一行的价值全在「说实话」：
+    /// 用户拒过权限之后，App 里一切照常（能设提醒、详情页也显示"提前15分钟"），
+    /// 只有这里能告诉他"其实一条都不会响"。
+    private var notificationSection: some View {
+        Section {
+            LabeledContent("通知权限", value: notifyStatusText)
+            if reminderRuleCount > 0 {
+                LabeledContent("已排提醒", value: "\(armedCount) 条")
+            }
+            if notifyStatus == .denied {
+                Button("去系统设置开启") {
+                    openSystemSettings()
+                }
+            } else if notifyStatus == .notDetermined {
+                Button("开启提醒") {
+                    Task {
+                        await ReminderScheduler.shared.requestAuthorizationIfNeeded()
+                        await store.prepareReminders(forceRules: true)
+                        await loadNotificationState()
+                    }
+                }
+            }
+        } header: {
+            Text("提醒")
+        } footer: {
+            Text(reminderFooterText)
+        }
+    }
+
+    private var notifyStatusText: String {
+        switch notifyStatus {
+        case .authorized: return "已开启"
+        case .provisional: return "静默送达"
+        case .ephemeral: return "临时授权"
+        case .denied: return "已关闭"
+        case .notDetermined: return "未询问"
+        @unknown default: return "未知"
+        }
+    }
+
+    private var reminderFooterText: String {
+        switch notifyStatus {
+        case .denied:
+            // 注意这里不能用 Markdown 的 \*\* —— `Text(String)` 不解析 Markdown，
+            // 星号会原样显示出来。要强调就直接用词说清楚。
+            return "通知被关掉了，日程提醒不会响。iOS 只会问一次，所以只能去系统设置里手动打开。"
+        case .notDetermined:
+            return "还没申请通知权限。不打开的话，日程里设的提醒不会响。"
+        default:
+            // 说清楚"排了多少条"和"只排 30 天"这件事 ——
+            // 否则用户会疑惑"我明年的日程怎么没排上"
+            return "只排未来 \(ReminderScheduler.horizonDays) 天、最多 \(ReminderScheduler.maxPending) 条（iOS 单个 App 的待发通知上限是 64 条）。每次打开 App 会自动补排。"
+        }
+    }
+
+    private func loadNotificationState() async {
+        await ReminderScheduler.shared.refreshAuthorization()
+        notifyStatus = ReminderScheduler.shared.authorization
+        armedCount = ReminderScheduler.shared.armedCount
+        reminderRuleCount = ReminderRuleCache.shared.count
+    }
+
+    private func openSystemSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
     }
 
     /// 待处理冲突数。

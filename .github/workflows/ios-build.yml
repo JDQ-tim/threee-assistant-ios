@@ -227,6 +227,50 @@ jobs:
           exit $RC
 
       # ============================================================
+      #  提醒排程：哪些通知该排、哪些该丢、64 条上限怎么截
+      #  ------------------------------------------------------------
+      #  提醒功能里唯一有逻辑的部分是「决定排什么」：
+      #  过去的时刻要丢、已完成的待办不排、最多留 60 条、顺序要稳定。
+      #  这些错了的表现是「有些提醒不响」「删了还响」，
+      #  在真机上极难复现定位 —— 而它其实是纯计算，完全可以在这里验。
+      #
+      #  ReminderPlan.swift 是专门为此抽出来的：只依赖 Foundation，
+      #  不碰 UserNotifications（那个在命令行程序里拿不到授权上下文）。
+      # ============================================================
+      - name: 提醒排程校验
+        id: reminders
+        continue-on-error: true
+        timeout-minutes: 5
+        run: |
+          mkdir -p build-logs
+          set +e
+          swiftc -O -o reminder-check \
+            ThreeeAssistant/Core/Models.swift \
+            ThreeeAssistant/Core/SyncModels.swift \
+            ThreeeAssistant/Core/DateHelp.swift \
+            ThreeeAssistant/Core/ReminderPlan.swift \
+            Tests/ReminderCheck/main.swift \
+            > build-logs/reminder-build.log 2>&1
+          BUILD_RC=$?
+          cat build-logs/reminder-build.log
+
+          if [ "$BUILD_RC" -ne 0 ]; then
+            {
+              echo "❌ 提醒排程检查程序本身没编过 —— 这一关等于没验。"
+              echo "   详细编译错误："
+              echo ""
+              cat build-logs/reminder-build.log
+            } > build-logs/reminder.log
+            exit 1
+          fi
+
+          ./reminder-check Tests/fixtures > build-logs/reminder.log 2>&1
+          RC=$?
+          cat build-logs/reminder.log
+          echo "提醒排程检查退出码：$RC"
+          exit $RC
+
+      # ============================================================
       #  请求契约：客户端会发的键 vs 服务端会读的键
       #  ------------------------------------------------------------
       #  和上面的「契约回归」是两个方向，不能互相替代：
@@ -413,6 +457,19 @@ jobs:
             fi
             echo ""
 
+            # ---- 提醒排程结果 ----
+            # 提醒是「界面承诺了但曾经完全没实现」的那一块，
+            # 所以它的校验结果必须写进摘要，不能只在日志深处。
+            echo "## 提醒排程（哪些通知该排）"
+            if [ -f build-logs/reminder.log ]; then
+              echo '```'
+              tail -n 20 build-logs/reminder.log
+              echo '```'
+            else
+              echo "没有产出 reminder.log —— 检查程序本身可能没编过，见 reminder-build.log"
+            fi
+            echo ""
+
             echo "## 结论"
             if grep -q "BUILD SUCCEEDED" build-logs/full.log; then
               if [ "$SWIFT_HITS" -eq 0 ]; then
@@ -516,6 +573,22 @@ jobs:
             echo "⚠️ 没有 request-contract.log，请求契约这一关视为未通过"
           fi
 
+          # 提醒排程：必须明确打出「✅ 全部通过」才算过。
+          # 只判"退出码为 0"不够 —— 断言数为 0 时程序自己也会退 1，
+          # 那是刻意设计的（"什么都没查"不算通过）。
+          REM_OK=1
+          if [ -f build-logs/reminder.log ]; then
+            if grep -q "全部通过" build-logs/reminder.log; then
+              echo "✅ 提醒排程校验通过"
+              REM_OK=0
+            else
+              echo "❌ 提醒排程校验失败 —— 提醒可能不响，或者删了还响"
+              grep "^❌" build-logs/reminder.log || true
+            fi
+          else
+            echo "⚠️ 没有 reminder.log，提醒这一关视为未通过"
+          fi
+
           if grep -q "BUILD SUCCEEDED" build-logs/full.log 2>/dev/null; then
             # 见到过「SUCCEEDED 但一条 Swift 编译记录都没有」的增量构建。
             # 那种结果不能当通过 —— 等于这一趟什么都没验证。
@@ -535,7 +608,12 @@ jobs:
               echo "   只会让功能悄悄失效（服务端当那个字段没传）。请核对字段名。"
               exit 1
             fi
-            echo "✅ BUILD SUCCEEDED 且双向契约都通过"
+            if [ "$REM_OK" -ne 0 ]; then
+              echo "⚠️ BUILD SUCCEEDED，但提醒排程校验没过 —— 编译通过不代表提醒会响。"
+              echo "   请下载 build-logs 里的 reminder.log 看是哪条断言挂了。"
+              exit 1
+            fi
+            echo "✅ BUILD SUCCEEDED，双向契约与提醒排程都通过"
             exit 0
           fi
           if ! grep -q "BUILD FAILED" build-logs/full.log 2>/dev/null; then

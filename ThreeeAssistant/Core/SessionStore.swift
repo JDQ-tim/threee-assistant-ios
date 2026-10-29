@@ -139,6 +139,11 @@ final class SessionStore {
 
             weekStart = Date.now.startOfWeekMonday
             await refresh()
+
+            // 换了账号就把上个账号的提醒配置丢掉 —— 否则会拿别人的
+            // reminders 去排本机的通知，表现是"手机响了一条我根本没设过的提醒"。
+            ReminderRuleCache.shared.clear()
+            await prepareReminders()
         } catch {
             errorMessage = message(for: error)
         }
@@ -157,6 +162,11 @@ final class SessionStore {
 
         Keychain.delete(tokenKey)
         UserDefaults.standard.removeObject(forKey: userKey)
+
+        // 登出后必须把已排的通知撤掉、配置清掉：
+        // 留着的话，下一个人拿起这台手机，锁屏上会继续弹上一个人的日程。
+        await ReminderScheduler.shared.cancelAll()
+        ReminderRuleCache.shared.clear()
     }
 
     /// 改自己的密码。
@@ -243,6 +253,10 @@ final class SessionStore {
         calendars = []
         instances = []
         repeatRuleByEventID = [:]
+        // 日程都删了，排出去的提醒必须一起撤掉 ——
+        // 否则用户会收到一条指向已经不存在的日程的提醒，点开是空的。
+        ReminderRuleCache.shared.clear()
+        await ReminderScheduler.shared.cancelAll()
         await refresh()
         return res
     }
@@ -783,6 +797,14 @@ final class SessionStore {
         Keychain.delete(tokenKey)
         UserDefaults.standard.removeObject(forKey: userKey)
         errorMessage = "登录已失效，请重新登录"
+
+        // 登录态没了，锁屏上不该再继续弹这个账号的日程。
+        // 这里不能 await（handleExpiredToken 是同步的、在 catch 分支里被调用），
+        // 所以丢一个 Task 出去 —— 撤通知失败也不影响用户重新登录。
+        Task {
+            await ReminderScheduler.shared.cancelAll()
+        }
+        ReminderRuleCache.shared.clear()
     }
 
     func shiftWeek(by days: Int) async {
@@ -878,7 +900,18 @@ final class SessionStore {
             repeatRuleByEventID[id] = rrule
         }
 
+        // 提醒配置也当场记进缓存：这一刻我们手里就有 minutesBefore，
+        // 不记的话要等到下一次快照（最长 6 小时）才知道这条该什么时候响。
+        if let id = created.id {
+            ReminderRuleCache.shared.upsert(
+                eventID: id,
+                minutesBefore: reminders.map { Int($0.minutesBefore) },
+                strong: strong
+            )
+        }
+
         await refresh()
+        await ReminderScheduler.shared.resync(force: true)
     }
 
     /// 勾上 / 取消一个待办。
@@ -906,7 +939,11 @@ final class SessionStore {
     /// `recomputeInstances`）。只想删某一次请用 `deleteOccurrence`。
     func deleteEvent(eventID: String) async throws {
         try await APIClient.shared.delete("/api/events/\(eventID)")
+        // 整条删了，提醒配置也没用了。留着的话缓存会一直涨，
+        // 而且万一以后 id 被复用（服务端不会，但别赌）会排出一条幽灵提醒。
+        ReminderRuleCache.shared.remove(eventID: eventID)
         await refresh()
+        await ReminderScheduler.shared.resync(force: true)
     }
 
     /// 只删重复日程里的**这一次**。
@@ -939,6 +976,9 @@ final class SessionStore {
             query: [URLQueryItem(name: "key", value: String(occurrenceKey))]
         )
         await refresh()
+        // 只少了一次，但那条提醒必须撤掉 —— 不撤的话到点还会响，
+        // 而用户明明已经把这天的事删了。
+        await ReminderScheduler.shared.resync(force: true)
     }
 
     // MARK: - 修改日程
@@ -951,6 +991,13 @@ final class SessionStore {
         let res: EventResponse = try await APIClient.shared.get("/api/events/\(id)")
         // 打开过详情就等于知道了它的规则，顺手记下来给列表用
         repeatRuleByEventID[id] = res.event.rrule
+        // 提醒配置同理，而且这里是**唯一**能拿到 reminders 的地方
+        // （`/api/instances` 不带提醒）。顺手更新缓存，下一次重排就能用上。
+        ReminderRuleCache.shared.upsert(
+            eventID: res.event.id,
+            minutesBefore: res.event.reminders.map { Int($0.minutesBefore) },
+            strong: res.event.strong
+        )
         return res.event
     }
 
@@ -972,7 +1019,24 @@ final class SessionStore {
         if let r = patch.rrule {
             repeatRuleByEventID[id] = r
         }
+        // 提醒改动只可能走这条路径 —— `updateOccurrence` 会把 reminders/strong
+        // 显式清掉（服务端的 override 补丁不认这两个键）。
+        // 所以这里能确定：只要 patch 带了提醒，就是整条事件的新值。
+        if let rs = patch.reminders {
+            ReminderRuleCache.shared.upsert(
+                eventID: id,
+                minutesBefore: rs.map { Int($0.minutesBefore) },
+                strong: patch.strong ?? (ReminderRuleCache.shared.rule(for: id)?.strong ?? false)
+            )
+        } else if let s = patch.strong {
+            // 只改了强提醒开关，分钟数沿用缓存里的
+            let minutes = ReminderRuleCache.shared.rule(for: id)?.minutesBefore ?? []
+            if !minutes.isEmpty {
+                ReminderRuleCache.shared.upsert(eventID: id, minutesBefore: minutes, strong: s)
+            }
+        }
         await refresh()
+        await ReminderScheduler.shared.resync(force: true)
         return res.conflicts ?? []
     }
 
@@ -1024,6 +1088,9 @@ final class SessionStore {
             "/api/events/\(eventID)/occurrence", body: data
         )
         await refresh()
+        // 时间改了、或者勾成已完成 —— 两种情况都要重排：
+        // 前者触发时刻变了，后者不该再提醒。
+        await ReminderScheduler.shared.resync(force: true)
     }
 
     // MARK: - 日历共享
@@ -1250,9 +1317,61 @@ final class SessionStore {
             syncCursor = last
         }
 
+        // 快照里带着全部事件的 reminders，顺手把提醒缓存也刷新了 ——
+        // 不刷的话，用户刚点过"整份重拉"，提醒却还是旧配置。
+        // 同样只在 events 存在时覆盖，理由见 refreshReminderRulesIfStale。
+        if let events = res.events {
+            ReminderRuleCache.shared.replaceAll(events)
+        }
+
         await refresh()
+        await ReminderScheduler.shared.resync(force: true)
 
         return (res.calendars?.count ?? 0, res.events?.count ?? 0, res.lastSeq ?? 0)
+    }
+
+    // MARK: - 提醒
+
+    /// 登录后 / 回前台时调：补齐提醒配置，然后把通知重排一遍。
+    ///
+    /// 分成两步是有原因的：
+    /// - `refreshReminderRulesIfStale` 管「知道该提醒什么」（要发一次快照请求，重）
+    /// - `ReminderScheduler.bootstrap` 管「排进系统」（要一次实例请求，轻）
+    ///
+    /// 回前台只需要后者：配置没变，只是排出去的通知被系统消耗掉了，要补。
+    func prepareReminders(forceRules: Bool = false) async {
+        guard isLoggedIn else { return }
+        await refreshReminderRulesIfStale(force: forceRules)
+        await ReminderScheduler.shared.bootstrap()
+    }
+
+    /// `eventID -> 提醒配置` 的缓存该更新了就去拉一份快照。
+    ///
+    /// 为什么单为提醒拉快照也值得：`/api/instances` 不带 reminders，
+    /// 而 `/api/events/{id}` 只能一条一条问。要排对提醒就必须知道
+    /// **所有**日程的提醒配置，快照是唯一一次性能拿全的接口。
+    ///
+    /// 6 小时才拉一次（`ReminderRuleCache.fullSyncInterval`）——
+    /// 在别的设备上改了提醒，这台最多滞后 6 小时。
+    /// 这个滞后是刻意接受的：拉一次快照对老库来说不便宜，
+    /// 而"改了提醒后立刻在另一台设备上生效"不是日程应用的核心诉求。
+    func refreshReminderRulesIfStale(force: Bool = false) async {
+        guard isLoggedIn else { return }
+        guard force || ReminderRuleCache.shared.needsFullSync else { return }
+        do {
+            let res: SyncSnapshotResponse = try await APIClient.shared.get("/api/sync/snapshot")
+            // ⚠️ 只在 `events` 真的下发了才覆盖。
+            //    服务端理论上总会带这个数组（可能是空的），但万一哪天字段被改名
+            //    或者被 omitempty 干掉，`?? []` 会让这里**清空全部提醒配置**，
+            //    表现是「所有提醒突然不响了」，而且下次还会"成功"地再清一次。
+            if let events = res.events {
+                ReminderRuleCache.shared.replaceAll(events)
+            }
+        } catch {
+            // ⚠️ 拿不到就**沿用本地缓存**，绝不 `clear()`。
+            //    清空会让所有提醒配置变成"不知道"，重排时一条都不排，
+            //    表现是"断网开一次 App，提醒全没了"，而且恢复网络也不会自己好。
+        }
     }
 
     // MARK: - 日历邀请码

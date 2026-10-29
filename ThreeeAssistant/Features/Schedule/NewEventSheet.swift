@@ -246,6 +246,21 @@ struct NewEventSheet: View {
                             .buttonStyle(.plain)
                         }
                     }
+
+                    // 开了提醒但系统通知被关掉时必须当场说 ——
+                    // 不然用户会以为「我设了提醒」，直到真误了事才发现从来没响过。
+                    // （iOS 的通知授权只会问一次，之后只能在系统设置里改。）
+                    if !ReminderScheduler.shared.canDeliver {
+                        HStack(spacing: 6) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 11))
+                            Text("通知权限没开，这条提醒不会响。去「设置 → 提醒」打开。")
+                                .font(.system(size: 11.5))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .foregroundStyle(Theme.red600)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
             }
             .padding(.horizontal, 14)
