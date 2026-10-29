@@ -65,7 +65,7 @@ print("提醒排程校验：\(snapshotURL.path)")
 print(String(repeating: "-", count: 58))
 
 var realInstances: [ScheduleInstance] = []
-var realRules: [String: EventReminderRule] = []
+var realRules: [String: EventReminderRule] = [:]
 
 if let data = try? Data(contentsOf: snapshotURL),
    let snap = try? JSONDecoder().decode(SyncSnapshotResponse.self, from: data) {
