@@ -393,6 +393,73 @@ jobs:
           cat build-logs/full.log
           exit $RC
 
+      # ============================================================
+      #  真机包（arm64，未签名 IPA）
+      #  ------------------------------------------------------------
+      #  存在的唯一理由：**不用 Mac 也能装到 iPhone 上**。
+      #
+      #  模拟器那个 .app 是 x86_64/arm64 的模拟器产物，**装不进真机**
+      #  （SDK 都不一样）。而真机包正常要 Xcode + 开发者账号签名。
+      #
+      #  这里的做法：用 iphoneos SDK 编出 arm64 未签名包，打成标准 IPA
+      #  （Payload/ThreeeAssistant.app），在 Windows 上用 Sideloadly
+      #  配合免费 Apple ID 签名后直接装 —— 全程不需要 Mac。
+      #
+      #  ⚠️ 免费 Apple ID 签的包 **7 天过期**，到期重签一次即可。
+      #  ⚠️ 这一步失败**不阻断**整个流水线：模拟器版能编过就说明代码没问题，
+      #     真机包编不出来只是少了一条验证通道。但结果会写进摘要。
+      # ============================================================
+      - name: 编译真机包（arm64，不签名）
+        id: devicebuild
+        continue-on-error: true
+        timeout-minutes: 12
+        run: |
+          mkdir -p build-logs
+          set -o pipefail
+          xcodebuild \
+            -project ThreeeAssistant.xcodeproj \
+            -scheme ThreeeAssistant \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build/DeviceData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_ENTITLEMENTS="" \
+            ARCHS=arm64 \
+            ONLY_ACTIVE_ARCH=NO \
+            build > build-logs/device.log 2>&1
+          RC=$?
+          tail -n 40 build-logs/device.log
+          echo "真机包编译退出码：$RC"
+
+          if [ "$RC" -eq 0 ] && [ -d build/DeviceData/Build/Products/Release-iphoneos/ThreeeAssistant.app ]; then
+            # 打成标准 IPA 结构：Payload/ 里放 .app，整个 zip 起来
+            rm -rf build/ipa
+            mkdir -p build/ipa/Payload
+            cp -R build/DeviceData/Build/Products/Release-iphoneos/ThreeeAssistant.app build/ipa/Payload/
+            ( cd build/ipa && zip -qry ../ThreeeAssistant-unsigned.ipa Payload )
+            echo "IPA 大小：$(du -h build/ThreeeAssistant-unsigned.ipa | cut -f1)"
+            # 确认真的是设备版 arm64，而不是又一次编成了模拟器版
+            info="build/ipa/Payload/ThreeeAssistant.app/Info.plist"
+            if /usr/libexec/PlistBuddy -c "Print :CFBundleSupportedPlatforms:0" "$info" 2>/dev/null | grep -q iPhoneOS; then
+              echo "✅ 确认是 iPhoneOS 设备包"
+            else
+              echo "⚠️ 平台字段不是 iPhoneOS —— 这个 IPA 可能装不上真机"
+            fi
+          fi
+          exit $RC
+
+      - name: 上传真机包（IPA）
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ThreeeAssistant-device-ipa
+          path: build/ThreeeAssistant-unsigned.ipa
+          if-no-files-found: ignore
+          retention-days: 30
+
       - name: 提炼报错
         if: always()
         run: |
@@ -467,6 +534,23 @@ jobs:
               echo '```'
             else
               echo "没有产出 reminder.log —— 检查程序本身可能没编过，见 reminder-build.log"
+            fi
+            echo ""
+
+            # ---- 真机包 ----
+            echo "## 真机安装包（不用 Mac 也能装）"
+            if [ -f build/ThreeeAssistant-unsigned.ipa ]; then
+              echo "✅ 已生成 **未签名 IPA**：下载下面的 \`ThreeeAssistant-device-ipa\` 附件。"
+              echo ""
+              echo "装到 iPhone 上（Windows 全程够用）："
+              echo "1. 装 [Sideloadly](https://sideloadly.io/) 和「Apple 设备」应用（微软商店搜 Apple Devices）"
+              echo "2. 手机连电脑，解锁并「信任此电脑」"
+              echo "3. Sideloadly 里选 IPA，Apple ID 填自己的，点 Start 签名安装"
+              echo "4. 手机上「设置 → 通用 → VPN与设备管理」里信任这个开发者"
+              echo ""
+              echo "> 免费 Apple ID 签的包 **7 天过期**，到期在 Sideloadly 里重签一次。"
+            else
+              echo "⚠️ 没有生成 IPA —— 见 \`device.log\`。模拟器版不受影响。"
             fi
             echo ""
 
