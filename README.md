@@ -15,7 +15,7 @@ SwiftUI 原生实现，**iPhone 和 iPad 通用**。日程主线（查看 / 新�
 
 ## ✅ 云端编译已验证通过
 
-最近一次成功编译（run `40805625635`，head `ae22dff`，2026-10-29）：
+最近一次成功编译（run `40809920133`，head `8c5c0fb`，2026-10-29）：
 
 | 项目 | 结果 |
 |---|---|
@@ -23,12 +23,13 @@ SwiftUI 原生实现，**iPhone 和 iPad 通用**。日程主线（查看 / 新�
 | 编译机器 | macOS 14 + Xcode 15.4 |
 | SDK | iPhoneSimulator 17.5 |
 | 结果 | **`** BUILD SUCCEEDED **`** |
-| 代码量 | 44 个 Swift 文件 / 约 15300 行 |
-| 编译记录 | 110 条（确实是全量编译，不是复用产物） |
+| 代码量 | 47 个 Swift 文件 / 约 16200 行 |
+| 编译记录 | 116 条（确实是全量编译，不是复用产物） |
 | 错误 / 警告 | 0 / 0 |
 | 产物 | `ThreeeAssistant.app`（6.03 MB，x86_64 13.5 MB + arm64 13.2 MB） |
 | 响应契约 | 19 个接口 / 199 个字段，逐字段对过真实响应，**0 处不兼容** |
 | 请求契约 | 15 组「客户端发的键 vs 服务端读的键」，**全部对齐** |
+| 提醒排程 | 真实快照 + 合成数据 **19 条断言**（截断、去重、已完成待办、稳定性） |
 | 写操作实测 | 37 个 POST/PUT/DELETE 打真服务端，**37/37 通过** |
 
 > ⚠️ **「编译通过」不等于「能用」。** 这一点踩过两次：
@@ -145,7 +146,19 @@ bash tools/push_to_github.sh 你的GitHub用户名 threee-assistant-ios
 | 课程表网格 + 课程节次编辑 | ✅ |
 | 日程分享 / 举报 | ✅ |
 | 冲突检测 | ✅ |
+| **到点提醒（本地通知，不是只存不响）** | ✅ |
 | 下拉刷新 / 深色模式 / iPad 两栏 | ✅ |
+
+> **关于提醒**：2026-10-29 之前这块是**假的** —— 界面能设「提前 15 分钟」，
+> 数据也发到了服务端，但 App 从来没有注册过 `UserNotifications`，
+> 设备上永远不会响。现在补上了：
+>
+> - 登录后按「未来 30 天 / 最多 60 条」排进系统（iOS 硬上限是 64 条）
+> - 新建、改时间、改提醒、删日程、勾完待办都会立刻重排（幂等对账，不是追加）
+> - 换账号、登出、清空数据会把已排的通知全部撤掉
+> - **前台也会弹**（iOS 默认会吞掉前台通知，靠 `NotificationPresenter` 兜住）
+> - 设置页显示「通知权限 / 已排 N 条」；没权限时新建页会当场警告
+> - 提醒配置缓存在本地（`/api/instances` 不带 `reminders`，只能从快照/详情取）
 
 ### 独立模块
 
@@ -196,6 +209,7 @@ ios-native/
 ├── .github/workflows/ios-build.yml  GitHub 云端编译 + 契约回归 + 负向自检
 ├── Tests/
 │   ├── DecodeCheck/main.swift      swiftc 编的命令行程序，逐份 fixture 解码
+│   ├── ReminderCheck/main.swift    提醒排程的纯逻辑校验（19 条断言）
 │   ├── fixtures/*.json             19 份从真服务端抓下来的响应
 │   └── server-request-keys.json    服务端 115 个结构体字段快照
 ├── tools/
@@ -219,6 +233,9 @@ ios-native/
     │   ├── APIClient.swift            网络层 + 自签证书校验
     │   ├── SessionStore.swift         全局状态（@Observable）
     │   ├── RepeatRule.swift           重复规则 ↔ RRULE
+    │   ├── ReminderPlan.swift         提醒排程的纯函数（可离线验证）
+    │   ├── ReminderRules.swift        提醒配置本地缓存（落盘）
+    │   ├── ReminderScheduler.swift    排进系统通知 + 幂等对账
     │   ├── TrustStore.swift           证书指纹记忆（TOFU）
     │   ├── Keychain.swift             令牌存取
     │   ├── DateHelp.swift             时间显示 / 拼接
@@ -278,8 +295,16 @@ python tools/check_pbxproj.py
 ### 2. 没有测试目标
 
 工程里只有 App 一个 target，**没有任何 XCTest / Swift Testing 目标**。
-现有保障全在 CI 脚本和 Python 检查器里（它们确实能挡住契约和机械性错误），
-但业务逻辑——重复规则展开、冲突检测、日期分组——一行自动化测试都没有。
+现有保障全在 CI 脚本和 `Tests/` 下的命令行检查程序里：
+
+| 检查 | 覆盖 | 位置 |
+|---|---|---|
+| 契约回归 | 19 个真实响应逐份解码 + 负向自检 | `Tests/DecodeCheck` |
+| 请求契约 | 15 组「发的键 vs 读的键」 | `tools/check_request_contract.py` |
+| 提醒排程 | 19 条断言（截断/去重/已完成待办/顺序稳定） | `Tests/ReminderCheck` |
+
+但还有业务逻辑没有覆盖：**重复规则展开、冲突检测、日期分组**。
+这几块目前只能靠手验。
 
 ### 3. 无障碍基本没做
 
