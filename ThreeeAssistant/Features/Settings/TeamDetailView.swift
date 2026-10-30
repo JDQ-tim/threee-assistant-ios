@@ -127,7 +127,7 @@ struct TeamDetailView: View {
                     ForEach(calendars) { c in
                         HStack(spacing: 10) {
                             Image(systemName: c.role == "editor" ? "square.and.pencil" : "eye")
-                                .font(.system(size: 13))
+                                .font(.appFootnote)
                                 .foregroundStyle(Theme.textTertiary)
                                 .frame(width: 20)
                             Text(c.name.isEmpty ? "（已删）" : c.name)
@@ -179,11 +179,11 @@ struct TeamDetailView: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 5) {
                     Text(m.name)
-                        .font(.system(size: 15))
+                        .font(.appBody)
                         .foregroundStyle(Theme.textPrimary)
                     if isMe {
                         Text("你")
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(.caption2.weight(.semibold))
                             .padding(.horizontal, 5)
                             .padding(.vertical, 1)
                             .background(Theme.surfaceAlt)
@@ -399,7 +399,7 @@ struct TeamInvitesView: View {
 
                 if v.role == "admin" {
                     Text("管理员")
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.caption2.weight(.semibold))
                         .padding(.horizontal, 5)
                         .padding(.vertical, 1)
                         .background(Theme.accent.opacity(0.15))

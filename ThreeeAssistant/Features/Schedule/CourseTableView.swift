@@ -108,7 +108,7 @@ struct CourseTableView: View {
                 weekStart = Date.now.startOfWeekMonday
             } label: {
                 Text("本周")
-                    .font(.system(size: 12.5))
+                    .font(.appFootnote)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
                     .background(Theme.surfaceAlt)

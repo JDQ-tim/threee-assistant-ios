@@ -317,7 +317,7 @@ struct EditEventSheet: View {
                     Toggle(isOn: $allDay) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("全天日程")
-                                .font(.system(size: 15))
+                                .font(.appBody)
                                 .foregroundStyle(Theme.textPrimary)
                             Text(allDay ? "占满这一整天，不设具体时刻" : "打开后不设开始时刻和时长")
                                 .font(.caption2)
@@ -334,7 +334,7 @@ struct EditEventSheet: View {
                 labelled("时长") {
                     Stepper(value: $minutes, in: 0...1440, step: 15) {
                         Text(minutes == 0 ? "不设时长（待办）" : "\(minutes) 分钟")
-                            .font(.system(size: 15))
+                            .font(.appBody)
                             .foregroundStyle(Theme.textPrimary)
                     }
                     .padding(.horizontal, 14)
@@ -393,7 +393,7 @@ struct EditEventSheet: View {
                     VStack(spacing: 10) {
                         Toggle(isOn: $remindersOn) {
                             Text("到点提醒我")
-                                .font(.system(size: 15))
+                                .font(.appBody)
                                 .foregroundStyle(Theme.textPrimary)
                         }
                         .tint(Theme.accent)
@@ -406,7 +406,7 @@ struct EditEventSheet: View {
                                         if on { reminderOffsets.remove(m) } else { reminderOffsets.insert(m) }
                                     } label: {
                                         Text(EditEventSheet.reminderLabel(m))
-                                            .font(.system(size: 12.5, weight: on ? .semibold : .regular))
+                                            .font(.footnote.weight(on ? .semibold : .regular))
                                             .padding(.horizontal, 12)
                                             .padding(.vertical, 7)
                                             .background(on ? Theme.accent : Theme.surfaceAlt)
@@ -428,7 +428,7 @@ struct EditEventSheet: View {
                     Toggle(isOn: $strong) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("到点响铃提醒")
-                                .font(.system(size: 15))
+                                .font(.appBody)
                                 .foregroundStyle(Theme.textPrimary)
                             Text("按人存：共享日历上只影响你自己")
                                 .font(.caption2)
@@ -480,7 +480,7 @@ struct EditEventSheet: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(label)
-                .font(.system(size: 12.5))
+                .font(.appFootnote)
                 .foregroundStyle(Theme.textSecondary)
                 .padding(.leading, 2)
             content()

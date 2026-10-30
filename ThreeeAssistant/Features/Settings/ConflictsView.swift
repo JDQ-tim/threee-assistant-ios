@@ -172,7 +172,7 @@ private struct ConflictRow: View {
 
             HStack(spacing: 6) {
                 Text(ConflictRow.fieldLabel(conflict.field))
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Theme.textPrimary)
                 Spacer(minLength: 0)
                 if conflict.entity == "calendar" {
@@ -232,7 +232,7 @@ private struct ConflictRow: View {
                 .foregroundStyle(Theme.textTertiary)
                 .frame(width: 76, alignment: .leading)
             Text(ConflictRow.pretty(value))
-                .font(.system(size: 13))
+                .font(.appFootnote)
                 .foregroundStyle(Theme.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
@@ -244,7 +244,7 @@ private struct ConflictRow: View {
     private func actionButton(_ title: String, tone: Tone, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 12.5, weight: tone == .brand ? .semibold : .regular))
+                .font(.footnote.weight(tone == .brand ? .semibold : .regular))
                 .padding(.horizontal, 13)
                 .padding(.vertical, 7)
                 .background(tone == .brand ? Theme.accent : Theme.surfaceAlt)

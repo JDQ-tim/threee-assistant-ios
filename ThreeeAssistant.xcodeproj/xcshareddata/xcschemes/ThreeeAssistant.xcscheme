@@ -14,7 +14,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "42AEFBAE000000000000000E"
+               BlueprintIdentifier = "42AEFBAE0000000000000010"
                BuildableName = "ThreeeAssistant.app"
                BlueprintName = "ThreeeAssistant"
                ReferencedContainer = "container:ThreeeAssistant.xcodeproj">
@@ -44,7 +44,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "42AEFBAE000000000000000E"
+            BlueprintIdentifier = "42AEFBAE0000000000000010"
             BuildableName = "ThreeeAssistant.app"
             BlueprintName = "ThreeeAssistant"
             ReferencedContainer = "container:ThreeeAssistant.xcodeproj">
@@ -61,7 +61,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "42AEFBAE000000000000000E"
+            BlueprintIdentifier = "42AEFBAE0000000000000010"
             BuildableName = "ThreeeAssistant.app"
             BlueprintName = "ThreeeAssistant"
             ReferencedContainer = "container:ThreeeAssistant.xcodeproj">

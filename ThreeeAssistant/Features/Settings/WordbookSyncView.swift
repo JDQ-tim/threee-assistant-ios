@@ -170,11 +170,11 @@ struct WordbookSyncView: View {
                             .frame(maxWidth: .infinity)
                             .overlay(
                                 Text(n > 0 ? "\(n)" : "")
-                                    .font(.system(size: 10, weight: .semibold))
+                                    .font(.caption2.weight(.semibold))
                                     .foregroundStyle(Theme.onAccent)
                             )
                         Text(day.label)
-                            .font(.system(size: 9))
+                            .font(.appCaption2)
                             .foregroundStyle(Theme.textTertiary)
                     }
                 }

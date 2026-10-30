@@ -75,7 +75,7 @@ struct CourseGridView: View {
                         .font(.system(size: 11.5, weight: isToday ? .bold : .medium))
                         .foregroundStyle(isToday ? Theme.accent : Theme.textSecondary)
                     Text("\(Calendar.current.component(.day, from: d))")
-                        .font(.system(size: 10))
+                        .font(.appCaption2)
                         .foregroundStyle(isToday ? Theme.accent : Theme.textTertiary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -93,10 +93,10 @@ struct CourseGridView: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Theme.textSecondary)
             Text(p.start)
-                .font(.system(size: 9))
+                .font(.appCaption2)
                 .foregroundStyle(Theme.textTertiary)
             Text(p.end)
-                .font(.system(size: 9))
+                .font(.appCaption2)
                 .foregroundStyle(Theme.textTertiary)
         }
         .frame(width: 44)
@@ -129,7 +129,7 @@ struct CourseGridView: View {
                         .minimumScaleFactor(0.8)
                     if !hits[0].locationOrEmpty.isEmpty {
                         Text(hits[0].locationOrEmpty)
-                            .font(.system(size: 9))
+                            .font(.appCaption2)
                             .foregroundStyle(Color(hexString: "#FFFFFF").opacity(0.85))
                             .lineLimit(1)
                     }

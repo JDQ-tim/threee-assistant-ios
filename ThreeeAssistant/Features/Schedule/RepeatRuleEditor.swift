@@ -56,12 +56,12 @@ struct RepeatRuleEditor: View {
     private var intervalRow: some View {
         HStack(spacing: 8) {
             Text("每")
-                .font(.system(size: 14))
+                .font(.appSubheadline)
                 .foregroundStyle(Theme.textSecondary)
 
             Stepper(value: $interval, in: 1...30) {
                 Text("\(interval)")
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.body.weight(.medium))
                     .foregroundStyle(Theme.textPrimary)
                     .monospacedDigit()
             }
@@ -71,7 +71,7 @@ struct RepeatRuleEditor: View {
             .clipShape(RoundedRectangle(cornerRadius: Theme.cornerSmall, style: .continuous))
 
             Text(intervalUnit)
-                .font(.system(size: 14))
+                .font(.appSubheadline)
                 .foregroundStyle(Theme.textSecondary)
 
             Spacer(minLength: 0)
@@ -107,7 +107,7 @@ struct RepeatRuleEditor: View {
                     }
                 } label: {
                     Text(shortName(wd))
-                        .font(.system(size: 13, weight: on ? .semibold : .regular))
+                        .font(.footnote.weight(on ? .semibold : .regular))
                         .frame(maxWidth: .infinity)
                         .frame(height: 34)
                         .background(on ? Theme.accent : Theme.surfaceAlt)
@@ -153,11 +153,11 @@ struct RepeatRuleEditor: View {
             case .count:
                 HStack(spacing: 8) {
                     Text("重复")
-                        .font(.system(size: 14))
+                        .font(.appSubheadline)
                         .foregroundStyle(Theme.textSecondary)
                     Stepper(value: $count, in: 1...999) {
                         Text("\(count)")
-                            .font(.system(size: 15, weight: .medium))
+                            .font(.body.weight(.medium))
                             .foregroundStyle(Theme.textPrimary)
                             .monospacedDigit()
                     }
@@ -166,7 +166,7 @@ struct RepeatRuleEditor: View {
                     .background(Theme.surfaceAlt)
                     .clipShape(RoundedRectangle(cornerRadius: Theme.cornerSmall, style: .continuous))
                     Text("次")
-                        .font(.system(size: 14))
+                        .font(.appSubheadline)
                         .foregroundStyle(Theme.textSecondary)
                     Spacer(minLength: 0)
                 }
@@ -178,7 +178,7 @@ struct RepeatRuleEditor: View {
                     in: start...,
                     displayedComponents: .date
                 )
-                .font(.system(size: 14))
+                .font(.appSubheadline)
                 .environment(\.locale, Locale(identifier: "zh_Hans_CN"))
             }
         }

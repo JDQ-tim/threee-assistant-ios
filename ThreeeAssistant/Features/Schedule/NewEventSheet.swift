@@ -98,7 +98,7 @@ struct NewEventSheet: View {
                         Toggle(isOn: $allDay) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("全天日程")
-                                    .font(.system(size: 15))
+                                    .font(.appBody)
                                     .foregroundStyle(Theme.textPrimary)
                                 Text(allDay ? "占满这一整天，不设具体时刻" : "打开后不设开始时刻和时长")
                                     .font(.caption2)
@@ -115,7 +115,7 @@ struct NewEventSheet: View {
                     labelled("时长") {
                         Stepper(value: $minutes, in: 0...1440, step: 15) {
                             Text(minutes == 0 ? "不设时长" : "\(minutes) 分钟")
-                                .font(.system(size: 15))
+                                .font(.appBody)
                                 .foregroundStyle(Theme.textPrimary)
                         }
                         .padding(.horizontal, 14)
@@ -163,7 +163,7 @@ struct NewEventSheet: View {
                         Toggle(isOn: $strong) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("到点响铃提醒")
-                                    .font(.system(size: 15))
+                                    .font(.appBody)
                                     .foregroundStyle(Theme.textPrimary)
                                 Text("按人存：共享日历上只影响你自己")
                                     .font(.caption2)
@@ -181,7 +181,7 @@ struct NewEventSheet: View {
                         Toggle(isOn: $isTask) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("建成待办")
-                                    .font(.system(size: 15))
+                                    .font(.appBody)
                                     .foregroundStyle(Theme.textPrimary)
                                 Text("只有时间点，可以勾选完成")
                                     .font(.caption2)
@@ -222,7 +222,7 @@ struct NewEventSheet: View {
             VStack(spacing: 10) {
                 Toggle(isOn: $remindersOn) {
                     Text("到点提醒我")
-                        .font(.system(size: 15))
+                        .font(.appBody)
                         .foregroundStyle(Theme.textPrimary)
                 }
                 .tint(Theme.accent)
@@ -236,7 +236,7 @@ struct NewEventSheet: View {
                                 if on { reminderOffsets.remove(m) } else { reminderOffsets.insert(m) }
                             } label: {
                                 Text(m == 0 ? "准点" : "提前 \(labelFor(m))")
-                                    .font(.system(size: 12.5, weight: on ? .semibold : .regular))
+                                    .font(.footnote.weight(on ? .semibold : .regular))
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 7)
                                     .background(on ? Theme.accent : Theme.surfaceAlt)
@@ -253,9 +253,9 @@ struct NewEventSheet: View {
                     if !ReminderScheduler.shared.canDeliver {
                         HStack(spacing: 6) {
                             Image(systemName: "exclamationmark.triangle.fill")
-                                .font(.system(size: 11))
+                                .font(.appCaption)
                             Text("通知权限没开，这条提醒不会响。去「设置 → 提醒」打开。")
-                                .font(.system(size: 11.5))
+                                .font(.appCaption)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         .foregroundStyle(Theme.red600)
@@ -283,7 +283,7 @@ struct NewEventSheet: View {
     private func labelled<Content: View>(_ label: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(label)
-                .font(.system(size: 12.5))
+                .font(.appFootnote)
                 .foregroundStyle(Theme.textSecondary)
                 .padding(.leading, 2)
             content()

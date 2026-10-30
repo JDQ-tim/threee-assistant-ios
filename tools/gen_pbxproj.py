@@ -59,6 +59,9 @@ FEATURES_GROUP = oid("featuresgroup")
 LOGIN_GROUP = oid("logingroup")
 SCHEDULE_GROUP = oid("schedulegroup")
 SETTINGS_GROUP = oid("settingsgroup")
+# 重构时新增的两个功能目录：待办独立成页，「我的」取代原 SettingsView
+TASKS_GROUP = oid("tasksgroup")
+PROFILE_GROUP = oid("profilegroup")
 RESOURCES_GROUP = oid("resourcesgroup")
 CONFIG_GROUP = oid("configgroup")
 
@@ -87,11 +90,15 @@ GROUP_MAP = {
     "Features/Login": LOGIN_GROUP,
     "Features/Schedule": SCHEDULE_GROUP,
     "Features/Settings": SETTINGS_GROUP,
+    "Features/Tasks": TASKS_GROUP,
+    "Features/Profile": PROFILE_GROUP,
     "Resources": RESOURCES_GROUP,
 }
 
 group_children = {g: [] for g in GROUP_MAP.values()}
-group_children[FEATURES_GROUP] = [LOGIN_GROUP, SCHEDULE_GROUP, SETTINGS_GROUP]
+group_children[FEATURES_GROUP] = [
+    LOGIN_GROUP, SCHEDULE_GROUP, TASKS_GROUP, SETTINGS_GROUP, PROFILE_GROUP
+]
 
 file_refs = []      # (id, name, relpath)
 build_files = []    # (buildfile_id, fileref_id, name)
@@ -172,7 +179,9 @@ w("\t\t\tsourceTree = \"<group>\";")
 w("\t\t};")
 
 for g, label in ((APP_GROUP, "App"), (CORE_GROUP, "Core"), (DESIGN_GROUP, "Design"),
-                 (LOGIN_GROUP, "Login"), (SCHEDULE_GROUP, "Schedule"), (SETTINGS_GROUP, "Settings")):
+                 (LOGIN_GROUP, "Login"), (SCHEDULE_GROUP, "Schedule"),
+                 (TASKS_GROUP, "Tasks"), (SETTINGS_GROUP, "Settings"),
+                 (PROFILE_GROUP, "Profile")):
     w("\t\t%s /* %s */ = {" % (g, label))
     w("\t\t\tisa = PBXGroup;")
     w("\t\t\tchildren = (")
@@ -190,7 +199,9 @@ w("\t\t\tisa = PBXGroup;")
 w("\t\t\tchildren = (")
 w("\t\t\t\t%s /* Login */," % LOGIN_GROUP)
 w("\t\t\t\t%s /* Schedule */," % SCHEDULE_GROUP)
+w("\t\t\t\t%s /* Tasks */," % TASKS_GROUP)
 w("\t\t\t\t%s /* Settings */," % SETTINGS_GROUP)
+w("\t\t\t\t%s /* Profile */," % PROFILE_GROUP)
 w("\t\t\t);")
 w("\t\t\tpath = Features;")
 w("\t\t\tsourceTree = \"<group>\";")

@@ -97,7 +97,7 @@ struct WeatherView: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(d.place.isEmpty ? "（未设置地点）" : d.place)
-                        .font(.system(size: 15, weight: .medium))
+                        .font(.body.weight(.medium))
                         .foregroundStyle(Theme.textSecondary)
 
                     if let h = currentHour(d) {
@@ -106,15 +106,15 @@ struct WeatherView: View {
                                 .font(.system(size: 64, weight: .thin, design: .rounded))
                                 .foregroundStyle(Theme.textPrimary)
                             Text("°")
-                                .font(.system(size: 30, weight: .light))
+                                .font(.largeTitle.weight(.light))
                                 .foregroundStyle(Theme.textSecondary)
                         }
                         Text(h.label)
-                            .font(.system(size: 16, weight: .medium))
+                            .font(.body.weight(.medium))
                             .foregroundStyle(Theme.textPrimary)
                     } else {
                         Text("暂无数据")
-                            .font(.system(size: 17))
+                            .font(.appHeadline)
                             .foregroundStyle(Theme.textTertiary)
                     }
                 }
@@ -145,14 +145,14 @@ struct WeatherView: View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 3) {
                 Image(systemName: icon)
-                    .font(.system(size: 9))
+                    .font(.appCaption2)
                 Text(label)
                     .font(.caption2)
             }
             .foregroundStyle(Theme.textTertiary)
 
             Text(value)
-                .font(.system(size: 13, weight: .medium))
+                .font(.footnote.weight(.medium))
                 .foregroundStyle(Theme.textPrimary)
         }
     }
@@ -162,7 +162,7 @@ struct WeatherView: View {
     private func hourlyStrip(_ d: WeatherDocDTO) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("未来 24 小时")
-                .font(.system(size: 13, weight: .semibold))
+                .font(.footnote.weight(.semibold))
                 .foregroundStyle(Theme.textSecondary)
                 .padding(.leading, 2)
 
@@ -171,13 +171,13 @@ struct WeatherView: View {
                     ForEach(Array(d.hours.prefix(24).enumerated()), id: \.element.id) { idx, h in
                         VStack(spacing: 6) {
                             Text(idx == 0 ? "现在" : hourText(h.time))
-                                .font(.system(size: 10))
+                                .font(.appCaption2)
                                 .foregroundStyle(idx == 0 ? Theme.accent : Theme.textTertiary)
 
                             WeatherGlyph(symbol: h.symbol, size: 20)
 
                             Text("\(Int(h.temp.rounded()))°")
-                                .font(.system(size: 13, weight: .medium))
+                                .font(.footnote.weight(.medium))
                                 .foregroundStyle(Theme.textPrimary)
                         }
                         .frame(width: 46)
@@ -196,7 +196,7 @@ struct WeatherView: View {
     private func dailyList(_ d: WeatherDocDTO) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("未来几天")
-                .font(.system(size: 13, weight: .semibold))
+                .font(.footnote.weight(.semibold))
                 .foregroundStyle(Theme.textSecondary)
                 .padding(.leading, 2)
 
@@ -204,14 +204,14 @@ struct WeatherView: View {
                 ForEach(Array(d.days.enumerated()), id: \.element.id) { idx, day in
                     HStack(spacing: 12) {
                         Text(dayName(day.date, index: idx))
-                            .font(.system(size: 13))
+                            .font(.appFootnote)
                             .foregroundStyle(Theme.textPrimary)
                             .frame(width: 52, alignment: .leading)
 
                         WeatherGlyph(symbol: day.symbol, size: 18)
 
                         Text(day.label)
-                            .font(.system(size: 12))
+                            .font(.appCaption)
                             .foregroundStyle(Theme.textSecondary)
                             .lineLimit(1)
 
@@ -219,17 +219,17 @@ struct WeatherView: View {
 
                         if day.precipSum > 0.05 {
                             Text(String(format: "%.1f", day.precipSum))
-                                .font(.system(size: 10))
+                                .font(.appCaption2)
                                 .foregroundStyle(Theme.accent)
                         }
 
                         // 温度条：用当日最低/最高在整段区间里的位置画一小段
                         Text("\(Int(day.tempMin.rounded()))°")
-                            .font(.system(size: 12))
+                            .font(.appCaption)
                             .foregroundStyle(Theme.textTertiary)
                             .frame(width: 26, alignment: .trailing)
                         Text("\(Int(day.tempMax.rounded()))°")
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.caption.weight(.medium))
                             .foregroundStyle(Theme.textPrimary)
                             .frame(width: 26, alignment: .trailing)
                     }
@@ -251,15 +251,15 @@ struct WeatherView: View {
     private func staleBanner(_ d: WeatherDocDTO) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 12))
+                .font(.appCaption)
                 .foregroundStyle(Theme.red600)
             VStack(alignment: .leading, spacing: 2) {
                 Text("不是最新数据")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(Theme.textPrimary)
                 // 服务端给的 note 就是给人看的一句话，直接用
                 Text(d.note ?? "上游暂时取不到，显示的是上一次成功获取的预报。")
-                    .font(.system(size: 11))
+                    .font(.appCaption)
                     .foregroundStyle(Theme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -283,7 +283,7 @@ struct WeatherView: View {
             }
             Text("地点由服务器的「天气城市」设置决定，不是手机定位。")
         }
-        .font(.system(size: 10.5))
+        .font(.appCaption2)
         .foregroundStyle(Theme.textTertiary)
         .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, 2)
@@ -307,11 +307,11 @@ struct WeatherView: View {
                 .font(.system(size: 42, weight: .light))
                 .foregroundStyle(Theme.textTertiary)
             Text("暂时取不到天气")
-                .font(.system(size: 15, weight: .medium))
+                .font(.body.weight(.medium))
                 .foregroundStyle(Theme.textSecondary)
             if let failure = failure {
                 Text(failure)
-                    .font(.system(size: 12))
+                    .font(.appCaption)
                     .foregroundStyle(Theme.textTertiary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)

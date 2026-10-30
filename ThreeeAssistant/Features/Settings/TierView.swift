@@ -62,7 +62,7 @@ struct TierView: View {
         Section {
             HStack {
                 Text(t.tierLabel)
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.title3.weight(.semibold))
                     .foregroundStyle(t.tierExpired ? Theme.textSecondary : Theme.accent)
                 Spacer()
                 if t.tierExpired {

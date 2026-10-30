@@ -111,13 +111,13 @@ struct TeamListView: View {
     private func teamRow(_ t: TeamDTO) -> some View {
         HStack(spacing: 10) {
             Image(systemName: "person.3.fill")
-                .font(.system(size: 15))
+                .font(.appBody)
                 .foregroundStyle(Theme.accent)
                 .frame(width: 24)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(t.name)
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.body.weight(.medium))
                     .foregroundStyle(Theme.textPrimary)
                 HStack(spacing: 6) {
                     Text("\(t.memberCount ?? 0) 人")

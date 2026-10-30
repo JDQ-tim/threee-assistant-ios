@@ -59,69 +59,67 @@ struct ChangePasswordView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    SecureField("当前密码", text: $oldPass)
-                        .textContentType(.password)
-                } header: {
-                    Text("当前密码")
-                } footer: {
-                    Text("确认是你本人在改。服务端会核对这一项。")
-                }
+        Form {
+            Section {
+                SecureField("当前密码", text: $oldPass)
+                    .textContentType(.password)
+            } header: {
+                Text("当前密码")
+            } footer: {
+                Text("确认是你本人在改。服务端会核对这一项。")
+            }
 
-                Section {
-                    SecureField("新密码（至少 4 位）", text: $newPass)
-                        .textContentType(.newPassword)
-                    SecureField("再输一遍", text: $confirmPass)
-                        .textContentType(.newPassword)
-                } header: {
-                    Text("新密码")
-                } footer: {
-                    if let hint = localHint {
-                        Text(hint).foregroundStyle(.red)
-                    } else {
-                        Text("改完之后，其它设备上的登录会自动失效，这台设备不受影响。")
-                    }
-                }
-
-                if let msg = failure {
-                    Section {
-                        Text(msg)
-                            .font(.footnote)
-                            .foregroundStyle(.red)
-                    }
-                }
-
-                if let ok = doneMessage {
-                    Section {
-                        Label(ok, systemImage: "checkmark.shield")
-                            .font(.footnote)
-                            .foregroundStyle(Theme.teal600)
-                    }
+            Section {
+                SecureField("新密码（至少 4 位）", text: $newPass)
+                    .textContentType(.newPassword)
+                SecureField("再输一遍", text: $confirmPass)
+                    .textContentType(.newPassword)
+            } header: {
+                Text("新密码")
+            } footer: {
+                if let hint = localHint {
+                    Text(hint).foregroundStyle(.red)
+                } else {
+                    Text("改完之后，其它设备上的登录会自动失效，这台设备不受影响。")
                 }
             }
-            .navigationTitle("修改密码")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button {
-                        submit()
-                    } label: {
-                        if busy {
-                            ProgressView()
-                        } else {
-                            Text("修改")
-                        }
-                    }
-                    .disabled(!canSubmit)
+
+            if let msg = failure {
+                Section {
+                    Text(msg)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
                 }
             }
-            .interactiveDismissDisabled(busy)
+
+            if let ok = doneMessage {
+                Section {
+                    Label(ok, systemImage: "checkmark.shield")
+                        .font(.footnote)
+                        .foregroundStyle(Theme.teal600)
+                }
+            }
         }
+        .navigationTitle("修改密码")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("取消") { dismiss() }
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                Button {
+                    submit()
+                } label: {
+                    if busy {
+                        ProgressView()
+                    } else {
+                        Text("修改")
+                    }
+                }
+                .disabled(!canSubmit)
+            }
+        }
+        .interactiveDismissDisabled(busy)
     }
 
     private func submit() {

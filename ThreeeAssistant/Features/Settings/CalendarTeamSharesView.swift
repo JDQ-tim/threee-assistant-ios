@@ -129,11 +129,11 @@ struct CalendarTeamSharesView: View {
         HStack(spacing: 10) {
             Image(systemName: "person.3.fill")
                 .foregroundStyle(Theme.accent)
-                .font(.system(size: 14))
+                .font(.appSubheadline)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(s.name.isEmpty ? "（团队已删）" : s.name)
-                    .font(.system(size: 15))
+                    .font(.appBody)
                     .foregroundStyle(Theme.textPrimary)
                 Text(s.role == "editor" ? "可编辑这张日历" : "只读")
                     .font(.caption2)

@@ -109,7 +109,7 @@ struct RegisterView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(needAdmin ? "这台服务器还是空的" : "加入这台服务器")
-                .font(.system(size: 20, weight: .semibold))
+                .font(.title3.weight(.semibold))
                 .foregroundStyle(Theme.textPrimary)
             Text(needAdmin
                  ? "第一个注册的账号会自动成为管理员，不需要邀请码。"
@@ -172,7 +172,7 @@ struct RegisterView: View {
                 HStack(spacing: 8) {
                     if probing { ProgressView().tint(Theme.onAccent) }
                     Text(probing ? "正在连接…" : "重新连接")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.body.weight(.semibold))
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
@@ -275,7 +275,7 @@ struct RegisterView: View {
                 HStack(spacing: 8) {
                     if busy { ProgressView().tint(Theme.onAccent) }
                     Text(busy ? "正在创建…" : (needAdmin ? "创建管理员" : "注册"))
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.body.weight(.semibold))
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)

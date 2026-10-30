@@ -111,7 +111,7 @@ struct CalendarMembersView: View {
                     )) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("允许添加成员")
-                                .font(.system(size: 15))
+                                .font(.appBody)
                             Text("关掉只是不让再加人，已经加进来的人仍然看得到")
                                 .font(.caption2)
                                 .foregroundStyle(Theme.textTertiary)
@@ -176,7 +176,7 @@ struct CalendarMembersView: View {
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(m.name)
-                    .font(.system(size: 15))
+                    .font(.appBody)
                     .foregroundStyle(Theme.textPrimary)
                 Text(m.roleLabel)
                     .font(.caption2)

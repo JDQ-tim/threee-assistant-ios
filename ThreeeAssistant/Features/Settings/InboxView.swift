@@ -73,7 +73,9 @@ struct InboxView: View {
         }
         .background(Theme.background)
         .navigationTitle("收件箱")
-        .navigationBarTitleDisplayMode(.inline)
+        // 重构后这一页是一级 Tab 的根页面，不是从别处推进去的子页，
+        // 所以用大标题 —— 和「日程」「待办」「我的」保持一致。
+        .navigationBarTitleDisplayMode(.large)
         .toolbar {
             if !visiblePending.isEmpty {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -190,7 +192,7 @@ struct InboxView: View {
             }
 
             Text(it.displayTitle)
-                .font(.system(size: 15, weight: .medium))
+                .font(.body.weight(.medium))
                 .foregroundStyle(Theme.textPrimary)
                 .lineLimit(2)
 
@@ -218,7 +220,7 @@ struct InboxView: View {
                     accept(it)
                 } label: {
                     Text("加入我的日历")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.footnote.weight(.semibold))
                         .padding(.horizontal, 14)
                         .padding(.vertical, 6)
                         .background(Theme.accent)
@@ -232,7 +234,7 @@ struct InboxView: View {
                     confirmingDismiss = it
                 } label: {
                     Text("忽略")
-                        .font(.system(size: 13))
+                        .font(.appFootnote)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 6)
                         .background(Theme.surfaceAlt)
@@ -264,7 +266,7 @@ struct InboxView: View {
     private func systemRow(_ it: InboxItemDTO) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(it.displayTitle)
-                .font(.system(size: 14))
+                .font(.appSubheadline)
                 .foregroundStyle(Theme.textPrimary)
             if let notes = it.notes, !notes.isEmpty {
                 Text(notes)
@@ -455,13 +457,13 @@ struct InboxArchiveView: View {
                     ForEach(decided) { it in
                         HStack(spacing: 10) {
                             Image(systemName: it.status == "accepted" ? "checkmark.circle" : "tray.and.arrow.down")
-                                .font(.system(size: 14))
+                                .font(.appSubheadline)
                                 .foregroundStyle(it.status == "accepted" ? Theme.accent : Theme.textTertiary)
                                 .frame(width: 20)
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(it.displayTitle)
-                                    .font(.system(size: 14))
+                                    .font(.appSubheadline)
                                     .foregroundStyle(Theme.textPrimary)
                                     .lineLimit(1)
                                 HStack(spacing: 6) {

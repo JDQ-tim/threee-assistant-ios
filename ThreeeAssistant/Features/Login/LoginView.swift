@@ -31,13 +31,13 @@ struct LoginView: View {
                     .frame(width: 68, height: 68)
                     .overlay(
                         Text("3e")
-                            .font(.system(size: 30, weight: .bold))
+                            .font(.largeTitle.weight(.bold))
                             .foregroundStyle(Theme.onAccent)
                     )
                     .padding(.top, 60)
 
                 Text("3e 学习助手")
-                    .font(.system(size: 26, weight: .bold))
+                    .font(.title.weight(.bold))
                     .foregroundStyle(Theme.textPrimary)
                     .padding(.top, 18)
 
@@ -83,7 +83,7 @@ struct LoginView: View {
                     HStack(spacing: 8) {
                         if busy { ProgressView().tint(Theme.onAccent) }
                         Text(busy ? "正在连接…" : "登录")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.body.weight(.semibold))
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
@@ -102,7 +102,7 @@ struct LoginView: View {
                     showRegister = true
                 } label: {
                     Text("还没有账号？注册")
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.subheadline.weight(.medium))
                         .foregroundStyle(Theme.accent)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 13)
@@ -125,7 +125,7 @@ struct LoginView: View {
                         HStack(spacing: 6) {
                             if checking { ProgressView().controlSize(.small) }
                             Text(checking ? "正在测试…" : "测试连接")
-                                .font(.system(size: 13, weight: .medium))
+                                .font(.footnote.weight(.medium))
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 7)
@@ -231,7 +231,7 @@ struct FieldBox<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(label)
-                .font(.system(size: 12.5))
+                .font(.appFootnote)
                 .foregroundStyle(Theme.textSecondary)
                 .padding(.leading, 2)
 

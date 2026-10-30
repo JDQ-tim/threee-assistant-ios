@@ -57,7 +57,7 @@ struct EventRowView: View {
             //    看起来像整行都被按下去了。所以勾选热区单独做成 44×44 的明确区域。
             if item.isDone {
                 Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 17))
+                    .font(.appHeadline)
                     .foregroundStyle(Theme.teal600)
             }
 
@@ -79,7 +79,7 @@ struct EventRowView: View {
                 }
 
                 Text(item.title.nonEmpty(or: "（无标题）"))
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.body.weight(.medium))
                     .foregroundStyle(item.isDone ? Theme.textTertiary : Theme.textPrimary)
                     // 完成的划掉。这是"完成"最不需要解释的表达方式
                     .strikethrough(item.isDone, color: Theme.textTertiary)
@@ -153,7 +153,7 @@ struct PillView: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: 11, weight: .medium))
+            .font(.caption.weight(.medium))
             .foregroundStyle(fg)
             .padding(.horizontal, 7)
             .padding(.vertical, 1)
@@ -176,7 +176,7 @@ struct DayHeaderView: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Text(relativeDays ? day.friendlyDay : day.monthDay)
-                .font(.system(size: 16, weight: .semibold))
+                .font(.body.weight(.semibold))
                 .foregroundStyle(Theme.textPrimary)
 
             Text(day.weekdayName)
@@ -185,7 +185,7 @@ struct DayHeaderView: View {
 
             if day.isSameDay(as: .now) {
                 Text("今天")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.caption.weight(.medium))
                     .foregroundStyle(Theme.onAccent)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 1)

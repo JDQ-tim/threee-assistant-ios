@@ -144,11 +144,11 @@ struct MonthGrid: View {
         HStack(spacing: 6) {
             Circle().fill(Theme.accent.opacity(0.75)).frame(width: 4, height: 4)
             Text("有安排")
-                .font(.system(size: 10.5))
+                .font(.appCaption2)
                 .foregroundStyle(Theme.textTertiary)
             Spacer(minLength: 0)
             Text("点日期查看那一周")
-                .font(.system(size: 10.5))
+                .font(.appCaption2)
                 .foregroundStyle(Theme.textTertiary)
         }
         .padding(.top, 4)

@@ -54,7 +54,7 @@ struct EventDetailSheet: View {
                             .frame(width: 4, height: 30)
 
                         Text(item.title.nonEmpty(or: "（无标题）"))
-                            .font(.system(size: 22, weight: .semibold))
+                            .font(.title2.weight(.semibold))
                             .foregroundStyle(Theme.textPrimary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -87,7 +87,7 @@ struct EventDetailSheet: View {
                         showEdit = true
                     } label: {
                         Text("修改这条日程")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.body.weight(.semibold))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 13)
                             .background(Theme.accent)
@@ -109,7 +109,7 @@ struct EventDetailSheet: View {
                             Image(systemName: "paperplane")
                             Text("分享给同学")
                         }
-                        .font(.system(size: 15, weight: .medium))
+                        .font(.body.weight(.medium))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 11)
                         .background(Theme.surfaceAlt)
@@ -131,7 +131,7 @@ struct EventDetailSheet: View {
                         HStack {
                             if busy { ProgressView().tint(.white) }
                             Text(busy ? "正在删除…" : deleteButtonTitle)
-                                .font(.system(size: 16, weight: .semibold))
+                                .font(.body.weight(.semibold))
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 13)
@@ -156,7 +156,7 @@ struct EventDetailSheet: View {
                         showReport = true
                     } label: {
                         Text("举报这条日程")
-                            .font(.system(size: 13))
+                            .font(.appFootnote)
                             .foregroundStyle(Theme.textTertiary)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 8)
@@ -242,7 +242,7 @@ struct EventDetailSheet: View {
                         .font(.footnote)
                         .foregroundStyle(Theme.textTertiary)
                     Text(snoozedUntil == nil ? "稍后提醒" : "已延后提醒")
-                        .font(.system(size: 12.5))
+                        .font(.appFootnote)
                         .foregroundStyle(Theme.textSecondary)
                     Spacer(minLength: 0)
                 }
@@ -253,14 +253,14 @@ struct EventDetailSheet: View {
                     HStack(spacing: 10) {
                         Text(Date(timeIntervalSince1970: TimeInterval(until)).monthDay
                              + " " + Date(timeIntervalSince1970: TimeInterval(until)).hhmm)
-                            .font(.system(size: 14.5, weight: .semibold))
+                            .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Theme.textPrimary)
                         Spacer(minLength: 0)
                         Button {
                             clearSnooze()
                         } label: {
                             Text("撤销")
-                                .font(.system(size: 12.5, weight: .semibold))
+                                .font(.footnote.weight(.semibold))
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
                                 .background(Theme.surfaceAlt)
@@ -281,7 +281,7 @@ struct EventDetailSheet: View {
                                 doSnooze(minutes: m)
                             } label: {
                                 Text(m >= 60 ? "\(m / 60) 小时后" : "\(m) 分钟后")
-                                    .font(.system(size: 12.5, weight: .medium))
+                                    .font(.footnote.weight(.medium))
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 7)
                                     .background(Theme.surfaceAlt)
@@ -367,12 +367,12 @@ struct EventDetailSheet: View {
     private func infoRow(_ key: String, _ value: String) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Text(key)
-                .font(.system(size: 13.5))
+                .font(.appSubheadline)
                 .foregroundStyle(Theme.textTertiary)
                 .frame(width: 56, alignment: .leading)
 
             Text(value)
-                .font(.system(size: 14.5))
+                .font(.appSubheadline)
                 .foregroundStyle(Theme.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
 

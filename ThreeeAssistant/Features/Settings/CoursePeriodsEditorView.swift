@@ -113,7 +113,7 @@ struct CoursePeriodsEditorView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Text("第 \(row.wrappedValue.index) 节")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.footnote.weight(.semibold))
                     .foregroundStyle(Theme.textSecondary)
                     .frame(width: 56, alignment: .leading)
 
@@ -123,7 +123,7 @@ struct CoursePeriodsEditorView: View {
 
             HStack(spacing: 8) {
                 Text("时间")
-                    .font(.system(size: 13))
+                    .font(.appFootnote)
                     .foregroundStyle(Theme.textSecondary)
                     .frame(width: 56, alignment: .leading)
 

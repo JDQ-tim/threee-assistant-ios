@@ -8,7 +8,6 @@ struct ScheduleView: View {
 
     @State private var detail: ScheduleInstance?
     @State private var showNew = false
-    @State private var showSettings = false
 
     /// 勾选失败时的临时提示，几秒后自动消失
     @State private var toast: String?
@@ -65,13 +64,6 @@ struct ScheduleView: View {
                     }
                     .disabled(store.calendars.isEmpty)
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showSettings = true
-                    } label: {
-                        Image(systemName: "person.crop.circle")
-                    }
-                }
             }
             .sheet(item: $detail) { item in
                 EventDetailSheet(item: item, calendar: store.calendarsByID[item.calendarID])
@@ -81,9 +73,6 @@ struct ScheduleView: View {
             .sheet(isPresented: $showNew) {
                 NewEventSheet()
                     .presentationDetents([.large])
-            }
-            .sheet(isPresented: $showSettings) {
-                SettingsView()
             }
             // 列表右滑删除的确认。
             //
@@ -137,7 +126,7 @@ struct ScheduleView: View {
 
                 VStack(spacing: 1) {
                     Text(rangeLabel)
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.footnote.weight(.medium))
                         .monospacedDigit()
                         .foregroundStyle(Theme.textSecondary)
                     if store.isLoading {
@@ -150,7 +139,7 @@ struct ScheduleView: View {
                 Button("今天") {
                     Task { await store.goToday() }
                 }
-                .font(.system(size: 13, weight: .medium))
+                .font(.footnote.weight(.medium))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 7)
                 .background(Theme.surfaceAlt)

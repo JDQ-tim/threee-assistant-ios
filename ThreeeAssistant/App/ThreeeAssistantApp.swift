@@ -44,7 +44,10 @@ struct RootView: View {
     var body: some View {
         Group {
             if store.isLoggedIn {
-                ScheduleView()
+                // 重构后进入四 Tab 主框架，不再是单个日程页。
+                // 原来所有功能挤在日程页右上角的 sheet 里，
+                // 现在按 iOS 的信息架构拆成 日程/待办/收件箱/我的。
+                MainTabView()
                     .transition(.opacity)
             } else {
                 LoginView()

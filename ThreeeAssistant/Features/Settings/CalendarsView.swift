@@ -25,96 +25,94 @@ struct CalendarsView: View {
     @State private var membersOf: CalendarDTO?
 
     var body: some View {
-        NavigationStack {
-            List {
-                if let msg = failure {
-                    Section {
-                        ErrorBanner(message: msg)
-                            .listRowInsets(EdgeInsets())
-                            .listRowBackground(Color.clear)
-                    }
-                }
-
+        List {
+            if let msg = failure {
                 Section {
-                    ForEach(store.calendars) { cal in
-                        // 课程表日历单独给一个「打开课表」入口 ——
-                        // 它和普通日历的读法完全不同（节次 × 星期网格），
-                        // 塞进日程页的周/月 Picker 里会把那三个选项变成四选一，
-                        // 而且课表自己也要翻周，两套翻页逻辑会打架。
-                        if cal.kind == "course" {
-                            NavigationLink {
-                                CourseTableView(calendar: cal)
-                            } label: {
-                                row(cal)
-                            }
-                            .swipeActions(edge: .trailing) {
-                                if cal.canManage {
-                                    Button(role: .destructive) {
-                                        pendingDelete = cal
-                                    } label: {
-                                        Label("删除", systemImage: "trash")
-                                    }
+                    ErrorBanner(message: msg)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                }
+            }
+
+            Section {
+                ForEach(store.calendars) { cal in
+                    // 课程表日历单独给一个「打开课表」入口 ——
+                    // 它和普通日历的读法完全不同（节次 × 星期网格），
+                    // 塞进日程页的周/月 Picker 里会把那三个选项变成四选一，
+                    // 而且课表自己也要翻周，两套翻页逻辑会打架。
+                    if cal.kind == "course" {
+                        NavigationLink {
+                            CourseTableView(calendar: cal)
+                        } label: {
+                            row(cal)
+                        }
+                        .swipeActions(edge: .trailing) {
+                            if cal.canManage {
+                                Button(role: .destructive) {
+                                    pendingDelete = cal
+                                } label: {
+                                    Label("删除", systemImage: "trash")
                                 }
                             }
-                        } else {
-                            Button {
-                                editing = cal
-                            } label: {
-                                row(cal)
-                            }
-                            .buttonStyle(.plain)
-                            .swipeActions(edge: .trailing) {
-                                // 只有 owner 才有删除权。给所有人显示一个必然失败的按钮
-                                // 比不显示更糟 —— 用户会以为是网络问题。
-                                if cal.canManage {
-                                    Button(role: .destructive) {
-                                        pendingDelete = cal
-                                    } label: {
-                                        Label("删除", systemImage: "trash")
-                                    }
+                        }
+                    } else {
+                        Button {
+                            editing = cal
+                        } label: {
+                            row(cal)
+                        }
+                        .buttonStyle(.plain)
+                        .swipeActions(edge: .trailing) {
+                            // 只有 owner 才有删除权。给所有人显示一个必然失败的按钮
+                            // 比不显示更糟 —— 用户会以为是网络问题。
+                            if cal.canManage {
+                                Button(role: .destructive) {
+                                    pendingDelete = cal
+                                } label: {
+                                    Label("删除", systemImage: "trash")
                                 }
                             }
                         }
                     }
-                } footer: {
-                    Text("左滑可删除自己创建的日历。别人分享给你的日历不能删，只能退出。\n点「课程表」日历可直接打开课表网格。")
                 }
+            } footer: {
+                Text("左滑可删除自己创建的日历。别人分享给你的日历不能删，只能退出。\n点「课程表」日历可直接打开课表网格。")
+            }
 
-                Section {
-                    Button {
-                        creating = true
-                    } label: {
-                        Label("新建日历", systemImage: "plus.circle.fill")
-                    }
+            Section {
+                Button {
+                    creating = true
+                } label: {
+                    Label("新建日历", systemImage: "plus.circle.fill")
                 }
             }
-            .navigationTitle("我的日历")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("完成") { dismiss() }
-                }
+        }
+        .navigationTitle("我的日历")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("完成") { dismiss() }
             }
-            .sheet(isPresented: $creating) {
-                CalendarEditSheet(calendar: nil)
+        }
+        .sheet(isPresented: $creating) {
+            CalendarEditSheet(calendar: nil)
+        }
+        .navigationDestination(item: $membersOf) { cal in
+            CalendarMembersView(calendarID: cal.id)
+        }
+        .sheet(item: $editing) { cal in
+            CalendarEditSheet(calendar: cal)
+        }
+        .alert("删除这个日历？", isPresented: Binding(
+            get: { pendingDelete != nil },
+            set: { if !$0 { pendingDelete = nil } }
+        ), presenting: pendingDelete) { cal in
+            Button("删除", role: .destructive) {
+                performDelete(cal)
             }
-            .navigationDestination(item: $membersOf) { cal in
-                CalendarMembersView(calendarID: cal.id)
-            }
-            .sheet(item: $editing) { cal in
-                CalendarEditSheet(calendar: cal)
-            }
-            .alert("删除这个日历？", isPresented: Binding(
-                get: { pendingDelete != nil },
-                set: { if !$0 { pendingDelete = nil } }
-            ), presenting: pendingDelete) { cal in
-                Button("删除", role: .destructive) {
-                    performDelete(cal)
-                }
-                Button("取消", role: .cancel) { pendingDelete = nil }
-            } message: { cal in
-                Text("「\(cal.name)」以及里面所有日程都会被删除，其它设备同步后也会消失。\n\n这个操作撤不回来。")
-            }
+            Button("取消", role: .cancel) { pendingDelete = nil }
+        } message: { cal in
+            Text("「\(cal.name)」以及里面所有日程都会被删除，其它设备同步后也会消失。\n\n这个操作撤不回来。")
         }
     }
 
@@ -126,7 +124,7 @@ struct CalendarsView: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(cal.name)
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.body.weight(.medium))
                     .foregroundStyle(Theme.textPrimary)
                 Text(subtitle(cal))
                     .font(.caption)
@@ -146,10 +144,10 @@ struct CalendarsView: View {
                 } label: {
                     HStack(spacing: 3) {
                         Image(systemName: "person.2")
-                            .font(.system(size: 12))
+                            .font(.appCaption)
                         if let n = cal.members?.count, n > 0 {
                             Text("\(n)")
-                                .font(.system(size: 11, weight: .medium))
+                                .font(.caption.weight(.medium))
                         }
                     }
                     .foregroundStyle(Theme.textSecondary)
@@ -230,7 +228,7 @@ struct CalendarEditSheet: View {
 
                     VStack(alignment: .leading, spacing: 5) {
                         Text("名称")
-                            .font(.system(size: 12.5))
+                            .font(.appFootnote)
                             .foregroundStyle(Theme.textSecondary)
                             .padding(.leading, 2)
                         TextField("例如：大二上课程表", text: $name)
@@ -243,7 +241,7 @@ struct CalendarEditSheet: View {
 
                     VStack(alignment: .leading, spacing: 8) {
                         Text("颜色")
-                            .font(.system(size: 12.5))
+                            .font(.appFootnote)
                             .foregroundStyle(Theme.textSecondary)
                             .padding(.leading, 2)
 
@@ -267,7 +265,7 @@ struct CalendarEditSheet: View {
                                         )
                                         .overlay(
                                             Image(systemName: "checkmark")
-                                                .font(.system(size: 12, weight: .bold))
+                                                .font(.caption.weight(.bold))
                                                 .foregroundStyle(.white)
                                                 .opacity(on ? 1 : 0)
                                         )
@@ -279,7 +277,7 @@ struct CalendarEditSheet: View {
 
                     VStack(alignment: .leading, spacing: 5) {
                         Text("类型")
-                            .font(.system(size: 12.5))
+                            .font(.appFootnote)
                             .foregroundStyle(Theme.textSecondary)
                             .padding(.leading, 2)
                         Picker("类型", selection: $kind) {

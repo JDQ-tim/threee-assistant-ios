@@ -75,7 +75,7 @@ struct ShareEventSheet: View {
             Section {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(instance.title.nonEmpty(or: "（无标题）"))
-                        .font(.system(size: 15, weight: .medium))
+                        .font(.body.weight(.medium))
                         .foregroundStyle(Theme.textPrimary)
                     Text(subtitle)
                         .font(.caption2)
