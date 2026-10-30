@@ -63,45 +63,55 @@ struct InboxView: View {
     }
 
     var body: some View {
-        Group {
-            if loading {
-                ProgressView("正在读取…")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                list
-            }
-        }
-        .background(Theme.background)
-        .navigationTitle("收件箱")
-        // 重构后这一页是一级 Tab 的根页面，不是从别处推进去的子页，
-        // 所以用大标题 —— 和「日程」「待办」「我的」保持一致。
-        .navigationBarTitleDisplayMode(.large)
-        .toolbar {
-            if !visiblePending.isEmpty {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button {
-                            dismissAll()
-                        } label: {
-                            Label("全部忽略（\(visiblePending.count)）", systemImage: "tray.and.arrow.down")
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                    }
-                    .disabled(busy)
+        // ⚠️ 这个 NavigationStack 是必需的，不能省。
+        //
+        // 四 Tab 重构后这一页成了 Tab 的**根视图**。Tab 的根视图必须自己
+        // 提供 NavigationStack —— 否则：
+        //   1. `.navigationTitle` 无处可挂，顶部一条标题都不显示
+        //   2. 下面那个 `NavigationLink`（→ 已处理记录）点了毫无反应，
+        //      因为外面没有可推入的栈
+        // 两样都不会编译报错，只会"看起来页面是对的、点了没反应"。
+        NavigationStack {
+            Group {
+                if loading {
+                    ProgressView("正在读取…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    list
                 }
             }
+            .background(Theme.background)
+            .navigationTitle("收件箱")
+            // 重构后这一页是一级 Tab 的根页面，不是从别处推进去的子页，
+            // 所以用大标题 —— 和「日程」「待办」「我的」保持一致。
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                if !visiblePending.isEmpty {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Menu {
+                            Button {
+                                dismissAll()
+                            } label: {
+                                Label("全部忽略（\(visiblePending.count)）", systemImage: "tray.and.arrow.down")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                        }
+                        .disabled(busy)
+                    }
+                }
+            }
+            .alert("忽略这一条？", isPresented: Binding(
+                get: { confirmingDismiss != nil },
+                set: { if !$0 { confirmingDismiss = nil } }
+            ), presenting: confirmingDismiss) { it in
+                Button("忽略", role: .destructive) { dismiss_(it) }
+                Button("取消", role: .cancel) { confirmingDismiss = nil }
+            } message: { _ in
+                Text("忽略之后这条不会再出现在收件箱里。发件人那边的原始日程不受影响。")
+            }
+            .task { await reload() }
         }
-        .alert("忽略这一条？", isPresented: Binding(
-            get: { confirmingDismiss != nil },
-            set: { if !$0 { confirmingDismiss = nil } }
-        ), presenting: confirmingDismiss) { it in
-            Button("忽略", role: .destructive) { dismiss_(it) }
-            Button("取消", role: .cancel) { confirmingDismiss = nil }
-        } message: { _ in
-            Text("忽略之后这条不会再出现在收件箱里。发件人那边的原始日程不受影响。")
-        }
-        .task { await reload() }
     }
 
     // MARK: - 列表
