@@ -28,3 +28,4 @@ build-logs/
 # 本地临时目录（下载 CI 日志用）
 .ci/
 .tmpcheck*/
+.ci-tmp/
