@@ -573,6 +573,195 @@ for rel, src in ALL_SRC.items():
             "在这个属性/函数的第一行加 `@Bindable var store = store`"
             % (rel, idx + 1, head_text))
 
+# ============================================================
+#  检查 A：Optional 链式调用后再调 String 扩展
+#  ------------------------------------------------------------
+#  CI 报过：`store.user?.name.nonEmpty(or:)` →
+#  "value of type 'String' has no member 'nonEmpty'"
+#
+#  根因：`?.` 的作用是"取到 nil 就停在这里"。`store.user?.name`
+#  整体是 String?，但 `.nonEmpty` 是 **String 的扩展**，不是
+#  Optional 的 —— 于是编译器在 String 上找 nonEmpty，找不到。
+#
+#  形状：a?.b.method(...)  其中 method 定义在 String 等非可选类型上
+#  正确写法：(a?.b ?? "").method(...)  或把扩展定义在 Optional 上
+#
+#  这里不做完整类型推断，只抓最典型的「可空链 + 已知 String 扩展」组合。
+# ============================================================
+
+# 从源码里自动收集「定义在 String 扩展上的方法名」，
+# 而不是硬编码一份清单 —— 硬编码的清单迟早和代码脱节。
+#
+# ⚠️ 关键的区分：
+#   - `extension String { func f() }`           → 只能对非可选 String 调用
+#   - `extension Optional where Wrapped == String
+#      { func f() }`                            → 可以对 String? 直接调用
+#   后者存在时，`a?.b.f()` 是**合法**的（f 就定义在 Optional 上）。
+#   这个项目里 `nonEmpty(or:)` 正好属于后者，所以正确的代码不能报错。
+_string_only_methods = set()
+_optional_string_methods = set()
+for _p in files:
+    _src = open(_p, encoding="utf-8", errors="replace").read()
+
+    for _m in re.finditer(
+            r"extension\s+String\s*\{((?:[^{}]|\{[^{}]*\})*)", _src):
+        for _mm in re.finditer(r"func\s+(\w+)\s*\(", _m.group(1)):
+            _string_only_methods.add(_mm.group(1))
+
+    for _m in re.finditer(
+            r"extension\s+Optional\s+where\s+Wrapped\s*==\s*String\s*\{"
+            r"((?:[^{}]|\{[^{}]*\})*)", _src):
+        for _mm in re.finditer(r"func\s+(\w+)\s*\(", _m.group(1)):
+            _optional_string_methods.add(_mm.group(1))
+
+# 同一个名字可能两处都有（一般不会），那就当成可选版处理，宁可不报
+_cannot_chain = _string_only_methods - _optional_string_methods
+
+for p in files:
+    rel = os.path.relpath(p, ROOT).replace("\\", "/")
+    src = open(p, encoding="utf-8", errors="replace").read()
+    for idx, line in enumerate(src.split("\n"), 1):
+        # 形状： xxx?.yyy.zzz(   —— 即 `?.` 之后又跟了至少一层 `.`
+        for m in re.finditer(r"\w+\?\.(?:\w+\.)+(\w+)\s*\(", line):
+            name = m.group(1)
+            if name in _cannot_chain:
+                errors.append(
+                    "%s:%d `?.` 链之后调用了 String 扩展 `%s`，"
+                    "这里实际是 Optional，编译器会报 "
+                    "\"value of type 'String' has no member '%s'\"。\n"
+                    "         └ 改成 `(可空表达式 ?? \"\").%s(...)`，"
+                    "或把方法定义在 `extension Optional where Wrapped == String` 上"
+                    % (rel, idx, name, name, name))
+
+# ============================================================
+#  检查 B：View 的必填参数没传
+#  ------------------------------------------------------------
+#  CI 报过：`CalendarInvitesView()` → "missing argument for parameter 'calendarID'"
+#
+#  出现场景：把一个**需要上下文**的页面（比如按日历维度的邀请码管理）
+#  当成全局页面挂上去。编译器会拦，但只有真编译时才知道；
+#  这类错误在"重构导航层级"时几乎必然会冒出来，值得机械检查。
+#
+#  ⚠️ 判"必填"的三个条件缺一不可，否则就是误报：
+#    1. 类型不是 Optional（`((() -> Void)?` 这种可以不传）
+#    2. 没有默认值（`= nil`、`= []`、`= ""` 都不算必填）
+#    3. 属于**这个** View 自己的属性，不是它内部嵌套类型的属性
+#       （`SyncStatusView` 里面嵌套定义的那些 icon/detail/errors
+#        是内层小 View 的字段，和它自己的初始化毫无关系）
+# ============================================================
+
+
+def _own_props_decl(src, body_start):
+    """取 struct body 开头到第一个 body/init/func **之前**的声明区，
+    并且按大括号深度跳过嵌套类型体内的内容。"""
+    out = []
+    depth = 1
+    i = body_start
+    n = len(src)
+    while i < n:
+        ch = src[i]
+        if ch == "{":
+            depth += 1
+            # 进入嵌套类型/属性观察器：整段跳过
+            inner = 1
+            j = i + 1
+            while j < n and inner > 0:
+                if src[j] == "{":
+                    inner += 1
+                elif src[j] == "}":
+                    inner -= 1
+                j += 1
+            i = j
+            continue
+        if ch == "}":
+            depth -= 1
+            if depth == 0:
+                break
+            i += 1
+            continue
+        # 到第一个 var body 就停 —— 后面的都是实现，不是声明
+        if src.startswith("var body", i) and (i == 0 or src[i - 1] in " \n"):
+            break
+        if src.startswith("init(", i):
+            break
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
+_required = {}
+for p in files:
+    src = open(p, encoding="utf-8", errors="replace").read()
+    for m in re.finditer(r"struct\s+(\w+)\s*:\s*View\s*\{", src):
+        name = m.group(1)
+        decl = _own_props_decl(src, m.end())
+        props = []
+        for pm in re.finditer(
+                r"^\s+(?:let|var)\s+(\w+)\s*:\s*([^\n]+?)\s*$", decl, re.M):
+            pname, ptype = pm.group(1), pm.group(2).strip()
+            # 属性包装器（@State/@Environment/@Bindable…）一律不算必填：
+            # 它们由 SwiftUI 注入或自带初值
+            line_start = decl.rfind("\n", 0, pm.start()) + 1
+            if decl[line_start:pm.start()].strip().startswith("@"):
+                continue
+            # 有默认值 → 不必填
+            if "=" in ptype:
+                continue
+            # Optional → 不必填
+            if ptype.endswith("?"):
+                continue
+            props.append(pname)
+        if props:
+            _required[name] = props
+
+for p in files:
+    rel = os.path.relpath(p, ROOT).replace("\\", "/")
+    src = open(p, encoding="utf-8", errors="replace").read()
+    for name, params in _required.items():
+        for m in re.finditer(r"\b%s\s*\(" % re.escape(name), src):
+            head = src[max(0, m.start() - 30):m.start()]
+            if re.search(r"struct\s+$", head):
+                continue
+            i = m.end()
+            depth = 1
+            while i < len(src) and depth > 0:
+                if src[i] == "(":
+                    depth += 1
+                elif src[i] == ")":
+                    depth -= 1
+                i += 1
+            args = src[m.end():i - 1]
+
+            # 尾随闭包：`Foo(a: 1) { ... }` 里的 `{...}` 会绑定到
+            # 最后一个 **无默认值** 的闭包参数上（Swift 的规则）。
+            # 不识别这个就会把 `CreateCalendarInviteSheet(calendarID: x) { ... }`
+            # 误报成"缺 onCreated"。所以只看括号后面有没有紧跟 `{`。
+            j = i
+            while j < len(src) and src[j] in " \t\n":
+                j += 1
+            has_trailing_closure = j < len(src) and src[j] == "{"
+
+            line = src[:m.start()].count("\n") + 1
+            missing = [a for a in params
+                       if not re.search(r"\b%s\s*:" % re.escape(a), args)]
+
+            # 有尾随闭包时，可以"吃掉"一个缺失的闭包型参数
+            if has_trailing_closure and missing:
+                # 名字里带 on/Callback/Handler 的按闭包处理；
+                # 更稳的做法是看声明里的类型，这里已在 _required 里
+                # 只登记了无默认值的，闭包参数也在这份名单里
+                closure_like = [a for a in missing
+                                if re.search(r"^(on|did|will|handle)", a, re.I)]
+                if closure_like:
+                    missing = [a for a in missing if a != closure_like[-1]]
+
+            if missing:
+                errors.append(
+                    "%s:%d `%s(...)` 缺必填参数 %s —— "
+                    "这个页面需要外部传入上下文，不能当全局页面用。\n"
+                    "         └ 要么补参数，要么换一个不需要上下文的汇总页"
+                    % (rel, line, name, missing))
+
 print("=" * 60)
 print("Swift 源码粗检（无类型检查）")
 print("文件数: %d" % len(files))
