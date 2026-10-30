@@ -1,0 +1,176 @@
+# 界面架构与交互逻辑
+
+> 这份文档解释「界面为什么长这样」。改界面之前先读一遍，
+> 免得把已经踩过的坑再踩一遍。
+
+---
+
+## 一级结构：四个 Tab
+
+```
+MainTabView
+├── 日程    ScheduleView     周/月视图、新建、详情
+├── 待办    TasksView        逾期 / 进行中 / 已完成
+├── 收件箱  InboxView        别人投来的单条日程（带未读角标）
+└── 我的    ProfileView      账号 + 分组设置
+```
+
+### 为什么是这四个
+
+**日程**是主战场，不需要解释。
+
+**待办**单独一个 Tab，因为待办和日程的**时间语义不同**：
+日程是「某个时刻发生的事」，待办是「某天之前要做完的事」。
+混在一个按日分组的列表里，周二看到一条周一的未完成待办，
+用户会以为它排在周二。分开之后，「过期待办」才有地方集中显示。
+
+**收件箱**必须在外面。它是「别人给了你东西」的唯一提示，
+藏在设置第 8 项等于没有。带角标之后，有未读一眼就能看见。
+
+**我的**放第四位，符合 iOS 惯例（微信、系统设置都是这样）。
+
+---
+
+## 「我的」页：六个分组
+
+```
+ProfileView
+├── 头像卡片        名字首字、身份徽章、服务器地址
+├── [告警区]        通知权限异常时浮到这里
+├── 常用            提醒与通知 → NotificationSettingsView
+│                   我的日历   → CalendarsView
+├── 协作            我的团队   → TeamListView
+│                   日历邀请   → CalendarInvitesView
+│                   我的举报   → MyReportsView
+├── 数据与同步      同步       → SyncStatusView
+│                   背词同步   → WordbookSyncView
+│                   修改冲突   → ConflictsView
+├── 偏好            天气       → WeatherView
+│                   天气城市   → WeatherLocationView
+│                   用户组     → TierView
+├── 安全            修改密码   → ChangePasswordView
+│                   安全与证书 → SecurityView
+├── 关于            关于       → AboutView
+│                   注册码     → SiteInviteView     （仅管理员）
+│                   数据自检   → DataIntegrityView   （仅管理员）
+└── 退出登录
+```
+
+### 分组的依据
+
+不是按「功能模块」，而是**按用户找东西时的心理归类**：
+
+- **常用** —— 每天或每周都会碰的
+- **协作** —— 都涉及「别人」：团队、邀请、举报
+- **数据与同步** —— 出问题才来的：同步卡了、冲突了
+- **偏好** —— 可调可不调的：天气、档位
+- **安全** —— 有风险的操作：改密码、清证书、清数据
+- **关于** —— 查版本、看功能清单、管理员工具
+
+### 为什么通知告警要浮到首屏
+
+用户拒绝通知权限之后，App 里**一切照常**：
+能设提醒、详情页照常显示「提前 15 分钟」、列表里也有铃铛图标。
+只有主页这一条红色告警能告诉他「其实一条都不会响」。
+
+这条告警是**唯一**会浮到首屏的东西。其余信息全在子页里。
+
+---
+
+## 导航层级规则
+
+### 一条 Tab 一条栈
+
+每个 Tab 根页自己持有 **一个** `NavigationStack`。
+Tab 内部的子页用 `NavigationLink` push，**不要再包 NavigationStack**。
+
+反例（重构前）：`CalendarsView` 自带 NavigationStack，却又被
+`NavigationLink` push 进去 —— 结果出现**双层导航栏**，
+返回按钮叠两层。重构时已去掉。
+
+### sheet 和 push 怎么选
+
+| 场景 | 用什么 | 理由 |
+|---|---|---|
+| 进一层看详情 | push | 有「返回」，用户知道自己在哪 |
+| 新建 / 编辑表单 | sheet | 是一个独立任务，有明确的完成/取消 |
+| 确认危险操作 | alert / confirmationDialog | 必须打断 |
+| 选一个值 | Menu / Picker | 轻量，不该离开当前页 |
+
+### 哪些页面必须有 NavigationStack
+
+只有**从 sheet 弹出的页面**需要，因为它不在任何栈里。
+
+当前需要 NavigationStack 的：
+- `EditEventSheet`、`NewEventSheet`、`EventDetailSheet`
+- `ReportEventSheet`、`ShareEventSheet`
+- `RegisterView`
+- `CalendarsView` / `TeamListView` 内部的几个子 sheet
+- `CalendarMembersView`、`CalendarTeamSharesView`
+
+---
+
+## 字号：语义化，不硬编码
+
+### 规则
+
+```swift
+// 对
+Text("标题").font(.appBody)
+Text("说明").font(.appFootnote)
+Text("09:30").font(.appTime)      // 自带等宽数字
+
+// 错
+Text("标题").font(.system(size: 15))
+```
+
+语义字号定义在 `Design/Typography.swift`，
+全部跟随系统「文字大小」设置缩放。
+
+### 哪些地方可以例外
+
+只有三类，且每类都有理由：
+
+| 类型 | 例子 | 为什么不跟随 |
+|---|---|---|
+| 网格数字 | `MonthGrid`、`CourseGridView` | 格子大小固定，字放大就溢出格线 |
+| 展示图标 | 空状态 44pt 图标、天气 64pt 温度 | 是装饰，放大反而破坏版式 |
+| 等宽代码 | 服务器地址、同步游标 | `design: .monospaced` 优先于字号 |
+
+### 改字号的工具
+
+`tools/migrate_fonts.py` 和 `migrate_fonts2.py` 是当初批量替换用的。
+**如果以后还要批量改，先读它们的注释** —— 第一版有个 bug：
+`font(.system(size: 15, weight: .medium))` 替换后变成
+`.weight(medium)`，丢了前导点，50 处编译错误。
+
+---
+
+## 配色
+
+数值取自安卓端 `Theme.kt`，两端必须是同一套颜色。
+详见 `Design/Theme.swift`。
+
+语义：
+- `accent`（蓝）—— 可点、可操作
+- `teal600`（青）—— 已完成、已改期
+- `amber600`（琥珀）—— 待办、管理员
+- `red600`（红）—— 错误、逾期、危险操作
+
+**不要为了好看换色。** 颜色在这里是「语义」，不是装饰。
+
+---
+
+## 待办与日程的分界
+
+同一个 `ScheduleInstance`，靠 `isTask` 区分。
+
+| | 日程 | 待办 |
+|---|---|---|
+| 分组依据 | 日期 | 状态（逾期/进行中/已完成） |
+| 时间含义 | 什么时候发生 | 什么时候之前要完成 |
+| 完成动作 | 无 | 勾选（`doneAt`） |
+| 逾期概念 | 无 | 有，红标 + 天数 |
+
+日程列表里**不给非待办项加勾选** ——
+把一节课标记成「做完」没有意义，给了反而误导。
