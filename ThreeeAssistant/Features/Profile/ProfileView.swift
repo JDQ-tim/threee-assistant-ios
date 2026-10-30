@@ -261,7 +261,7 @@ struct ProfileView: View {
                 .frame(width: 56, height: 56)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(store.user?.name.nonEmpty(or: "未命名"))
+                    Text(store.user?.name.nonEmpty(or: "未命名") ?? "未命名")
                         .font(.appTitle)
                         .foregroundStyle(Theme.textPrimary)
 
