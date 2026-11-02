@@ -62,6 +62,10 @@ SETTINGS_GROUP = oid("settingsgroup")
 # 重构时新增的两个功能目录：待办独立成页，「我的」取代原 SettingsView
 TASKS_GROUP = oid("tasksgroup")
 PROFILE_GROUP = oid("profilegroup")
+# Siri / 快捷指令 / 聚焦搜索的入口（App Intents）。
+# 单独一个目录而不是塞进 Core：它要 `import AppIntents`，
+# 和纯数据层放一起会让「哪些文件依赖系统框架」变得不直观。
+INTENTS_GROUP = oid("intentsgroup")
 RESOURCES_GROUP = oid("resourcesgroup")
 CONFIG_GROUP = oid("configgroup")
 
@@ -92,6 +96,7 @@ GROUP_MAP = {
     "Features/Settings": SETTINGS_GROUP,
     "Features/Tasks": TASKS_GROUP,
     "Features/Profile": PROFILE_GROUP,
+    "Intents": INTENTS_GROUP,
     "Resources": RESOURCES_GROUP,
 }
 
@@ -169,8 +174,9 @@ w("\t\t};")
 w("\t\t%s /* ThreeeAssistant */ = {" % ROOT_SRC_GROUP)
 w("\t\t\tisa = PBXGroup;")
 w("\t\t\tchildren = (")
-for g in (APP_GROUP, CORE_GROUP, DESIGN_GROUP, FEATURES_GROUP, RESOURCES_GROUP):
+for g in (APP_GROUP, CORE_GROUP, DESIGN_GROUP, INTENTS_GROUP, FEATURES_GROUP, RESOURCES_GROUP):
     label = {APP_GROUP: "App", CORE_GROUP: "Core", DESIGN_GROUP: "Design",
+             INTENTS_GROUP: "Intents",
              FEATURES_GROUP: "Features", RESOURCES_GROUP: "Resources"}[g]
     w("\t\t\t\t%s /* %s */," % (g, label))
 w("\t\t\t);")
@@ -179,6 +185,7 @@ w("\t\t\tsourceTree = \"<group>\";")
 w("\t\t};")
 
 for g, label in ((APP_GROUP, "App"), (CORE_GROUP, "Core"), (DESIGN_GROUP, "Design"),
+                 (INTENTS_GROUP, "Intents"),
                  (LOGIN_GROUP, "Login"), (SCHEDULE_GROUP, "Schedule"),
                  (TASKS_GROUP, "Tasks"), (SETTINGS_GROUP, "Settings"),
                  (PROFILE_GROUP, "Profile")):
