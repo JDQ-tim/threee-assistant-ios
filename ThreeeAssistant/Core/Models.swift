@@ -210,6 +210,22 @@ struct CalendarDTO: Codable, Identifiable, Hashable {
     /// 这里统一按最严的 owner 判断 —— 给一个改不了名字的日历开放编辑页，
     /// 用户改完点保存才被拒，体验比一开始就不给入口差得多。
     var canManage: Bool { role == "owner" }
+
+    /// 我能不能**往这张日历里写日程**。
+    ///
+    /// 和 `canManage` 是两件事，别合并：owner 当然能写，但 editor 也能写 ——
+    /// 他只是不能改名和删档。服务端 `canWrite` 的口径是 owner/admin/editor。
+    ///
+    /// ## 为什么值得单列一个属性
+    ///
+    /// Siri 的「新建日程」要替用户挑一张日历。挑错了会吃 403，
+    /// 而用户完全不知道发生了什么（他只是对着手表说了一句话）。
+    /// 所以挑之前必须先按这个属性筛。
+    /// `role` 为 nil 时返回 false 是**故意的**：未知角色不给写权限，
+    /// 宁可让用户看到一句「没有可写的日历」，也不要发出一个必然失败的请求。
+    var canWrite: Bool {
+        role == "owner" || role == "admin" || role == "editor"
+    }
 }
 
 /// 日历成员。共享日历上用来展示"都有谁"。
