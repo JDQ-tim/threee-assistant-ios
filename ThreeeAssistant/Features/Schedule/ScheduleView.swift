@@ -304,9 +304,23 @@ struct ScheduleView: View {
         LazyVStack(alignment: .leading, spacing: 18) {
             ForEach(groups) { group in
                 VStack(alignment: .leading, spacing: 8) {
-                    DayHeaderView(day: group.day, relativeDays: store.scope == .week)
+                    DayHeaderView(day: group.day,
+                                  relativeDays: store.scope == .week,
+                                  holidayName: group.holidayName,
+                                  makeupFrom: group.makeupFrom)
                     ForEach(group.items) { item in
                         rowButton(item)
+                    }
+                    // 假日当天被折叠的日程要明说条数。
+                    // 不显示的话用户会以为「这天的课怎么没了」，
+                    // 而放假恰恰是它该消失的正确行为 —— 得让他知道是放假的缘故。
+                    if let name = group.holidayName {
+                        Text(group.hiddenCount > 0
+                             ? "\(name)放假，跳过 \(group.hiddenCount) 条日程"
+                             : "\(name)放假")
+                            .font(.appFootnote)
+                            .foregroundStyle(Theme.textTertiary)
+                            .padding(.vertical, 2)
                     }
                 }
             }
