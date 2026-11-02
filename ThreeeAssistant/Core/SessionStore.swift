@@ -62,21 +62,99 @@ final class SessionStore {
         Dictionary(uniqueKeysWithValues: calendars.map { ($0.id, $0) })
     }
 
-    /// 按天分组，全天排最前，其余按开始时间
+    /// 假日设置的版本号。用户在设置页改了假日表就 +1。
+    ///
+    /// ⚠️ 必须是一个**存储属性**。`HolidayCalendar` 读的是 UserDefaults，
+    ///    `@Observable` 看不到 UserDefaults 变化；只有把这个值搬进类里，
+    ///    `dayGroups` 读它时才建立依赖，改完假日回到日程页才会重算。
+    ///    （写成 `_ = HolidayCalendar.revision` 是无效的 ——
+    ///     那只是普通全局读取，不进入观察机制的记录。）
+    var holidayRevision: Int = HolidayCalendar.revision
+
+    /// 改了假日表之后调用
+    func reloadHolidays() {
+        HolidayCalendar.bumpRevision()
+        holidayRevision = HolidayCalendar.revision
+    }
+
+    /// 按天分组，全天排最前，其余按开始时间。
+    ///
+    /// ## 假日与调休在这里生效
+    ///
+    /// 分组是**唯一**的入口（全工程只有这一处构造 `DayGroup`），
+    /// 所以假日跳过、补课映射都做在这里，视图层不用知道任何细节。
+    ///
+    /// ⚠️ 两者都**只改显示**：
+    ///    - 假日当天的日程不是删除，是折叠进 `hiddenCount` 计数里
+    ///    - 补课日显示的日程不是复制到服务端，是在本地映射过去
+    ///
+    ///    绝不能自动回写服务端。这台设备上的日程混着别人共享的日历和
+    ///    别的客户端导入的 ICS，偷偷把课挪走会让用户在别的设备上
+    ///    看到一件自己没做过的事，而且查不出是哪个客户端干的。
     var dayGroups: [DayGroup] {
+        // 读一下，建立观察依赖
+        _ = holidayRevision
+
         var buckets: [Date: [ScheduleInstance]] = [:]
         for item in instances {
             let day = item.start.startOfDay
             buckets[day, default: []].append(item)
         }
-        return buckets
-            .map { day, items in
-                DayGroup(day: day, items: items.sorted { a, b in
-                    if a.allDay != b.allDay { return a.allDay }
-                    return a.startUTC < b.startUTC
-                })
+
+        var groups: [DayGroup] = []
+
+        for (day, items) in buckets {
+            switch HolidayCalendar.kind(of: day) {
+            case .holiday(let name):
+                // 假日当天：整天的日程都不显示。
+                // 但**待办不算** —— 待办没有「那天上课」的语义，
+                // 一个 10 月 1 日到期的待办不该因为放假就消失。
+                let tasks = items.filter(\.isTask)
+                let rest = items.filter { !$0.isTask }
+                // 一样都没有就整组不发 —— 发一个空组会在列表里留下一行
+                // 光秃秃的日期，看着像同步坏了
+                if tasks.isEmpty && rest.isEmpty { continue }
+                groups.append(DayGroup(day: day, items: sortInstances(tasks),
+                                       holidayName: name, makeupFrom: nil,
+                                       hiddenCount: rest.count))
+
+            case .makeupWork(_, _):
+                // 调休上班日：显示**被补的那一天**的日程。
+                //
+                // 补课日自己原本的日程（比如周六本来有琴课）照常显示，
+                // 因为那确实是那天的事。两者拼在一起才是这一天的全部。
+                var merged = items
+                var src: Date? = nil
+                if let from = HolidayCalendar.sourceDay(for: day) {
+                    // 源日子如果是假日就不搬 ——
+                    // 学校不会把课排在被放假的那天，再补回来
+                    if case .holiday = HolidayCalendar.kind(of: from) {
+                        src = nil
+                    } else if let origin = buckets[from] {
+                        src = from
+                        merged += origin.filter { !$0.isTask }
+                    }
+                }
+                if merged.isEmpty && src == nil { continue }
+                groups.append(DayGroup(day: day, items: sortInstances(merged),
+                                       holidayName: nil, makeupFrom: src,
+                                       hiddenCount: 0))
+
+            case .normal:
+                groups.append(DayGroup(day: day, items: sortInstances(items),
+                                       holidayName: nil, makeupFrom: nil,
+                                       hiddenCount: 0))
             }
-            .sorted { $0.day < $1.day }
+        }
+
+        return groups.sorted { $0.day < $1.day }
+    }
+
+    private func sortInstances(_ items: [ScheduleInstance]) -> [ScheduleInstance] {
+        items.sorted { a, b in
+            if a.allDay != b.allDay { return a.allDay }
+            return a.startUTC < b.startUTC
+        }
     }
 
     var weekEnd: Date { weekStart.addingDays(6) }
