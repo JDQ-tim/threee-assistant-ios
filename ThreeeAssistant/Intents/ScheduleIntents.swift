@@ -319,7 +319,20 @@ struct ThreeeAssistantShortcuts: AppShortcutsProvider {
         AppShortcut(
             intent: CreateEventIntent(),
             phrases: [
-                "用\(.applicationName)记一件事",
+                // ⚠️ 这条短语**必须**带上 \(\.$title)。
+                //
+                //    最初写的是纯文本「用\(.applicationName)记一件事」，
+                //    编译通过、CI 全绿、在快捷指令 App 里也能看到这个动作，
+                //    但 Siri 短语**被系统静默丢弃**了 —— 二进制里搜不到这串字。
+                //
+                //    原因是 `title` 是**必填参数**，而短语里没给它留位置，
+                //    Siri 无法从「记一件事」里推断出要记什么，于是这条
+                //    AppShortcut 注册不成立。编译器不报错、不警告。
+                //
+                //    （2026-11-02 用 grep 二进制的办法发现的：另外三个
+                //      Intent 的短语都能在可执行文件里找到，只有这条没有。）
+                "用\(.applicationName)记\(\.$title)",
+                "\(.applicationName)记\(\.$title)",
             ],
             shortTitle: "新建日程",
             systemImageName: "plus.circle"
