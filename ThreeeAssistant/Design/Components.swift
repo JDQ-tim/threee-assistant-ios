@@ -173,6 +173,12 @@ struct DayHeaderView: View {
     ///    读者根本分不清哪天是哪天 —— 相对词只在"近在手边的几天"里才有意义。
     var relativeDays: Bool = true
 
+    /// 法定假日名（「国庆节」）。有值时显示一个角标。
+    var holidayName: String? = nil
+
+    /// 这一天是在补哪一天的课。有值时显示「补周三」。
+    var makeupFrom: Date? = nil
+
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Text(relativeDays ? day.friendlyDay : day.monthDay)
@@ -193,9 +199,29 @@ struct DayHeaderView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
             }
 
+            // 假日用红色、补课用橙色：两者语义相反（一天不上课 / 一天要上课），
+            // 用同一个颜色会让人看不出这天到底是哪种
+            if let holidayName {
+                cornerTag(holidayName, color: Theme.red600, bg: Theme.red50)
+            }
+            if let makeupFrom {
+                cornerTag("补\(makeupFrom.weekdayName)的课",
+                          color: Theme.amber600, bg: Theme.amber50)
+            }
+
             Spacer()
         }
         .padding(.bottom, 8)
+    }
+
+    private func cornerTag(_ text: String, color: Color, bg: Color) -> some View {
+        Text(text)
+            .font(.caption2.weight(.medium))
+            .foregroundStyle(color)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 1)
+            .background(bg)
+            .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
     }
 }
 
