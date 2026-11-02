@@ -79,7 +79,29 @@ def changed_files() -> list:
             print(f"  !! 跳过删除 {path}（Contents API 删除要单独调 DELETE）")
             continue
         files.append(path)
-    return files
+    return _order(files)
+
+
+# ⚠️ 推送**顺序**是有语义的，不是随便排。
+#
+# Contents API 一个文件一个 commit，所以中间必然存在「部分文件已上传」的
+# 状态。如果 `project.pbxproj` 先上去，而它新引用的 .swift 还没到，
+# 那这个 commit 就是**编译不过**的 —— 而 GitHub 会为每个 commit 跑一次 CI。
+#
+# 2026-11-02 就这么踩了一次：pbxproj 排在前，Intents 两个文件排在后，
+# 中间那个 commit 的 CI 报
+#   error: Build input files cannot be found: '.../IntentSession.swift'
+# 而且**不是一次性失败**：它还会白白占满 macOS runner 的排队队列
+# （当时同一时刻有 5 个 run 在排队，其中一个还被我手动 dispatch 了）。
+#
+# 规则：工程文件最后推。其余文件之间没有依赖，保持原顺序即可。
+_LAST = ("ThreeeAssistant.xcodeproj/project.pbxproj",)
+
+
+def _order(files: list) -> list:
+    head = [f for f in files if f not in _LAST]
+    tail = [f for f in files if f in _LAST]
+    return head + tail
 
 
 def file_sha(path: str):
@@ -167,7 +189,7 @@ def main() -> None:
     if not files:
         print("没有改动，不用推")
         return
-    print(f"要写 {len(files)} 个文件：")
+    print(f"要写 {len(files)} 个文件（pbxproj 会排在最后）：")
     for f in files:
         print("  -", f)
     if dry:
