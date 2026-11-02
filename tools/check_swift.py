@@ -762,6 +762,68 @@ for p in files:
                     "         └ 要么补参数，要么换一个不需要上下文的汇总页"
                     % (rel, line, name, missing))
 
+# ============================================================
+#  检查 C：可选链后面跟的是**非可选**属性的方法调用
+#  ------------------------------------------------------------
+#  CI 报过（连卡四轮）：`store.user?.name.nonEmpty(or:)`
+#  报错是 "value of type 'String' has no member 'nonEmpty'" ——
+#  看起来像扩展不可见，实际完全是另一回事。
+#
+#  APIUser.name 是 `let name: String`（非可选）。
+#  写 `a?.b.c()` 时，只要 b 是非可选的，Swift 的 optional chaining
+#  会把 b 当**集合**拍平：String? 得到 String? = Character，
+#  也就是 [Character]?。于是 .c 是在 Character 上找，当然找不到。
+#
+#  这个假错误把我往「扩展可见性」上带偏了两轮，值得机械拦住。
+#  查法：扫 `x?.y.z(`，如果 y 在某个 struct/class 里声明成
+#  非可选类型，就报错。y 的声明从全仓库的 `let y: T` / `var y: T`
+#  里找（含 `= 默认值` 的情况也算非可选）。
+#
+#  ⚠️ 排除：y 后面直接跟 `!` 或 `?.`（那是在继续链，不是拍平）；
+#          y 是 String 以外的集合也一样会拍平，但集合套集合
+#          极少见，不扩大范围，宁可少报不误报。
+# ============================================================
+_optional_chain_hits = []
+
+# 先收集所有「属性名 -> 是否 Optional」的声明
+_prop_types = {}
+_prop_decl = re.compile(
+    r"^\s+(?:let|var)\s+(\w+)\s*:\s*([^\n=]+?)\s*(?:=\s*[^\n]+)?$",
+    re.M)
+for f in files:
+    src = open(f, encoding="utf8").read()
+    for m in _prop_decl.finditer(src):
+        name, typ = m.group(1), m.group(2).strip()
+        _prop_types.setdefault(name, set()).add(typ)
+
+for f in files:
+    rel = os.path.relpath(f, ROOT)
+    src = open(f, encoding="utf8").read()
+    for lineno, line in enumerate(src.splitlines(), 1):
+        if line.lstrip().startswith("//") or line.lstrip().startswith("///"):
+            continue
+        # a?.b.c(  —— 只取「?. 之后紧跟一个标识符再跟 .方法(」这种两段式
+        for m in re.finditer(r"\?\.(\w+)\.(\w+)\s*\(", line):
+            prop, meth = m.group(1), m.group(2)
+            types = _prop_types.get(prop)
+            if not types:
+                continue
+            # 只要有一处把它声明成非可选的 String，就当拍平处理
+            non_opt_string = any(
+                t.startswith("String") and not t.endswith("?") and
+                not t.endswith("!") for t in types)
+            if not non_opt_string:
+                continue
+            _optional_chain_hits.append(
+                "%s:%d `?.%s.%s(` —— %s 是非可选 String，"
+                "可选链会把它当**集合**拍平成 [Character]?，"
+                "再在 Character 上找 %s 必然失败。\n"
+                "         └ 改成 `(x?.%s ?? \"\").%s(...)` 或用 Optional 的 flatMap"
+                % (rel, lineno, prop, meth, prop, meth, prop, meth))
+
+if _optional_chain_hits:
+    errors.extend(_optional_chain_hits)
+
 print("=" * 60)
 print("Swift 源码粗检（无类型检查）")
 print("文件数: %d" % len(files))
