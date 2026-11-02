@@ -22,6 +22,10 @@ struct NewEventSheet: View {
     @State private var repeatCount = 10
     @State private var repeatUntil = Date().addingDays(90)
 
+    /// 选「双周」但原定日期落在单周时，为落到双周而整体推迟的天数（0 或 7）。
+    /// 只由 `RepeatRuleEditor` 写入，见那里关于「为什么上报偏移而不是改日期」的说明。
+    @State private var repeatDayShift = 0
+
     // 提醒：用「提前多少分钟」的排序集合，0 表示准点
     @State private var reminderOffsets: Set<Int> = [15]
     @State private var remindersOn = true
@@ -37,8 +41,14 @@ struct NewEventSheet: View {
     @State private var failure: String?
 
     /// 首次开始时间。重复规则和提醒都依赖它
+    ///
+    /// ⚠️ 这里的 `repeatDayShift` 是「选了双周、但原来的日子落在单周时，
+    ///    整体往后挪一周」的偏移。必须**所有**用到开始时间的地方都带上它，
+    ///    否则会出现「列表显示周二、实际存在下周二」这种对不上的情况 ——
+    ///    所以这里只提供一个 `startDate`，其它地方一律走它，不再自己拼。
     private var startDate: Date {
-        Date(timeIntervalSince1970: TimeInterval(epochSeconds(date: day, time: time)))
+        let base = Date(timeIntervalSince1970: TimeInterval(epochSeconds(date: day, time: time)))
+        return repeatDayShift == 0 ? base : base.addingDays(repeatDayShift)
     }
 
     /// 全天和待办都是「没有时长」的语义，时长 Stepper 对两者都无意义
@@ -153,7 +163,8 @@ struct NewEventSheet: View {
                             end: $repeatEnd,
                             count: $repeatCount,
                             until: $repeatUntil,
-                            start: startDate
+                            start: startDate,
+                            dayShift: $repeatDayShift
                         )
                     }
 
@@ -300,8 +311,12 @@ struct NewEventSheet: View {
 
         // 全天日程落在当天 00:00 —— 不然会存成一个 14:30 的「全天日程」，
         // 别的客户端按整天显示时看不出来，但排序和「是否已过」的判断都会错。
+        //
+        // ⚠️ 这里也要加 `repeatDayShift`：全天日程同样可能设成双周，
+        //    漏掉它就会出现「双周全天的第一次落在单周」。
+        let dayBase = repeatDayShift == 0 ? day : day.addingDays(repeatDayShift)
         let start: Date = allDay
-            ? Calendar.current.startOfDay(for: day)
+            ? Calendar.current.startOfDay(for: dayBase)
             : startDate
 
         let rrule = RepeatRule.build(
