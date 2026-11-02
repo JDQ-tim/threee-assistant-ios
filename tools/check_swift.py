@@ -369,12 +369,52 @@ for rel, src in ALL_SRC.items():
 #     occurrencePatch.strong = nil
 #     Task { ... patch: occurrencePatch ... }
 # 编译器拒绝。改法是造个新值再赋给 let。
+#
+# ⚠️ 只在**函数体内部**的局部 var 上才成立。
+#    类型/结构体的存储属性（`@State private var doc: ...`）被 Task 捕获
+#    是**合法**的 —— 闭包捕获的是 self，属性在 MainActor 上访问。
+#    最初这版没有这条限制，于是把
+#        WeatherView 的 `@State private var doc`（第 23 行）
+#        和它下面 20 行处的 `.task { if doc == nil ... }` 判成了错误。
+#    这不是"可疑"，这是**误报** —— 而误报比漏报更坏，
+#    它会让人去改一段根本没错的代码（这个教训在 check_intents 上刚吃过一次）。
+#
+#     判据：往下扫到第一个 `func` / 下一个 `var` 之前，
+#     若中途遇到**缩进回退到 4 空格及以内**的行，说明已经离开声明体，
+#     此时才认为命中的 `var` 是局部变量。
+def _is_local_var(lines: list, idx: int) -> bool:
+    """`var x` 是不是函数体内的局部变量（而不是类型属性）。"""
+    decl = lines[idx]
+    decl_indent = len(decl) - len(decl.lstrip())
+    for k in range(idx + 1, len(lines)):
+        raw = lines[k]
+        if not raw.strip():
+            continue
+        ind = len(raw) - len(raw.lstrip())
+        # 缩进回退到声明行本身或更浅 → 声明体结束
+        if ind <= decl_indent:
+            stripped = raw.strip()
+            if re.match(r"^\}", stripped):
+                return True
+            if re.match(r"^(?:private\s+|public\s+)?(?:var|let|func|init|struct|enum|class)\b",
+                        stripped) or re.match(r"^@", stripped):
+                return True
+    return False
+
+
 for rel, src in ALL_SRC.items():
     clean = strip_noise(src)
     lines = clean.split("\n")
     for i, line in enumerate(lines):
         dm = re.match(r"\s*var\s+(\w+)\s*[:=]", line)
         if not dm:
+            continue
+        # `var body: some View` 永远不是局部变量（body 是 View 协议的要求），
+        # 而它下面几十行里必然有 `.task { }` —— 旧版因此把每个 View 都判错。
+        # 这是**兜底**，即使 `_is_local_var` 判错也不能报它。
+        if dm.group(1) == "body":
+            continue
+        if not _is_local_var(lines, i):
             continue
         name = dm.group(1)
         # 往后 40 行内找 Task {，再在 Task 体内找这个名字
