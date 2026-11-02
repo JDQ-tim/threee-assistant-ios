@@ -46,6 +46,24 @@ struct ProfileView: View {
 
     private var isAdmin: Bool { store.user?.isAdmin ?? false }
 
+    /// 设置页这一行右边的小字。
+    ///
+    /// 未设置时给的是「未设置」而不是 nil —— 这是**要用户去做的事**，
+    /// 不像「N 个团队」那样为空时可以什么都不显示。
+    private var termWeeksDetail: String {
+        switch WeekNumbering.label(for: .now) {
+        case .unset:
+            return "未设置"
+        case .beforeStart(let n):
+            return n == 1 ? "下周开学" : "\(n) 周后开学"
+        case .normal(let week, let total, let parity):
+            return total.map { "第 \(week)/\($0) 周 · \(parity.label)" }
+                ?? "第 \(week) 周 · \(parity.label)"
+        case .afterEnd(let week, _):
+            return "第 \(week) 周"
+        }
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -73,6 +91,19 @@ struct ProfileView: View {
                     }
                 } header: {
                     Text("常用")
+                }
+
+                Section {
+                    NavigationLink {
+                        TermWeeksView()
+                    } label: {
+                        row(icon: "calendar.badge.clock", tint: .indigo, title: "教学周",
+                            detail: termWeeksDetail)
+                    }
+                } header: {
+                    Text("学期")
+                } footer: {
+                    Text("告诉 App「第 1 周从哪天开始」，它才能在日程页顶部显示「第 8 周 · 单周」，并让单双周日程落在正确的周次上。只在这台设备生效。")
                 }
 
                 Section {
