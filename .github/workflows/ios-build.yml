@@ -111,6 +111,41 @@ jobs:
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
+        with:
+          # 拉开全量历史，并用「自己重新算一遍」的方式核对 docs 下的文件名。
+          # 起因：远端曾经存过 `docs/"\347\225\214..."` 这种被转义两遍的名字，
+          # 中文变成了字面量反斜杠，本地 git 在 Windows 上直接签不出仓库。
+          # 只比工作区文件名抓不到它（工作区是对的），必须看历史对象。
+          fetch-depth: 0
+
+      - name: 文件名与历史一致性（docs 转义、目录被文件占用）
+        continue-on-error: true
+        run: |
+          echo "===== 1. 当前树里有没有被转义过的路径 ====="
+          # 路径里出现反斜杠数字（如 \347\225\214）就是转义没解开的痕迹。
+          BAD=$(git ls-tree -r -z --name-only HEAD | tr '\0' '\n' | grep -c '\\[0-7][0-7][0-7]' || true)
+          if [ "$BAD" -gt 0 ]; then
+            echo "::error::有 $BAD 个路径含未解开的转义序列"
+            git ls-tree -r -z --name-only HEAD | tr '\0' '\n' | grep '\\[0-7][0-7][0-7]' | head -20
+          else
+            echo "OK：没有转义路径"
+          fi
+
+          echo ""
+          echo "===== 2. 历史里有没有过普通文件占了目录名 ====="
+          # 曾经有个提交把 docs 写成了**文件**而不是目录。
+          # 这种历史会让后续所有 checkout 在这里反复报错，且 git 不会提示原因。
+          git rev-list --all | while read -r c; do
+            t=$(git ls-tree "$c" docs 2>/dev/null | awk '{print $2}')
+            if [ "$t" = "blob" ]; then
+              echo "::warning::提交 $c 里 docs 是普通文件而不是目录"
+            fi
+          done | sort -u | head -10
+          echo "（这一项只警告，不影响编译：历史已经过去了，改不回来）"
+
+          echo ""
+          echo "===== 3. 本地有没有未提交的改动导致 CI 和本地不一致 ====="
+          git status --porcelain | head -5 || true
 
       - name: 显示工具链版本
         run: |
