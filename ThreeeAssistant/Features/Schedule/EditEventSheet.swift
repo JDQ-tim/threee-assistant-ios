@@ -50,6 +50,10 @@ struct EditEventSheet: View {
     @State private var repeatCount = 10
     @State private var repeatUntil = Date().addingDays(90)
 
+    /// 见 NewEventSheet 里同名属性的说明。这里额外依赖一个事实：
+    /// 编辑已有日程时它**初始为 0** —— 打开页面不该自动挪动用户已经存好的日期。
+    @State private var repeatDayShift = 0
+
     // 提醒
     @State private var remindersOn = true
     @State private var reminderOffsets: Set<Int> = []
@@ -372,7 +376,8 @@ struct EditEventSheet: View {
                             end: $repeatEnd,
                             count: $repeatCount,
                             until: $repeatUntil,
-                            start: epochDate
+                            start: epochDate,
+                            dayShift: $repeatDayShift
                         )
                         .onChange(of: repeatKind) { _, _ in markRepeatTouched() }
                         .onChange(of: repeatInterval) { _, _ in markRepeatTouched() }
@@ -503,8 +508,14 @@ struct EditEventSheet: View {
     }
 
     /// 表单当前拼出来的开始时间点
+    ///
+    /// ⚠️ 并进了 `repeatDayShift`（选双周时整体推迟的天数）。
+    ///    编辑页里这个值被三处用到：RRULE 的 DTSTART、提交时的 dtstart_utc、
+    ///    以及「只改这一次」时的 occurrenceKey 计算。三处必须一致 ——
+    ///    任何一处漏掉偏移，都会出现「规则从这周开始、实际日程从下周开始」。
     private var epochDate: Date {
-        Date(timeIntervalSince1970: TimeInterval(epochSeconds(date: day, time: time)))
+        let base = Date(timeIntervalSince1970: TimeInterval(epochSeconds(date: day, time: time)))
+        return repeatDayShift == 0 ? base : base.addingDays(repeatDayShift)
     }
 
     private static func reminderLabel(_ minutes: Int) -> String {
@@ -551,8 +562,13 @@ struct EditEventSheet: View {
         // ⚠️ 全天日程不比时刻。全天是「这一天」，具体几点几分没有意义，
         //    而 DatePicker 在 time 未被使用时也不会变 ——
         //    但用户如果先改了时间再打开全天，那个残留时刻会被当成改动提交。
+        //
+        // ⚠️ 两条分支都加了 `repeatDayShift`：选「双周」时若原日期落在单周，
+        //    真正落库的开始日要往后挪一周。不带这个偏移的话，用户改了
+        //    「改为双周」，规则变了、start 没变 —— 结果系列从单周开始，
+        //    而界面上的说明写着「双周从 xx 开始」。两边自相矛盾。
         if !allDay {
-            let newEpoch = epochSeconds(date: day, time: time)
+            let newEpoch = epochSeconds(date: day.addingDays(repeatDayShift), time: time)
             if newEpoch != instance.startUTC {
                 p.dtstartUTC = newEpoch
                 p.tzid = TimeZone.current.identifier
@@ -560,7 +576,9 @@ struct EditEventSheet: View {
         } else if !instance.allDay {
             // 从有时间改成全天：开始时刻按「当天 00:00」落库，
             // 不然会留一个半截时刻（比如 14:30 的全天日程，看着就怪）
-            let midnight = epochSeconds(date: day, time: Calendar.current.startOfDay(for: day))
+            let dayBase = day.addingDays(repeatDayShift)
+            let midnight = epochSeconds(date: dayBase,
+                                        time: Calendar.current.startOfDay(for: dayBase))
             if midnight != instance.startUTC {
                 p.dtstartUTC = midnight
                 p.tzid = TimeZone.current.identifier
