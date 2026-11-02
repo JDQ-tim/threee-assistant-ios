@@ -64,6 +64,18 @@ struct ProfileView: View {
         }
     }
 
+    /// 节假日那一行的小字。
+    ///
+    /// 今年没数据就要**说出来**。不说的话用户 2028 年会以为假日功能正常，
+    /// 而实际上一条都不会跳过 —— 静默失效是最糟的失败方式。
+    private var holidayDetail: String {
+        let year = Calendar.current.component(.year, from: .now)
+        if HolidayCalendar.coveredYears.contains(year) {
+            return "\(year) 年已有"
+        }
+        return "\(year) 年待补"
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -100,10 +112,17 @@ struct ProfileView: View {
                         row(icon: "calendar.badge.clock", tint: .indigo, title: "教学周",
                             detail: termWeeksDetail)
                     }
+
+                    NavigationLink {
+                        HolidaysView()
+                    } label: {
+                        row(icon: "beach.umbrella", tint: .pink, title: "节假日与调休",
+                            detail: holidayDetail)
+                    }
                 } header: {
                     Text("学期")
                 } footer: {
-                    Text("告诉 App「第 1 周从哪天开始」，它才能在日程页顶部显示「第 8 周 · 单周」，并让单双周日程落在正确的周次上。只在这台设备生效。")
+                    Text("告诉 App「第 1 周从哪天开始」，它才能在日程页顶部显示「第 8 周 · 单周」，并让单双周日程落在正确的周次上。节假日当天的日程会自动隐藏。都只在这台设备生效。")
                 }
 
                 Section {
