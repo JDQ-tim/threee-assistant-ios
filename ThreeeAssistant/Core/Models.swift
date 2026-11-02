@@ -1958,6 +1958,20 @@ enum CourseDefaults {
 struct DayGroup: Identifiable {
     let day: Date
     let items: [ScheduleInstance]
+
+    /// 这一天是法定节假日。值就是假日名（「国庆节」）。
+    ///
+    /// 有这个字段的组会显示成「国庆节 · 因放假跳过 3 条」，
+    /// 而不是一个莫名其妙的空列表 —— 空列表会被当成"同步坏了"。
+    var holidayName: String? = nil
+
+    /// 这一天是调休补课日，显示的是**这一天的**日程。
+    /// 值是被补的那一天（例如 10月10日 补 10月7日 那一周周三的课）。
+    var makeupFrom: Date? = nil
+
+    /// 因放假被折叠掉的日程条数
+    var hiddenCount: Int = 0
+
     var id: Date { day }
 }
 
