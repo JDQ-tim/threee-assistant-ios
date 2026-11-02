@@ -319,20 +319,37 @@ struct ThreeeAssistantShortcuts: AppShortcutsProvider {
         AppShortcut(
             intent: CreateEventIntent(),
             phrases: [
-                // ⚠️ 这条短语**必须**带上 \(\.$title)。
+                // 这条短语**故意不带** \(\.$title) 槽位。
                 //
-                //    最初写的是纯文本「用\(.applicationName)记一件事」，
-                //    编译通过、CI 全绿、在快捷指令 App 里也能看到这个动作，
-                //    但 Siri 短语**被系统静默丢弃**了 —— 二进制里搜不到这串字。
+                // ## 一段走过的弯路（2026-11-02，留作反面教材）
                 //
-                //    原因是 `title` 是**必填参数**，而短语里没给它留位置，
-                //    Siri 无法从「记一件事」里推断出要记什么，于是这条
-                //    AppShortcut 注册不成立。编译器不报错、不警告。
+                // 我一度以为这条短语「被系统静默丢弃」了，理由是可执行文件里
+                // grep 不到「记一件事」这串字，而另外三条都能 grep 到。
+                // 于是把短语改成了「用\(.applicationName)记\(\.$title)」，
+                // 还在提交说明里写了一大段「必填参数必须给槽位」的解释。
                 //
-                //    （2026-11-02 用 grep 二进制的办法发现的：另外三个
-                //      Intent 的短语都能在可执行文件里找到，只有这条没有。）
-                "用\(.applicationName)记\(\.$title)",
-                "\(.applicationName)记\(\.$title)",
+                // **这个结论是错的。** App Intents 的短语注册结果不在可执行
+                // 文件里，而在 .app 包内的 `Metadata.appintents/root.ssu.yaml`。
+                // 那份文件里有：
+                //
+                //     - metadata:
+                //         name: CreateEventIntent_3
+                //       corpuses:
+                //         training:
+                //         - locale: zh_CN
+                //           utterances:
+                //           - 用${+applicationName}记一件事
+                //
+                // 也就是说纯文本短语一直是对的。可执行文件里搜不到，
+                // 只是因为短语是编译进元数据资源的，不是编进 Mach-O 的。
+                //
+                // ## 为什么改回纯文本
+                //
+                // 带槽位要求用户一口气说出「记 明天下午答辩」，Siri 才肯认；
+                // 纯文本则允许先说「记一件事」，把「要记什么」留到
+                // `requestValueDialog` 再问。后者在手持设备上更自然。
+                "用\(.applicationName)记一件事",
+                "\(.applicationName)记一件事",
             ],
             shortTitle: "新建日程",
             systemImageName: "plus.circle"
