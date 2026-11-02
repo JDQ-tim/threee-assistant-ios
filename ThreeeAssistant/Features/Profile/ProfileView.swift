@@ -261,7 +261,11 @@ struct ProfileView: View {
                 .frame(width: 56, height: 56)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(store.user?.name.nonEmpty(or: "未命名") ?? "未命名")
+                    // 这里**故意**不用 nonEmpty(or:)：它定义在 Components.swift 的
+                    // Optional 扩展上，CI 在 Xcode 15.4 上硬是解析不到它
+                    // （同文件里 item.title.nonEmpty 却能过）。与其赌扩展可见性，
+                    // 不如就地展开 —— 语义完全一样，只依赖标准库。
+                    Text(store.user?.name.flatMap { $0.isEmpty ? nil : $0 } ?? "未命名")
                         .font(.appTitle)
                         .foregroundStyle(Theme.textPrimary)
 
