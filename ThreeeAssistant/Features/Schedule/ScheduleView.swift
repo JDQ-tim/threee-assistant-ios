@@ -129,6 +129,7 @@ struct ScheduleView: View {
                         .font(.footnote.weight(.medium))
                         .monospacedDigit()
                         .foregroundStyle(Theme.textSecondary)
+                    weekBadge
                     if store.isLoading {
                         ProgressView().controlSize(.mini)
                     }
@@ -170,6 +171,79 @@ struct ScheduleView: View {
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 8)
+    }
+
+    // MARK: - 第几周（顶部常驻）
+
+    /// 顶部那行「第 8/18 周 · 单周」。
+    ///
+    /// ## 显示的是「正在看的那一周」，不是「今天」
+    ///
+    /// 两条都想过，最后选「正在看的那一周」：
+    /// 用户翻到第 3 周时，顶部若还钉着「今天是第 8 周」，
+    /// 上面写 8、下面列的全是 3 周的事，两边互相打架。
+    /// 而「今天第几周」在**点今天**之后自然就对上了。
+    ///
+    /// 代价是：翻远了看不出来自己在哪。所以 `anchorDate` 取的是
+    /// 当前视图的**起点**（周视图取周一，月视图取 1 号），
+    /// 它本身跟着翻页变，语义是「这一屏从第几周开始」。
+    private var anchorDate: Date {
+        store.scope == .week ? store.weekStart : store.monthAnchor
+    }
+
+    @ViewBuilder
+    private var weekBadge: some View {
+        let label = WeekNumbering.label(for: anchorDate)
+
+        if label.needsSetup {
+            // 未设置时不做成一个"死"的灰字 —— 那看起来像坏了。
+            // 做成一个明确的动作入口，点了直奔设置页。
+            NavigationLink {
+                TermWeeksView()
+            } label: {
+                HStack(spacing: 3) {
+                    Image(systemName: "calendar.badge.clock")
+                        .font(.system(size: 9, weight: .semibold))
+                    Text(label.text)
+                        .font(.caption2.weight(.medium))
+                }
+                .foregroundStyle(Theme.blue600)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 2)
+                .background(Theme.blue50)
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+        } else {
+            HStack(spacing: 3) {
+                Text(label.text)
+                    .font(.caption2.weight(.medium))
+                    .monospacedDigit()
+                // 单双周用颜色再标一次：只靠「单/双」两个字，
+                // 扫一眼列表时几乎注意不到，而它决定了这周的课到底上不上
+                if case .normal(_, _, let parity) = label {
+                    Text(parity.short)
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1)
+                        .background(parity == .odd ? Theme.blue600 : Theme.teal600)
+                        .clipShape(Capsule())
+                }
+            }
+            .foregroundStyle(isThisWeek ? Theme.textSecondary : Theme.textTertiary)
+        }
+    }
+
+    /// 当前看的是不是包含今天的那一屏。用来把非本周的周次压暗一点 ——
+    /// 翻到别的周时，一眼能看出「这不是现在」。
+    private var isThisWeek: Bool {
+        switch store.scope {
+        case .week:
+            return store.weekStart.isSameDay(as: Date.now.startOfWeekMonday)
+        case .month:
+            return Calendar.current.isDate(store.monthAnchor, equalTo: .now, toGranularity: .month)
+        }
     }
 
     private var rangeLabel: String {
