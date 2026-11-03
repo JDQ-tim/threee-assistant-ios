@@ -115,16 +115,21 @@ final class SystemCalendar {
 
     /// 当前授权状态。
     ///
-    /// ⚠️ 写成 `nonisolated static` 而不是实例计算属性：
-    ///    `EKEventStore.authorizationStatus` 是纯查询，不需要主线程，
-    ///    但它会被 `ProfileView` 的副标题在一堆 `@MainActor` 上下文里调。
-    ///    放在实例上会逼着所有调用点都先 await 到主线程，白白多一层。
+    /// ⚠️ 必须是 `nonisolated static func`，**不能是 `static var`**：
+    ///    `nonisolated` 只能标在方法或存储属性上，
+    ///    标在计算属性上编译器会报 `'nonisolated' can not be applied to
+    ///    stored properties`（它把 var 当存储属性读），连带三条语法错误。
+    ///    这是 2026-11-03 CI 抓出来的，本地粗检看不出来。
+    ///
+    /// ⚠️ 写成函数而不是实例属性还有一个原因：它会被 `ProfileView`
+    ///    的副标题在一堆 `@MainActor` 上下文里同步调用。
+    ///    放在实例上会逼所有调用点先 await 到主线程，白白多一层。
     ///
     /// ⚠️ 没有 `.authorized` 分支：iOS 17 起它和 `.fullAccess` 的
-    ///    rawValue 相同，两个 case 都写会得到 "duplicate case" 警告。
+    ///    rawValue 相同，两个 case 都写会得到 duplicate case 警告。
     ///    老系统上 `.authorized` 的值会自动落进 `.fullAccess` —— 这是
     ///    Apple 保证的向前兼容，不是我们靠猜。
-    nonisolated static var access() -> SystemCalendarAccess {
+    nonisolated static func access() -> SystemCalendarAccess {
         switch EKEventStore.authorizationStatus(for: .event) {
         case .notDetermined:
             return .notDetermined

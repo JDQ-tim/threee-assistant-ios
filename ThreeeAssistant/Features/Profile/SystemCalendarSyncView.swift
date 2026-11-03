@@ -28,7 +28,7 @@ struct SystemCalendarSyncView: View {
     @Environment(SessionStore.self) private var store
     @Environment(\.dismiss) private var dismiss
 
-    @State private var access: SystemCalendarAccess = .notDetermined
+    @State private var accessState: SystemCalendarAccess = .notDetermined
     @State private var calendars: [SystemCalendarInfo] = []
 
     // 导入
@@ -56,13 +56,13 @@ struct SystemCalendarSyncView: View {
         List {
             accessSection
 
-            if access.canRead {
+            if accessState.canRead {
                 importSection
             }
-            if access.canWrite {
+            if accessState.canWrite {
                 exportSection
             }
-            if access.canRead || access.canWrite {
+            if accessState.canRead || accessState.canWrite {
                 historySection
             }
         }
@@ -78,7 +78,7 @@ struct SystemCalendarSyncView: View {
 
     @ViewBuilder
     private var accessSection: some View {
-        switch access {
+        switch accessState {
         case .notDetermined:
             Section {
                 Button {
@@ -221,7 +221,7 @@ struct SystemCalendarSyncView: View {
     }
 
     private func recomputePreview() {
-        guard access.canRead, !pickedSystemIDs.isEmpty else {
+        guard accessState.canRead, !pickedSystemIDs.isEmpty else {
             importPreview = nil
             return
         }
@@ -367,7 +367,7 @@ struct SystemCalendarSyncView: View {
     // MARK: - 动作
 
     private func reload() async {
-        access = SystemCalendar.access()
+        accessState = SystemCalendar.access()
         calendars = sys.listCalendars()
         importedCount = ImportedEventMap.shared.count
         exportedCount = ExportedEventMap.shared.count
@@ -380,7 +380,7 @@ struct SystemCalendarSyncView: View {
     }
 
     private func askAccess() async {
-        access = await sys.requestAccess()
+        accessState = await sys.requestAccess()
         await reload()
     }
 
