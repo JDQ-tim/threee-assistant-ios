@@ -139,8 +139,14 @@ def main() -> None:
     base_sha = head["sha"]
     print("远端起点:", base_sha[:10], "tree", head["commit"]["tree"]["sha"][:10])
 
+    # 缺省分界用**远端的 tree** 反查：远端 sha 本地不存在（API 推送重建过提交对象），
+    # 不能拿它当 `rev-list` 的起点，否则会算出 0 个待推提交然后"成功"退出 —— 静默假成功。
     if local_base is None:
-        local_base = base_sha
+        raise SystemExit(
+            "第一次用必须显式传第二个参数（本地分界提交）。\n"
+            "原因：API 推送会用 POST /git/trees 重建整棵树，连没改动的子目录\n"
+            "都会拿到新的 tree sha，所以「按 tree sha 反查本地提交」永远查不到。"
+        )
     if subprocess.call(["git", "cat-file", "-e", local_base + "^{commit}"],
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) != 0:
         raise SystemExit(
