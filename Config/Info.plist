@@ -55,5 +55,13 @@
 	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>需要访问局域网内你自建的日程服务器，用于同步日程数据。</string>
+	<!-- 系统日历（EventKit）。
+	     iOS 17 起日历权限拆成两档，这里申请的是「完全访问」：
+	     只写权限只能导出，而导入是用户明确要求的方向，所以必须读写都要。
+	     文案要写清楚「为什么」—— Apple 审核会看，用户也会看。 -->
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>读取你设备上的日历事件，导入成 3e 的日程；也把 3e 的日程写回一张单独的「3e学习助手」日历，让锁屏、灵动岛和 Apple Watch 能看到。只会读写你选中的那些日历，不会修改其他日历的内容。</string>
+	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
+	<string>把 3e 的日程写进系统日历，让锁屏、灵动岛和 Apple Watch 能看到。</string>
 </dict>
 </plist>

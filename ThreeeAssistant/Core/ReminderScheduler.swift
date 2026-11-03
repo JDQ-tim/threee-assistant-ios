@@ -150,6 +150,46 @@ final class ReminderScheduler {
         }
     }
 
+    // MARK: - 诊断（只读，给设置页显示）
+
+    /// 系统里此刻真实待发多少条（只数我们这个前缀的）。
+    ///
+    /// `armedCount` 是"我们打算排多少"，这个是从系统数回来的。
+    /// 两者不一致说明有通知没排进去 —— 这正是不报错的那种失败，
+    /// 不讲出来用户只会觉得"提醒时灵时不灵"。
+    func pendingCountNow() async -> Int {
+        let pending = await UNUserNotificationCenter.current().pendingNotificationRequests()
+        return pending.filter { $0.identifier.hasPrefix(Self.identifierPrefix) }.count
+    }
+
+    /// 未来窗口内的日程统计，用来区分"没配提醒"和"还没建日程"。
+    ///
+    /// - instances: 未来 30 天里的实例条数（去重后按 eventID 算的是原始条数）
+    /// - expired: 起始时间已经过去、因此提醒时刻也一起过去的条数
+    ///
+    /// 拉不到服务端时返回全 0，**不把网络错误当成"你没有日程"** ——
+    /// 调用方据此生成的文案是"还没有任何日程"，那会是句假话。
+    func windowStats() async -> (instances: Int, expired: Int) {
+        let now = Date.now
+        let from = Int64(now.timeIntervalSince1970)
+        let to = from + Int64(Self.horizonDays) * 86_400
+        do {
+            let res: InstancesResponse = try await APIClient.shared.get(
+                "/api/instances",
+                query: [
+                    URLQueryItem(name: "from", value: String(from)),
+                    URLQueryItem(name: "to", value: String(to)),
+                ]
+            )
+            let expired = res.instances.filter {
+                $0.startUTC <= from && !($0.isTask && $0.doneAt != nil)
+            }.count
+            return (res.instances.count, expired)
+        } catch {
+            return (0, 0)
+        }
+    }
+
     /// 退出登录 / 清空数据时调。
     func cancelAll() async {
         let center = UNUserNotificationCenter.current()

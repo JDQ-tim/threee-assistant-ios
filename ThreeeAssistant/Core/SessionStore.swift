@@ -946,6 +946,40 @@ final class SessionStore {
         notes: String = "",
         location: String = ""
     ) async throws {
+        _ = try await createEventReturningID(
+            calendarID: calendarID,
+            title: title,
+            start: start,
+            durationMinutes: durationMinutes,
+            rrule: rrule,
+            reminders: reminders,
+            isTask: isTask,
+            allDay: allDay,
+            strong: strong,
+            notes: notes,
+            location: location
+        )
+    }
+
+    /// 同 `createEvent`，但把新日程的 id 交回去。
+    ///
+    /// 系统日历导入要用它记「这条系统事件已经导成 3e 的哪一条」。
+    /// 不返回 id 的话，导入只能靠"标题+时间"反查，
+    /// 而同名同时间的两个班会让这个反查指向错误的那条。
+    @discardableResult
+    func createEventReturningID(
+        calendarID: String,
+        title: String,
+        start: Date,
+        durationMinutes: Int,
+        rrule: String? = nil,
+        reminders: [ReminderDTO] = [],
+        isTask: Bool = false,
+        allDay: Bool = false,
+        strong: Bool = false,
+        notes: String = "",
+        location: String = ""
+    ) async throws -> String? {
         // 全天日程的时长由「天」决定，调用方传的分钟数不可信 ——
         // 用户在新建页把「全天」打开时，时长 Stepper 是被禁用的，
         // 那里面残留的 30 分钟会把日程存成「全天但只有半小时」。
@@ -990,6 +1024,7 @@ final class SessionStore {
 
         await refresh()
         await ReminderScheduler.shared.resync(force: true)
+        return created.id
     }
 
     /// 勾上 / 取消一个待办。
@@ -2010,6 +2045,23 @@ final class SessionStore {
         let data = try JSONEncoder().encode(body)
         let _: CalendarEnvelope = try await APIClient.shared.post("/api/calendars", body: data)
         await refresh()
+    }
+
+    /// 同上，但把新日历的 id 交回去。
+    ///
+    /// 系统日历导入需要它：建完日历要立刻往里灌几百条日程，
+    /// 用 `createCalendar` 再回头按名字找，会在"用户已有同名日历"
+    /// 时灌错地方 —— 而且那个错误是静默的，只是数据多一点。
+    @discardableResult
+    func createCalendarReturningID(name: String, color: String, kind: String) async throws -> String? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw APIError.server(400, "日历名称不能为空") }
+
+        let body = CalendarBody(name: trimmed, color: color, kind: kind)
+        let data = try JSONEncoder().encode(body)
+        let res: CalendarEnvelope = try await APIClient.shared.post("/api/calendars", body: data)
+        await refresh()
+        return res.calendar?.id
     }
 
     /// 改名 / 改颜色。

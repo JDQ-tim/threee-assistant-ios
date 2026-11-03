@@ -76,6 +76,20 @@ struct ProfileView: View {
         return "\(year) 年待补"
     }
 
+    /// 系统日历那一行的副标题。
+    ///
+    /// 只报"有没有通"，不报条数 —— 条数要读 UserDefaults，
+    /// 而这一行在每次进设置页时都会重算，为了一个数字去反序列化
+    /// 两张字典不值得。真正关心条数的人点进去就能看到。
+    private var systemCalendarDetail: String {
+        switch SystemCalendar.access() {
+        case .notDetermined: return "未授权"
+        case .canWriteOnly: return "仅可导出"
+        case .full: return "已连通"
+        case .denied: return "已关闭"
+        }
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -100,6 +114,16 @@ struct ProfileView: View {
                     } label: {
                         row(icon: "calendar", tint: .blue, title: "我的日历",
                             detail: "\(store.calendars.count) 张")
+                    }
+
+                    // 系统日历是"我的日历"的自然延伸：前者是 3e 自己的日历，
+                    // 后者是把 iOS 日历搬进搬出。放在一起，用户不用猜。
+                    NavigationLink {
+                        SystemCalendarSyncView()
+                    } label: {
+                        row(icon: "arrow.triangle.2.circlepath.icloud", tint: .teal,
+                            title: "系统日历",
+                            detail: systemCalendarDetail)
                     }
                 } header: {
                     Text("常用")

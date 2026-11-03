@@ -25,6 +25,13 @@ struct NotificationSettingsView: View {
     @State private var status: UNAuthorizationStatus = .notDetermined
     @State private var armedCount = 0
     @State private var ruleCount = 0
+    /// 系统里**真实**待发的条数。`armedCount` 是"我们认为应该排多少"，
+    /// 这个是从 `UNUserNotificationCenter` 实际数回来的。两者不一致就说明
+    /// 有通知没排进去（超出上限 / add 失败），不讲出来用户永远不知道。
+    @State private var pendingCount = 0
+    /// 未来窗口内一共拉到多少条日程，以及其中有多少条是"该有提醒但没排上"的。
+    @State private var instanceCount = 0
+    @State private var expiredCount = 0
     @State private var loading = false
 
     var body: some View {
@@ -35,12 +42,41 @@ struct NotificationSettingsView: View {
                 Text(statusFooter)
             }
 
+            // 这一段以前是 `if ruleCount > 0` —— 零条时整段消失。
+            // 结果是：用户看到「系统权限：已开启」+「重新排一遍」两行，
+            // 找不到任何一句解释"为什么到点不响"。
+            // 而真实原因恰恰就是这一段该说的话：你的日程一条都没配提醒。
+            // 沉默不是中立，沉默会被读成"功能坏了"。
             if ruleCount > 0 {
                 Section {
                     LabeledContent("配了提醒的日程", value: "\(ruleCount) 条")
                     LabeledContent("已排进系统", value: "\(armedCount) 条")
+                    if pendingCount != armedCount {
+                        LabeledContent("系统里实际待发", value: "\(pendingCount) 条")
+                            .foregroundStyle(Theme.amber600)
+                    }
                 } footer: {
                     Text("iOS 单个 App 的待发通知上限是 64 条，这里按 \(ReminderScheduler.maxPending) 条自截。只排未来 \(ReminderScheduler.horizonDays) 天 —— 明年的日程现在排不进去，等它进入 30 天窗口时会自动补上。")
+                }
+
+                if expiredCount > 0 {
+                    Section {
+                        Text("有 \(expiredCount) 条日程已经过了开始时间，它们的提醒时刻也一起过去了，所以不会响 —— 这是正常的。")
+                            .font(.appFootnote)
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                }
+            } else {
+                Section {
+                    Label(
+                        instanceCount > 0
+                            ? "未来 \(ReminderScheduler.horizonDays) 天有 \(instanceCount) 条日程，但一条提醒都没配"
+                            : "还没有任何日程",
+                        systemImage: "bell.slash"
+                    )
+                    .foregroundStyle(Theme.amber600)
+                } footer: {
+                    Text(emptyRuleHint)
                 }
             }
 
@@ -111,11 +147,22 @@ struct NotificationSettingsView: View {
         }
     }
 
+    private var emptyRuleHint: String {
+        if instanceCount > 0 {
+            return "通知不是按「有日程」发的，是按「这条日程设了提醒」发的。新建日程时把「到点提醒我」打开（默认就是开着的，提前 15 分钟），或者在已有日程的详情里补一个提醒 —— 加完之后回到这一页点「重新排一遍」。"
+        }
+        return "先去「日程」里建一条，建的时候「到点提醒我」默认是开着的。完成后回到这一页点「重新排一遍」。"
+    }
+
     private func load() async {
         await ReminderScheduler.shared.refreshAuthorization()
         status = ReminderScheduler.shared.authorization
         armedCount = ReminderScheduler.shared.armedCount
         ruleCount = ReminderRuleCache.shared.count
+        pendingCount = await ReminderScheduler.shared.pendingCountNow()
+        let stats = await ReminderScheduler.shared.windowStats()
+        instanceCount = stats.instances
+        expiredCount = stats.expired
     }
 
     private func enable() async {
