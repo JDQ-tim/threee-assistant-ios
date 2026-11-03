@@ -8,7 +8,7 @@ import UIKit
 //  把 3e 的日程和 iOS「日历」App 打通，两个方向：
 //
 //   导入：系统日历里的课表 → 3e 的一张新日历
-//   导出：3e 的日程 → 系统日历里的一张「3e学习助手」日历
+//   导出：学习助手的日程 → 系统日历里的一张「学习助手」日历
 //
 //  ## 为什么必须双向，而不是只做一边
 //
@@ -102,12 +102,20 @@ final class SystemCalendar {
     private let store = EKEventStore()
 
     /// 我们建的系统日历的标题。用户能在系统日历里看到这个名字。
-    static let oursTitle = "3e学习助手"
+    static let oursTitle = "学习助手"
 
-    /// 标记用：我们建的日历在 `EKCalendar` 上没有自定义字段可用，
-    /// 只能靠标题 + source 认。这是 EventKit 的硬限制。
-    /// 所以**不要改名**，改名会导致下一次找不到自己建的日历而重复建一张。
-    private static let legacyTitles = ["3e", "3e学习助手"]
+    /// 认「哪张日历是我们建的」。
+    ///
+    /// ⚠️ **旧名字必须留着**，不能因为改名就删掉。
+    ///    2026-11-03 之前 App 叫「3e学习助手」，那时候导出过的用户，
+    ///    系统日历里已经有一张叫「3e学习助手」的日历。
+    ///    只认新名字的话，那些人下次导出会**再建一张新的**，
+    ///    于是系统日历里出现两张几乎一样的日历，而旧的那张里
+    ///    还留着他们之前导的全部日程 —— 这不是"少了一次更新"，
+    ///    是"凭空多出一份重复数据"，很难自己清干净。
+    ///
+    /// ⚠️ 改名后也不要把它从列表里去掉，除非确定没人用过旧版本。
+    private static let legacyTitles = ["学习助手", "3e学习助手", "3e"]
 
     private init() {}
 
@@ -210,7 +218,21 @@ final class SystemCalendar {
 
     /// 拿到（必要时创建）我们那张系统日历。
     func ensureOurCalendar() throws -> EKCalendar {
-        if let c = ourCalendar() { return c }
+        if let c = ourCalendar() {
+            // 旧版本建的日历还叫旧名字 —— 就地改名，**不要另建一张**。
+            //
+            // 改名而不是新建的分界线很清楚：
+            //   改名 = 那张日历里已有的日程原样保留，用户看不到任何多余的东西；
+            //   新建 = 旧日历连同里面几百条日程留在那儿，系统日历里出现两份。
+            //
+            // 保存失败也不阻断流程：名字没改成的代价是"看起来还叫旧名"，
+            // 而抛错会让整次导出失败，那更糟。
+            if c.title != Self.oursTitle {
+                c.title = Self.oursTitle
+                try? store.saveCalendar(c, commit: true)
+            }
+            return c
+        }
 
         let cal = EKCalendar(for: .event, eventStore: store)
         cal.title = Self.oursTitle
@@ -223,8 +245,8 @@ final class SystemCalendar {
             throw SystemCalendarError.noWritableSource
         }
         cal.source = source
-        // 给一个稳定的颜色，用户一眼能认出这是 3e 写的
-        cal.cgColor = UIColor(red: 0.09, green: 0.37, blue: 0.65, alpha: 1).cgColor
+        // 给一个稳定的颜色，用户一眼能认出这是学习助手写的
+        cal.cgColor = UIColor(red: 0.06, green: 0.43, blue: 0.34, alpha: 1).cgColor
 
         try store.saveCalendar(cal, commit: true)
         return cal
@@ -301,7 +323,7 @@ enum SystemCalendarError: LocalizedError {
         case .noWritableSource:
             return "系统里没有可写的日历账号。请先在「设置 → 日历 → 账户」里登录 iCloud 或开启「本机日历」。"
         case .noAccess:
-            return "没有日历访问权限。请在「设置 → 3e学习助手 → 日历」里打开。"
+            return "没有日历访问权限。请在「设置 → 学习助手 → 日历」里打开。"
         case .noOurCalendar:
             return "还没有创建「\(SystemCalendar.oursTitle)」日历。先点一次「导出到系统日历」。"
         }

@@ -102,7 +102,7 @@ struct SystemCalendarSyncView: View {
             } header: {
                 Text("权限")
             } footer: {
-                Text("日历权限被关掉了。去「设置 → 3e学习助手 → 日历」里打开。已经拒绝过的权限，App 再问也不会弹框。")
+                Text("日历权限被关掉了。去「设置 → 学习助手 → 日历」里打开。已经拒绝过的权限，App 再问也不会弹框。")
             }
 
         case .canWriteOnly:

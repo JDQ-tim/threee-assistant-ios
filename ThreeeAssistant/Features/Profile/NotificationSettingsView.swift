@@ -111,7 +111,7 @@ struct NotificationSettingsView: View {
 
             if status == .denied {
                 Section {
-                    Text("iOS 的通知授权只会询问一次。你之前拒绝过，系统就不会再弹框了 —— 只能去「设置 → 通知 → 3e学习助手」里手动打开。")
+                    Text("iOS 的通知授权只会询问一次。你之前拒绝过，系统就不会再弹框了 —— 只能去「设置 → 通知 → 学习助手」里手动打开。")
                         .font(.appFootnote)
                         .foregroundStyle(Theme.textSecondary)
                 }
