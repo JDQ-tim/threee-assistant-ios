@@ -1,0 +1,111 @@
+{
+  "format": "threees.navpack",
+  "formatVersion": 2,
+  "packId": "demo-campus",
+  "name": "演示校区",
+  "note": "用于离线自检的样本包，不是真实学校数据",
+  "version": "1.2.0",
+  "tencentKey": "",
+  "referer": "学习助手",
+  "origin": {
+    "id": "origin",
+    "name": "校门",
+    "lat": 24.8741,
+    "lng": 118.6757
+  },
+  "buildings": [
+    {
+      "id": "b_mingde_b1",
+      "name": "明德楼B1",
+      "alias": ["明德B1", "明德楼B1栋"],
+      "lat": 24.8752,
+      "lng": 118.6762,
+      "campus": "主校区",
+      "note": "公共课教学楼",
+      "type": "teaching",
+      "floors": [
+        {
+          "name": "1 层",
+          "rooms": [
+            { "name": "101", "type": "classroom", "x": -0.32, "y": 0.1, "w": 0.18, "h": 0.14 },
+            { "name": "102", "type": "classroom", "x": -0.1, "y": 0.1, "w": 0.18, "h": 0.14 },
+            { "name": "楼梯", "type": "stairs", "x": 0.36, "y": 0.1, "w": 0.12, "h": 0.14 }
+          ]
+        },
+        {
+          "name": "3 层",
+          "rooms": [
+            { "name": "302", "type": "classroom", "x": -0.32, "y": -0.2, "w": 0.18, "h": 0.14 },
+            { "name": "A302", "type": "lecture", "x": -0.1, "y": -0.2, "w": 0.2, "h": 0.16 },
+            { "name": "洗手间", "type": "toilet", "x": 0.36, "y": -0.2, "w": 0.12, "h": 0.12 }
+          ]
+        }
+      ],
+      "shape": [
+        [24.87528, 118.67605],
+        [24.87528, 118.67635],
+        [24.87512, 118.67635],
+        [24.87512, 118.67605]
+      ],
+      "shapeExact": true
+    },
+    {
+      "id": "b_mingde_a",
+      "name": "明德楼A",
+      "alias": [],
+      "lat": 24.8756,
+      "lng": 118.6768,
+      "campus": "主校区",
+      "note": "",
+      "type": "teaching",
+      "floors": []
+    },
+    {
+      "id": "b_canteen",
+      "name": "第一食堂",
+      "alias": ["一食"],
+      "lat": 24.8749,
+      "lng": 118.6749,
+      "campus": "主校区",
+      "type": "canteen",
+      "floors": []
+    },
+    {
+      "id": "b_zhu4",
+      "name": "主4#201",
+      "alias": ["主4", "主四"],
+      "lat": 24.8744,
+      "lng": 118.6771,
+      "campus": "主校区",
+      "type": "dorm",
+      "floors": []
+    },
+    {
+      "id": "b_nocoord",
+      "name": "体育馆",
+      "alias": [],
+      "lat": 0,
+      "lng": 0,
+      "campus": "主校区",
+      "type": "gym",
+      "floors": []
+    }
+  ],
+  "marks": [
+    {
+      "id": "m_gate",
+      "kind": "label",
+      "lat": 24.8741,
+      "lng": 118.6757,
+      "text": "南大门",
+      "w": 60,
+      "h": 20,
+      "color": "#185FA5"
+    },
+    {
+      "id": "m_bad_mark",
+      "kind": "label",
+      "text": "这条没有坐标，解析时应当被丢掉"
+    }
+  ]
+}

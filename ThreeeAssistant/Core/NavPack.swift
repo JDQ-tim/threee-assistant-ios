@@ -525,8 +525,8 @@ extension NavPack {
             "version": version,
             "tencentKey": tencentKey,
             "referer": referer,
-            "buildings": buildings.map(\.toJSON),
-            "marks": marks.map(\.toJSON),
+            "buildings": buildings.map { $0.toJSON() },
+            "marks": marks.map { $0.toJSON() },
             "_importedAt": importedAt,
         ]
         if let origin { o["origin"] = origin.toJSON }
@@ -545,7 +545,7 @@ extension NavBuilding {
             "campus": campus,
             "note": note,
             "type": type,
-            "floors": floors.map(\.toJSON),
+            "floors": floors.map { $0.toJSON() },
         ]
         // ⚠️ 空轮廓**不写这个键**，而不是写一个空数组 —— 和安卓端一致。
         //    写了空数组会让"没有轮廓"和"轮廓是空的"在下游分不开。
@@ -559,7 +559,7 @@ extension NavBuilding {
 
 extension NavFloor {
     func toJSON() -> [String: Any] {
-        ["name": name, "rooms": rooms.map(\.toJSON)]
+        ["name": name, "rooms": rooms.map { $0.toJSON() }]
     }
 }
 

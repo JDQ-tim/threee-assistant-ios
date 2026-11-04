@@ -159,6 +159,23 @@ enum NavMatcher {
             }
         }
 
+        // ②b 楼名后面跟一个**方位修饰词**（「明德楼B1门口」「第一食堂楼下」）。
+        //
+        // ⚠️ 这一条是 iOS **独有**的，安卓端没有 —— 因为安卓端在 ② 没命中时
+        //    会掉到腾讯地图去搜，而 iOS 没有联网兜底（用的是系统地图，
+        //    没有"给一段文字查坐标"的能力）。
+        //    不补这一条，「明德楼B1门口」在 iOS 上就是"认不出"，
+        //    而这是学生写得最多的一种地点。
+        //
+        //    `nonRoomWords` 恰好就是这批词 —— 它本来是用来**排除**房号的，
+        //    在这里改为"认出是方位词，所以确实指向那栋楼"。
+        for (b, k) in pairs where k.count >= 2 && q.contains(k) {
+            let tail = removingFirst(k, from: q)
+            if nonRoomWords.contains(tail) {
+                return NavMatch(building: b, kind: .room)
+            }
+        }
+
         // ③ 去掉标点之后再比（「主5#501」→「主5501」，「主-5」→「主5」）
         let qs = NavText.stripPunct(q)
         if !qs.isEmpty {
@@ -177,23 +194,42 @@ enum NavMatcher {
         // ★ 两个候选咬得很近时**不猜** —— "猜错一栋楼"比"没找到"更糟：
         //   用户会直接按它导航过去。所以除了 0.75 的绝对门槛，
         //   还要求领先第二名 0.08。
-        var best: NavBuilding?
-        var bestScore = 0.0
-        var second = 0.0
+        //
+        // ## ⚠️ 这里和安卓端不一样，是**修了它的一个 bug**
+        //
+        // 安卓端的写法是把所有 (楼, 名字) 对摊平了边遍历边维护
+        // "最高分 / 次高分"，判据是 `b !== best && sc >= bestScore`。
+        // 问题在于：**同一栋楼的第二个别名会走到 else 分支，把次高分顶上去**。
+        //
+        // ```
+        //   明德楼B1 的键：明德楼b1栋 / 明德楼b1 / 明德b1
+        //   查询「明得楼B1」（错一个字）
+        //     第 1 个键 → 0.667 成为最高分
+        //     第 2 个键 → 0.8，但它是**同一栋楼** → 进了 else，变成次高分 0.8
+        //   于是 bestScore(0.667) - second(0.8) < 0.08，判成"不猜"
+        // ```
+        //
+        // 结果就是"错一个字的楼名永远猜不出来"，而产品要求恰恰是
+        // 「哪怕只有局部对上了也要猜，只不过要提醒用户这是猜出来的」。
+        //
+        // 所以这里**按楼聚合**：先取每栋楼的最高分，再在楼之间比。
+        var bestOf: [String: Double] = [:]
+        var byID: [String: NavBuilding] = [:]
         for (b, k) in pairs {
             let kk = NavText.stripPunct(k)
             if kk.count < 2 { continue }
             let sc = similarity(qs, kk)
-            if b.id != best?.id && sc >= bestScore {
-                second = bestScore
-                bestScore = sc
-                best = b
-            } else if sc > second {
-                second = sc
+            if sc > (bestOf[b.id] ?? 0) {
+                bestOf[b.id] = sc
+                byID[b.id] = b
             }
         }
-        if let best, bestScore >= 0.75, bestScore - second >= 0.08 {
-            return NavMatch(building: best, kind: .fuzzy)
+        let ranked = bestOf.sorted { a, b in a.value > b.value }
+        if let top = ranked.first,
+           top.value >= 0.75,
+           ranked.count < 2 || top.value - ranked[1].value >= 0.08,
+           let winner = byID[top.key] {
+            return NavMatch(building: winner, kind: .fuzzy)
         }
 
         return nil

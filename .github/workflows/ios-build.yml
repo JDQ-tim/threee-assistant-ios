@@ -262,6 +262,80 @@ jobs:
           exit $RC
 
       # ============================================================
+      #  导航数据包：解析 + 地点匹配
+      # ============================================================
+      #
+      #  `NavMatch.swift` 里全是"哪种写法算同一栋楼"的判据，而这类判据
+      #  **编译器一个字都不会检查**：阈值写错、正则贪婪、字符串切歪，
+      #  全都表现为"某类地点突然认不出"，只有人工试才发现。
+      #
+      #  这个程序几秒就能出结果，等于把"校园地图能不能用"这件事
+      #  从"等真机"提前到了每次提交。
+      #
+      #  文件清单只放 Foundation / CoreLocation 的：
+      #    · NavPack.swift   import CoreLocation（macOS 上可用）
+      #    · NavMatch.swift  import Foundation
+      #    · NavPackStore.swift 不能进 —— 它 import Observation 且做文件读写
+      #      （@Observable + @MainActor 在命令行目标下没有意义）
+      - name: 导航数据包自检（解析 + 匹配）
+        id: navcheck
+        continue-on-error: true
+        timeout-minutes: 5
+        run: |
+          mkdir -p build-logs
+          set +e
+          swiftc -O -o nav-check \
+            ThreeeAssistant/Core/NavPack.swift \
+            ThreeeAssistant/Core/NavMatch.swift \
+            Tests/NavCheck/main.swift \
+            > build-logs/navcheck-build.log 2>&1
+          BUILD_RC=$?
+          cat build-logs/navcheck-build.log
+
+          if [ "$BUILD_RC" -ne 0 ]; then
+            {
+              echo "❌ 导航自检程序本身没编过 —— 这一关等于没验。"
+              echo "   详细编译错误："
+              echo ""
+              cat build-logs/navcheck-build.log
+            } > build-logs/navcheck.log
+            exit 1
+          fi
+
+          ./nav-check Tests/fixtures/NavPack.sample.json > build-logs/navcheck.log 2>&1
+          RC=$?
+          cat build-logs/navcheck.log
+
+          # ---- 自检：确认这个检查器真的会报错 ----
+          #
+          # 把样本的 formatVersion 改成一个认不出的版本。解析器必须**拒绝**，
+          # 不能"尽力解析" —— 半解析出来的包会让用户以为导入成功了，
+          # 实际上少了一半楼，而那种错在界面上完全看不出来。
+          mkdir -p build-logs/nav-negative
+          cp Tests/fixtures/NavPack.sample.json build-logs/nav-negative/
+          sed -i '' 's/"formatVersion": 2/"formatVersion": 99/' \
+            build-logs/nav-negative/NavPack.sample.json
+          ./nav-check build-logs/nav-negative/NavPack.sample.json \
+            > build-logs/navcheck-negative.log 2>&1
+          NEG_RC=$?
+          if [ "$NEG_RC" -eq 0 ]; then
+            {
+              echo ""
+              echo "❌❌ 自检失败：版本号改成 99 的包居然被接受了。"
+              echo "     这说明解析器在做「尽力解析」—— 而那会让用户导入一个残缺的包，"
+              echo "     并且界面上看不出任何异常。"
+            } | tee -a build-logs/navcheck.log
+            RC=1
+          else
+            echo "" >> build-logs/navcheck.log
+            echo "自检：更高版本的包被正确拒绝 ✅" >> build-logs/navcheck.log
+            echo "自检通过（故意改坏版本的包被拒绝，退出码 $NEG_RC）"
+          fi
+
+          echo "导航自检退出码：$RC"
+          exit $RC
+
+      # ============================================================
       #  提醒排程：哪些通知该排、哪些该丢、64 条上限怎么截
       #  ------------------------------------------------------------
       #  提醒功能里唯一有逻辑的部分是「决定排什么」：
