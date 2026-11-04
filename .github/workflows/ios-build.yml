@@ -33,12 +33,14 @@ on:
     #    资源包、文档、tools/ 里的 Python 脚本都不影响 Swift 编译。
     paths:
       - 'ThreeeAssistant/**'
+      - 'NextClassWidget/**'
       - 'ThreeeAssistant.xcodeproj/**'
       - 'Config/**'
       - '.github/workflows/ios-build.yml'
   pull_request:
     paths:
       - 'ThreeeAssistant/**'
+      - 'NextClassWidget/**'
       - 'ThreeeAssistant.xcodeproj/**'
       - 'Config/**'
       - '.github/workflows/ios-build.yml'
@@ -556,6 +558,21 @@ jobs:
               echo "✅ 确认是 iPhoneOS 设备包"
             else
               echo "⚠️ 平台字段不是 iPhoneOS —— 这个 IPA 可能装不上真机"
+            fi
+
+            # ---- 实时活动扩展有没有真的嵌进包里 ----
+            #
+            # ⚠️ 这是最难自己发现的一种失败：扩展编出来了、IPA 也产出了、
+            #    `BUILD SUCCEEDED` 也报了，但 PlugIns 里是空的 ——
+            #    装到手机上表现是「灵动岛什么都不显示」，
+            #    而任何一份日志里都不会有一句错，只能靠人工比对文件。
+            appex="build/ipa/Payload/ThreeeAssistant.app/PlugIns/NextClassWidget.appex"
+            if [ -d "$appex" ]; then
+              echo "✅ 实时活动扩展已嵌入：$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$appex/Info.plist" 2>/dev/null || echo '?')"
+              echo "OK $appex" > build-logs/extension.txt
+            else
+              echo "❌ 包里没有 PlugIns/NextClassWidget.appex —— 灵动岛/锁屏卡片不会工作"
+              echo "MISSING（编译成功但扩展没被拷进 .app/PlugIns）" > build-logs/extension.txt
             fi
           fi
           exit $RC

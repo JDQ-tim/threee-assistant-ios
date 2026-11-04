@@ -21,6 +21,7 @@ import UserNotifications
 struct NotificationSettingsView: View {
 
     @Environment(SessionStore.self) private var store
+    @Environment(LiveActivityManager.self) private var live
 
     @State private var status: UNAuthorizationStatus = .notDetermined
     @State private var armedCount = 0
@@ -41,6 +42,8 @@ struct NotificationSettingsView: View {
             } footer: {
                 Text(statusFooter)
             }
+
+            liveActivitySection
 
             // 这一段以前是 `if ruleCount > 0` —— 零条时整段消失。
             // 结果是：用户看到「系统权限：已开启」+「重新排一遍」两行，
@@ -131,6 +134,57 @@ struct NotificationSettingsView: View {
         case .denied: return "已关闭"
         case .notDetermined: return "未询问"
         @unknown default: return "未知"
+        }
+    }
+
+    /// 实时活动（灵动岛 / 锁屏卡片）。
+    ///
+    /// ## 为什么单独开一段，而不是并进"提醒"
+    ///
+    /// 它和提醒是**两套东西**，只是都长在锁屏上：
+    ///   · 提醒 = `UNNotification`，到点弹一下就走
+    ///   · 实时活动 = 一条**常驻**的状态，下课才收
+    /// 混在一起写，用户会以为关了提醒它也消失。
+    ///
+    /// ## 为什么这里必须说清"iPad 上没有灵动岛"
+    ///
+    /// 用户在 iPad 上打开这个开关，然后去主屏找灵动岛，找不到 ——
+    /// 会以为功能坏了。它在这里的真实形态是**锁屏底部那张卡片**。
+    @ViewBuilder
+    private var liveActivitySection: some View {
+        Section {
+            Toggle(isOn: Binding(
+                get: { live.isEnabled },
+                set: { on in
+                    live.setEnabled(on)
+                    if on {
+                        Task { await live.sync(instances: store.instances) }
+                    }
+                }
+            )) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("显示下一节课")
+                        .font(.appBody)
+                    Text("课前 30 分钟出现，下课后自动收起")
+                        .font(.appCaption2)
+                        .foregroundStyle(Theme.textTertiary)
+                }
+            }
+
+            if let t = live.showingTitle {
+                LabeledContent("正在显示", value: t)
+            }
+
+            if let e = live.lastError {
+                Text(e)
+                    .font(.appFootnote)
+                    .foregroundStyle(Theme.amber600)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        } header: {
+            Text("实时活动")
+        } footer: {
+            Text("它和上面的「提醒」是两回事：提醒到点弹一下就走，实时活动是一条**常驻**的状态，下课才收。\n\niPhone 14 Pro 及以上会同时出现在灵动岛里；iPad 上没有灵动岛，只会显示成锁屏底部的一张卡片（需要 iPadOS 26 以上）。\n\n系统总开关在「设置 → 通知 → 学习助手 → 实时活动」。")
         }
     }
 

@@ -63,5 +63,12 @@
 	<string>读取你设备上的日历事件，导入成学习助手的日程；也把学习助手的日程写回一张单独的「学习助手」日历，让锁屏、灵动岛和 Apple Watch 能看到。只会读写你选中的那些日历，不会修改其他日历的内容。</string>
 	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
 	<string>把 3e 的日程写进系统日历，让锁屏、灵动岛和 Apple Watch 能看到。</string>
+
+	<!-- 实时活动（Live Activity）。
+	     ⚠️ 这是「上灵动岛」的**唯一**开关。没有它，Activity.request 会直接抛错，
+	     而错误文案是 "Live Activities are not supported"，完全不提这个键。
+	     通知（UNNotification）**进不了灵动岛** —— 灵动岛只显示实时活动。 -->
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 </dict>
 </plist>

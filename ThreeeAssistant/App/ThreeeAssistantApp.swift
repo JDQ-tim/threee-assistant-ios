@@ -27,6 +27,13 @@ struct ThreeeAssistantApp: App {
     /// 退出登录时很容易连它一起清掉，而用户看不出是自己把地图弄没了。
     @State private var navStore = NavPackStore()
 
+    /// 实时活动（灵动岛 / 锁屏卡片）。
+    ///
+    /// 单独一个对象而不是塞进 SessionStore：它管的是**系统层面的一个可见物**
+    /// （锁屏上挂着的那一条），生命周期和"有没有登录"不是一回事 ——
+    /// 退出登录时要主动收掉它，但状态本身不该跟着账号清空。
+    @State private var liveActivity = LiveActivityManager()
+
     init() {
         // 通知的 delegate 必须在这里设 —— 晚于第一次投递的话，
         // 那之前前台到达的提醒会被系统直接吞掉（前台默认不展示）。
@@ -39,6 +46,7 @@ struct ThreeeAssistantApp: App {
             RootView()
                 .environment(store)
                 .environment(navStore)
+                .environment(liveActivity)
                 .tint(Theme.accent)
         }
     }
@@ -49,6 +57,7 @@ struct RootView: View {
 
     @Environment(SessionStore.self) private var store
     @Environment(NavPackStore.self) private var nav
+    @Environment(LiveActivityManager.self) private var live
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -88,6 +97,12 @@ struct RootView: View {
                 await store.reportDevice()
                 await store.prepareReminders()
             }
+            await live.sync(instances: store.instances)
+        }
+        // 日程一有变化就重算"现在岛上该显示哪一节"。
+        // 幂等：算出来还是同一条时只走 update，不会把活动重启一遍。
+        .onChange(of: store.instances) { _, list in
+            Task { await live.sync(instances: list) }
         }
         // 回到前台补排一次。
         //
@@ -96,7 +111,12 @@ struct RootView: View {
         // 如果不补排，接下来几天就是"一条提醒都不响"。
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active, store.isLoggedIn else { return }
-            Task { await store.prepareReminders(forceRules: false) }
+            Task {
+                await store.prepareReminders(forceRules: false)
+                // 回到前台也重算一次：用户可能在别的设备上改了课表，
+                // 或者上一节课已经下了（那时 staleDate 已经把它收掉了）。
+                await live.sync(instances: store.instances)
+            }
         }
     }
 }

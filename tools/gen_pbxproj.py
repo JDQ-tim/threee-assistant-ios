@@ -22,6 +22,25 @@ for dirpath, dirnames, filenames in os.walk(os.path.join(ROOT, SRC_ROOT)):
             swift_files.append(rel)
 swift_files.sort()
 
+# ---------- Widget Extension 的源文件 ----------
+# 它不在 ThreeeAssistant/ 下面，上面那趟 walk 收不到，所以单独走一遍。
+WIDGET_ROOT = "NextClassWidget"
+widget_swift = []
+for dirpath, dirnames, filenames in os.walk(os.path.join(ROOT, WIDGET_ROOT)):
+    dirnames.sort()
+    for fn in sorted(filenames):
+        if fn.endswith(".swift"):
+            rel = os.path.relpath(os.path.join(dirpath, fn), ROOT).replace("\\", "/")
+            widget_swift.append(rel)
+widget_swift.sort()
+
+# 两个 target **各编一次**的共享文件（ActivityAttributes 的定义）。
+# ⚠️ 它们必须已经在 App target 里 —— 这里只做校验，不重复登记。
+SHARED_FOR_WIDGET = ["ThreeeAssistant/Core/NextClassActivity.swift"]
+for _rel in SHARED_FOR_WIDGET:
+    if _rel not in swift_files:
+        raise RuntimeError("共享文件不在 App target 里: " + _rel)
+
 # ---------- 稳定 ID 生成 ----------
 _used = {}
 _counter = [0]
@@ -88,6 +107,28 @@ TGT_RELEASE = oid("tgtrelease")
 INFO_PLIST_REF = oid("fileref", "Config/Info.plist")
 ASSETS_REF = oid("fileref", "ThreeeAssistant/Resources/Assets.xcassets")
 
+# ---------- Widget Extension（实时活动）----------
+#
+# 为什么要单独一个 target：实时活动的界面只能由 **WidgetKit 扩展**渲染
+# （`@main WidgetBundle`），而一个 target 里只能有一个 @main。
+# 想上灵动岛，这层结构躲不掉。
+WIDGET_GROUP = oid("widgetgroup")
+WIDGET_TARGET = oid("widgettarget")
+WIDGET_PRODUCT_REF = oid("widgetproductref")
+WIDGET_SOURCES_PHASE = oid("widgetsourcesphase")
+WIDGET_FRAMEWORKS_PHASE = oid("widgetframeworksphase")
+WIDGET_RESOURCES_PHASE = oid("widgetresourcesphase")
+WIDGET_CONFIG_LIST = oid("widgetconfiglist")
+WIDGET_DEBUG = oid("widgetdebug")
+WIDGET_RELEASE = oid("widgetrelease")
+WIDGET_INFO_PLIST_REF = oid("fileref", "NextClassWidget/Info.plist")
+# 把 .appex 塞进 .app/PlugIns —— 少了这一步，扩展编出来了但不在包里，
+# 装到设备上就是"功能没反应"，而且不报任何错。
+EMBED_PHASE = oid("embedphase")
+EMBED_BUILD_FILE = oid("buildfile", "embed-appex")
+TARGET_DEP = oid("targetdep")
+CONTAINER_PROXY = oid("containerproxy")
+
 # ---------- 目录 -> group 映射 ----------
 GROUP_MAP = {
     "App": APP_GROUP,
@@ -108,6 +149,8 @@ group_children = {g: [] for g in GROUP_MAP.values()}
 group_children[FEATURES_GROUP] = [
     LOGIN_GROUP, SCHEDULE_GROUP, TASKS_GROUP, SETTINGS_GROUP, PROFILE_GROUP, CAMPUS_GROUP
 ]
+# Widget 那个组不在 GROUP_MAP 里（它的文件不在 ThreeeAssistant/ 下），单独建。
+group_children[WIDGET_GROUP] = []
 
 file_refs = []      # (id, name, relpath)
 build_files = []    # (buildfile_id, fileref_id, name)
@@ -123,6 +166,29 @@ for rel in swift_files:
         group_children[GROUP_MAP[rel_dir]].append(ref_id)
     else:
         raise RuntimeError("未映射的目录: " + rel_dir)
+
+# ---------- Widget target 的文件登记 ----------
+#
+# ⚠️ buildfile 的 id 用 (rel, "widget") 作键，**不能只按 rel** ——
+#    共享文件在两个 target 里各有一个 PBXBuildFile，
+#    只按路径生成 id 会让两个 build file 撞成同一个对象，
+#    结果是 App target 里多出一条指向扩展的引用（Xcode 不报错）。
+widget_refs = []          # (ref_id, name, relpath)
+widget_build_files = []   # (buildfile_id, fileref_id, name)
+
+for rel in widget_swift:
+    name = os.path.basename(rel)
+    ref_id = oid("fileref", rel)
+    widget_refs.append((ref_id, name, rel))
+    group_children[WIDGET_GROUP].append(ref_id)
+    widget_build_files.append((oid("buildfile", rel, "widget"), ref_id, name))
+
+for rel in SHARED_FOR_WIDGET:
+    name = os.path.basename(rel)
+    ref_id = oid("fileref", rel)      # 和 App target 里那一条是**同一个** fileRef
+    widget_build_files.append((oid("buildfile", rel, "widget"), ref_id, name))
+
+all_refs = file_refs + widget_refs
 
 # ---------- 文本拼装 ----------
 L = []
@@ -141,20 +207,60 @@ w("/* Begin PBXBuildFile section */")
 for bf_id, ref_id, name in build_files:
     w("\t\t%s /* %s in Sources */ = {isa = PBXBuildFile; fileRef = %s /* %s */; };" % (bf_id, name, ref_id, name))
 w("\t\t%s /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = %s /* Assets.xcassets */; };" % (oid("buildfile", "assets"), ASSETS_REF))
+for bf_id, ref_id, name in widget_build_files:
+    w("\t\t%s /* %s in Sources */ = {isa = PBXBuildFile; fileRef = %s /* %s */; };" % (bf_id, name, ref_id, name))
+w("\t\t%s /* NextClassWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = %s /* NextClassWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };" % (EMBED_BUILD_FILE, WIDGET_PRODUCT_REF))
 w("/* End PBXBuildFile section */")
+w("")
+
+w("/* Begin PBXContainerItemProxy section */")
+w("\t\t%s /* PBXContainerItemProxy */ = {" % CONTAINER_PROXY)
+w("\t\t\tisa = PBXContainerItemProxy;")
+w("\t\t\tcontainerPortal = %s /* Project object */;" % PROJECT)
+w("\t\t\tproxyType = 1;")
+w("\t\t\tremoteGlobalIDString = %s;" % WIDGET_TARGET)
+w("\t\t\tremoteInfo = NextClassWidget;")
+w("\t\t};")
+w("/* End PBXContainerItemProxy section */")
+w("")
+
+w("/* Begin PBXCopyFilesBuildPhase section */")
+w("\t\t%s /* Embed Foundation Extensions */ = {" % EMBED_PHASE)
+w("\t\t\tisa = PBXCopyFilesBuildPhase;")
+w("\t\t\tbuildActionMask = 2147483647;")
+# dstSubfolderSpec = 13 就是 "PlugIns"。写错成 Frameworks(10) 的话
+# 扩展会被塞进 .app/Frameworks，而系统只从 PlugIns 里找扩展 → 静默不加载。
+w("\t\t\tdstPath = \"\";")
+w("\t\t\tdstSubfolderSpec = 13;")
+w("\t\t\tfiles = (")
+w("\t\t\t\t%s /* NextClassWidget.appex in Embed Foundation Extensions */," % EMBED_BUILD_FILE)
+w("\t\t\t);")
+w("\t\t\tname = \"Embed Foundation Extensions\";")
+w("\t\t\trunOnlyForDeploymentPostprocessing = 0;")
+w("\t\t};")
+w("/* End PBXCopyFilesBuildPhase section */")
 w("")
 
 w("/* Begin PBXFileReference section */")
 w("\t\t%s /* ThreeeAssistant.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ThreeeAssistant.app; sourceTree = BUILT_PRODUCTS_DIR; };" % PRODUCT_REF)
-for ref_id, name, rel in file_refs:
+w("\t\t%s /* NextClassWidget.appex */ = {isa = PBXFileReference; explicitFileType = \"wrapper.app-extension\"; includeInIndex = 0; path = NextClassWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };" % WIDGET_PRODUCT_REF)
+for ref_id, name, rel in all_refs:
     w("\t\t%s /* %s */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = %s; sourceTree = \"<group>\"; };" % (ref_id, name, name))
 w("\t\t%s /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = \"<group>\"; };" % INFO_PLIST_REF)
+w("\t\t%s /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = \"<group>\"; };" % WIDGET_INFO_PLIST_REF)
 w("\t\t%s /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = ThreeeAssistant/Resources/Assets.xcassets; sourceTree = SOURCE_ROOT; };" % ASSETS_REF)
 w("/* End PBXFileReference section */")
 w("")
 
 w("/* Begin PBXFrameworksBuildPhase section */")
 w("\t\t%s /* Frameworks */ = {" % FRAMEWORKS_PHASE)
+w("\t\t\tisa = PBXFrameworksBuildPhase;")
+w("\t\t\tbuildActionMask = 2147483647;")
+w("\t\t\tfiles = (")
+w("\t\t\t);")
+w("\t\t\trunOnlyForDeploymentPostprocessing = 0;")
+w("\t\t};")
+w("\t\t%s /* Frameworks */ = {" % WIDGET_FRAMEWORKS_PHASE)
 w("\t\t\tisa = PBXFrameworksBuildPhase;")
 w("\t\t\tbuildActionMask = 2147483647;")
 w("\t\t\tfiles = (")
@@ -169,6 +275,7 @@ w("\t\t%s = {" % MAIN_GROUP)
 w("\t\t\tisa = PBXGroup;")
 w("\t\t\tchildren = (")
 w("\t\t\t\t%s /* ThreeeAssistant */," % ROOT_SRC_GROUP)
+w("\t\t\t\t%s /* NextClassWidget */," % WIDGET_GROUP)
 w("\t\t\t\t%s /* Config */," % CONFIG_GROUP)
 w("\t\t\t\t%s /* Products */," % PRODUCTS_GROUP)
 w("\t\t\t);")
@@ -192,13 +299,14 @@ for g, label in ((APP_GROUP, "App"), (CORE_GROUP, "Core"), (DESIGN_GROUP, "Desig
                  (INTENTS_GROUP, "Intents"),
                  (LOGIN_GROUP, "Login"), (SCHEDULE_GROUP, "Schedule"),
                  (TASKS_GROUP, "Tasks"), (SETTINGS_GROUP, "Settings"),
-                 (PROFILE_GROUP, "Profile"), (CAMPUS_GROUP, "Campus")):
+                 (PROFILE_GROUP, "Profile"), (CAMPUS_GROUP, "Campus"),
+                 (WIDGET_GROUP, "NextClassWidget")):
     w("\t\t%s /* %s */ = {" % (g, label))
     w("\t\t\tisa = PBXGroup;")
     w("\t\t\tchildren = (")
     for child in group_children[g]:
         # 找到名字
-        nm = next((n for i, n, r in file_refs if i == child), None)
+        nm = next((n for i, n, r in all_refs if i == child), None)
         w("\t\t\t\t%s /* %s */," % (child, nm))
     w("\t\t\t);")
     w("\t\t\tpath = %s;" % label)
@@ -241,6 +349,7 @@ w("\t\t%s /* Products */ = {" % PRODUCTS_GROUP)
 w("\t\t\tisa = PBXGroup;")
 w("\t\t\tchildren = (")
 w("\t\t\t\t%s /* ThreeeAssistant.app */," % PRODUCT_REF)
+w("\t\t\t\t%s /* NextClassWidget.appex */," % WIDGET_PRODUCT_REF)
 w("\t\t\t);")
 w("\t\t\tname = Products;")
 w("\t\t\tsourceTree = \"<group>\";")
@@ -256,15 +365,34 @@ w("\t\t\tbuildPhases = (")
 w("\t\t\t\t%s /* Sources */," % SOURCES_PHASE)
 w("\t\t\t\t%s /* Frameworks */," % FRAMEWORKS_PHASE)
 w("\t\t\t\t%s /* Resources */," % RESOURCES_PHASE)
+w("\t\t\t\t%s /* Embed Foundation Extensions */," % EMBED_PHASE)
 w("\t\t\t);")
 w("\t\t\tbuildRules = (")
 w("\t\t\t);")
 w("\t\t\tdependencies = (")
+w("\t\t\t\t%s /* PBXTargetDependency */," % TARGET_DEP)
 w("\t\t\t);")
 w("\t\t\tname = ThreeeAssistant;")
 w("\t\t\tproductName = ThreeeAssistant;")
 w("\t\t\tproductReference = %s /* ThreeeAssistant.app */;" % PRODUCT_REF)
 w("\t\t\tproductType = \"com.apple.product-type.application\";")
+w("\t\t};")
+w("\t\t%s /* NextClassWidget */ = {" % WIDGET_TARGET)
+w("\t\t\tisa = PBXNativeTarget;")
+w("\t\t\tbuildConfigurationList = %s /* Build configuration list for PBXNativeTarget \"NextClassWidget\" */;" % WIDGET_CONFIG_LIST)
+w("\t\t\tbuildPhases = (")
+w("\t\t\t\t%s /* Sources */," % WIDGET_SOURCES_PHASE)
+w("\t\t\t\t%s /* Frameworks */," % WIDGET_FRAMEWORKS_PHASE)
+w("\t\t\t\t%s /* Resources */," % WIDGET_RESOURCES_PHASE)
+w("\t\t\t);")
+w("\t\t\tbuildRules = (")
+w("\t\t\t);")
+w("\t\t\tdependencies = (")
+w("\t\t\t);")
+w("\t\t\tname = NextClassWidget;")
+w("\t\t\tproductName = NextClassWidget;")
+w("\t\t\tproductReference = %s /* NextClassWidget.appex */;" % WIDGET_PRODUCT_REF)
+w("\t\t\tproductType = \"com.apple.product-type.app-extension\";")
 w("\t\t};")
 w("/* End PBXNativeTarget section */")
 w("")
@@ -278,6 +406,9 @@ w("\t\t\t\tLastSwiftUpdateCheck = 1500;")
 w("\t\t\t\tLastUpgradeCheck = 1500;")
 w("\t\t\t\tTargetAttributes = {")
 w("\t\t\t\t\t%s = {" % TARGET)
+w("\t\t\t\t\t\tCreatedOnToolsVersion = 15.0;")
+w("\t\t\t\t\t};")
+w("\t\t\t\t\t%s = {" % WIDGET_TARGET)
 w("\t\t\t\t\t\tCreatedOnToolsVersion = 15.0;")
 w("\t\t\t\t\t};")
 w("\t\t\t\t};")
@@ -297,6 +428,7 @@ w("\t\t\tprojectDirPath = \"\";")
 w("\t\t\tprojectRoot = \"\";")
 w("\t\t\ttargets = (")
 w("\t\t\t\t%s /* ThreeeAssistant */," % TARGET)
+w("\t\t\t\t%s /* NextClassWidget */," % WIDGET_TARGET)
 w("\t\t\t);")
 w("\t\t};")
 w("/* End PBXProject section */")
@@ -308,6 +440,13 @@ w("\t\t\tisa = PBXResourcesBuildPhase;")
 w("\t\t\tbuildActionMask = 2147483647;")
 w("\t\t\tfiles = (")
 w("\t\t\t\t%s /* Assets.xcassets in Resources */," % oid("buildfile", "assets"))
+w("\t\t\t);")
+w("\t\t\trunOnlyForDeploymentPostprocessing = 0;")
+w("\t\t};")
+w("\t\t%s /* Resources */ = {" % WIDGET_RESOURCES_PHASE)
+w("\t\t\tisa = PBXResourcesBuildPhase;")
+w("\t\t\tbuildActionMask = 2147483647;")
+w("\t\t\tfiles = (")
 w("\t\t\t);")
 w("\t\t\trunOnlyForDeploymentPostprocessing = 0;")
 w("\t\t};")
@@ -324,7 +463,25 @@ for bf_id, ref_id, name in build_files:
 w("\t\t\t);")
 w("\t\t\trunOnlyForDeploymentPostprocessing = 0;")
 w("\t\t};")
+w("\t\t%s /* Sources */ = {" % WIDGET_SOURCES_PHASE)
+w("\t\t\tisa = PBXSourcesBuildPhase;")
+w("\t\t\tbuildActionMask = 2147483647;")
+w("\t\t\tfiles = (")
+for bf_id, ref_id, name in widget_build_files:
+    w("\t\t\t\t%s /* %s in Sources */," % (bf_id, name))
+w("\t\t\t);")
+w("\t\t\trunOnlyForDeploymentPostprocessing = 0;")
+w("\t\t};")
 w("/* End PBXSourcesBuildPhase section */")
+w("")
+
+w("/* Begin PBXTargetDependency section */")
+w("\t\t%s /* PBXTargetDependency */ = {" % TARGET_DEP)
+w("\t\t\tisa = PBXTargetDependency;")
+w("\t\t\ttarget = %s /* NextClassWidget */;" % WIDGET_TARGET)
+w("\t\t\ttargetProxy = %s /* PBXContainerItemProxy */;" % CONTAINER_PROXY)
+w("\t\t};")
+w("/* End PBXTargetDependency section */")
 w("")
 
 w("/* Begin XCBuildConfiguration section */")
@@ -408,6 +565,38 @@ for cfg_id, cfg_name in ((TGT_DEBUG, "Debug"), (TGT_RELEASE, "Release")):
     w("\t\t\t};")
     w("\t\t\tname = %s;" % cfg_name)
     w("\t\t};")
+
+# ---- Widget Extension 的构建设置 ----
+#
+# ⚠️ `SKIP_INSTALL = YES` 必须有：扩展是**嵌进 App** 的，
+#    不单独安装。少了它归档时会多出一个裸的 .appex。
+# ⚠️ `APPLICATION_EXTENSION_API_ONLY = YES`：扩展里用了只在 App 里
+#    可用的 API（比如 UIApplication）会在这里被拦下，而不是等到运行时崩。
+for cfg_id, cfg_name in ((WIDGET_DEBUG, "Debug"), (WIDGET_RELEASE, "Release")):
+    w("\t\t%s /* %s */ = {" % (cfg_id, cfg_name))
+    w("\t\t\tisa = XCBuildConfiguration;")
+    w("\t\t\tbuildSettings = {")
+    w("\t\t\t\tAPPLICATION_EXTENSION_API_ONLY = YES;")
+    w("\t\t\t\tCODE_SIGN_STYLE = Automatic;")
+    w("\t\t\t\tCURRENT_PROJECT_VERSION = 1;")
+    w("\t\t\t\tGENERATE_INFOPLIST_FILE = NO;")
+    w("\t\t\t\tINFOPLIST_FILE = NextClassWidget/Info.plist;")
+    w("\t\t\t\tIPHONEOS_DEPLOYMENT_TARGET = 17.0;")
+    w("\t\t\t\tLD_RUNPATH_SEARCH_PATHS = (")
+    w("\t\t\t\t\t\"$(inherited)\",")
+    w("\t\t\t\t\t\"@executable_path/Frameworks\",")
+    w("\t\t\t\t\t\"@executable_path/../../Frameworks\",")
+    w("\t\t\t\t);")
+    w("\t\t\t\tMARKETING_VERSION = 0.1;")
+    w("\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = cn.threees.assistant.ios.widget;")
+    w("\t\t\t\tPRODUCT_NAME = \"$(TARGET_NAME)\";")
+    w("\t\t\t\tSKIP_INSTALL = YES;")
+    w("\t\t\t\tSWIFT_EMIT_LOC_STRINGS = YES;")
+    w("\t\t\t\tSWIFT_VERSION = 5.9;")
+    w("\t\t\t\tTARGETED_DEVICE_FAMILY = \"1,2\";")
+    w("\t\t\t};")
+    w("\t\t\tname = %s;" % cfg_name)
+    w("\t\t};")
 w("/* End XCBuildConfiguration section */")
 w("")
 
@@ -426,6 +615,15 @@ w("\t\t\tisa = XCConfigurationList;")
 w("\t\t\tbuildConfigurations = (")
 w("\t\t\t\t%s /* Debug */," % TGT_DEBUG)
 w("\t\t\t\t%s /* Release */," % TGT_RELEASE)
+w("\t\t\t);")
+w("\t\t\tdefaultConfigurationIsVisible = 0;")
+w("\t\t\tdefaultConfigurationName = Release;")
+w("\t\t};")
+w("\t\t%s /* Build configuration list for PBXNativeTarget \"NextClassWidget\" */ = {" % WIDGET_CONFIG_LIST)
+w("\t\t\tisa = XCConfigurationList;")
+w("\t\t\tbuildConfigurations = (")
+w("\t\t\t\t%s /* Debug */," % WIDGET_DEBUG)
+w("\t\t\t\t%s /* Release */," % WIDGET_RELEASE)
 w("\t\t\t);")
 w("\t\t\tdefaultConfigurationIsVisible = 0;")
 w("\t\t\tdefaultConfigurationName = Release;")
