@@ -29,3 +29,8 @@ build-logs/
 .ci/
 .tmpcheck*/
 .ci-tmp/
+
+# 本地构建产物（CI 的附件在 Actions 里，仓库不存）
+# 2026-11-04：git add -A 把下载下来的 zip 一起提交了，
+# 推送因此多传了 8.7MB，花了 13 分钟。放进 .gitignore。
+dist/
