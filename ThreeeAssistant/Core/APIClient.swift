@@ -80,6 +80,17 @@ final class APIClient: NSObject, @unchecked Sendable {
         try await send("GET", path, query: query, body: nil)
     }
 
+    /// 拿**原始响应体**，不解码。
+    ///
+    /// 目前只有一处用：下载导航数据包（`GET /api/navpacks/download/{id}`）。
+    /// 那边返回的确实是一段 JSON，但它是**一个外部文件格式**，
+    /// 不是我们的接口契约 —— 交给 `NavPackParser` 自己去认，
+    /// 才能把"格式不对/版本太新/文件坏了"分成三句不同的话。
+    /// 用 `get<T: Decodable>` 的话，三种失败会压成同一个 `decoding` 错误。
+    func getRaw(_ path: String) async throws -> Data {
+        try await sendRaw("GET", path, query: [], body: nil)
+    }
+
     // MARK: - 独立端口（背词同步 8446）
 
     /// 背词同步跑在**另一个端口**上（服务端 `defaultWordbookPort = 8446`）。

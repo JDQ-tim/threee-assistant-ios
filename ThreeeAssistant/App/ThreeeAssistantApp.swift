@@ -19,6 +19,14 @@ struct ThreeeAssistantApp: App {
     /// 用 @State 持有是 @Observable 的固定写法（不是 @StateObject，那是 ObservableObject 那套）。
     @State private var store = SessionStore()
 
+    /// 校园数据包。
+    ///
+    /// 和 `SessionStore` 分开是有意的：**它不跟账号走**。
+    /// 同一个手机换个人登录，装的还是同一份校园包（那本来就是"这台手机
+    /// 在哪所学校"的属性，不是"谁的账号"的属性）。合成一个对象的话，
+    /// 退出登录时很容易连它一起清掉，而用户看不出是自己把地图弄没了。
+    @State private var navStore = NavPackStore()
+
     init() {
         // 通知的 delegate 必须在这里设 —— 晚于第一次投递的话，
         // 那之前前台到达的提醒会被系统直接吞掉（前台默认不展示）。
@@ -30,6 +38,7 @@ struct ThreeeAssistantApp: App {
         WindowGroup {
             RootView()
                 .environment(store)
+                .environment(navStore)
                 .tint(Theme.accent)
         }
     }
@@ -39,6 +48,7 @@ struct ThreeeAssistantApp: App {
 struct RootView: View {
 
     @Environment(SessionStore.self) private var store
+    @Environment(NavPackStore.self) private var nav
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -71,6 +81,9 @@ struct RootView: View {
         // ⚠️ 上报失败静默。它是纯统计用途，
         //    为了它弹错误横幅，用户会以为登录出了问题。
         .task {
+            // 校园数据包在启动时读一次。它和登录态无关 ——
+            // 没登录也要读（"我的"页面那一行要显示"几栋可定位"）。
+            nav.loadIfNeeded()
             if store.isLoggedIn {
                 await store.reportDevice()
                 await store.prepareReminders()

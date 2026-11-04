@@ -62,6 +62,9 @@ SETTINGS_GROUP = oid("settingsgroup")
 # 重构时新增的两个功能目录：待办独立成页，「我的」取代原 SettingsView
 TASKS_GROUP = oid("tasksgroup")
 PROFILE_GROUP = oid("profilegroup")
+# 校园地图（导航数据包）。单独一个目录：它有自己的数据层（Core/Nav*）
+# 和一套地图 UI，混进 Schedule 里会让「日程」这一块越来越难读。
+CAMPUS_GROUP = oid("campusgroup")
 # Siri / 快捷指令 / 聚焦搜索的入口（App Intents）。
 # 单独一个目录而不是塞进 Core：它要 `import AppIntents`，
 # 和纯数据层放一起会让「哪些文件依赖系统框架」变得不直观。
@@ -96,13 +99,14 @@ GROUP_MAP = {
     "Features/Settings": SETTINGS_GROUP,
     "Features/Tasks": TASKS_GROUP,
     "Features/Profile": PROFILE_GROUP,
+    "Features/Campus": CAMPUS_GROUP,
     "Intents": INTENTS_GROUP,
     "Resources": RESOURCES_GROUP,
 }
 
 group_children = {g: [] for g in GROUP_MAP.values()}
 group_children[FEATURES_GROUP] = [
-    LOGIN_GROUP, SCHEDULE_GROUP, TASKS_GROUP, SETTINGS_GROUP, PROFILE_GROUP
+    LOGIN_GROUP, SCHEDULE_GROUP, TASKS_GROUP, SETTINGS_GROUP, PROFILE_GROUP, CAMPUS_GROUP
 ]
 
 file_refs = []      # (id, name, relpath)
@@ -188,7 +192,7 @@ for g, label in ((APP_GROUP, "App"), (CORE_GROUP, "Core"), (DESIGN_GROUP, "Desig
                  (INTENTS_GROUP, "Intents"),
                  (LOGIN_GROUP, "Login"), (SCHEDULE_GROUP, "Schedule"),
                  (TASKS_GROUP, "Tasks"), (SETTINGS_GROUP, "Settings"),
-                 (PROFILE_GROUP, "Profile")):
+                 (PROFILE_GROUP, "Profile"), (CAMPUS_GROUP, "Campus")):
     w("\t\t%s /* %s */ = {" % (g, label))
     w("\t\t\tisa = PBXGroup;")
     w("\t\t\tchildren = (")
@@ -209,6 +213,7 @@ w("\t\t\t\t%s /* Schedule */," % SCHEDULE_GROUP)
 w("\t\t\t\t%s /* Tasks */," % TASKS_GROUP)
 w("\t\t\t\t%s /* Settings */," % SETTINGS_GROUP)
 w("\t\t\t\t%s /* Profile */," % PROFILE_GROUP)
+w("\t\t\t\t%s /* Campus */," % CAMPUS_GROUP)
 w("\t\t\t);")
 w("\t\t\tpath = Features;")
 w("\t\t\tsourceTree = \"<group>\";")

@@ -34,6 +34,7 @@ import UserNotifications
 struct ProfileView: View {
 
     @Environment(SessionStore.self) private var store
+    @Environment(NavPackStore.self) private var nav
 
     @State private var notifyStatus: UNAuthorizationStatus = .notDetermined
     @State private var armedCount = 0
@@ -90,6 +91,15 @@ struct ProfileView: View {
         }
     }
 
+    /// 校园地图那一行的副标题。
+    ///
+    /// 报「几栋楼」而不是「已导入」：用户真正想知道的是
+    /// "这份包是不是学校最新的那份"，楼栋数是唯一能一眼看出来的量。
+    private var campusDetail: String {
+        guard let p = nav.activePack else { return "未导入" }
+        return "\(p.withCoordCount) 栋可定位"
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -124,6 +134,17 @@ struct ProfileView: View {
                         row(icon: "arrow.triangle.2.circlepath.icloud", tint: .teal,
                             title: "系统日历",
                             detail: systemCalendarDetail)
+                    }
+
+                    // 校园地图：日程里写的地点 → 楼栋坐标。
+                    // 放在这里而不是做成第五个 Tab：它一学期用不了几次，
+                    // 但每次用都是"马上要迟到"的时候 —— 所以入口要短。
+                    NavigationLink {
+                        CampusMapView()
+                    } label: {
+                        row(icon: "map", tint: .indigo,
+                            title: "校园地图",
+                            detail: campusDetail)
                     }
                 } header: {
                     Text("常用")

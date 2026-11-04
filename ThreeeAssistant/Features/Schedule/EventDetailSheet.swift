@@ -7,11 +7,15 @@ struct EventDetailSheet: View {
     let calendar: CalendarDTO?
 
     @Environment(SessionStore.self) private var store
+    @Environment(NavPackStore.self) private var nav
     @Environment(\.dismiss) private var dismiss
 
     @State private var confirmDelete = false
     @State private var busy = false
     @State private var failure: String?
+
+    /// 校园地图（全屏 —— 详情页本身是 sheet，sheet 上再套 sheet 会被静默忽略）
+    @State private var showCampusMap = false
 
     /// 稍后提醒正在发请求
     @State private var snoozing = false
@@ -79,6 +83,7 @@ struct EventDetailSheet: View {
                         }
                     }
                     infoRow("地点", item.location.nonEmpty(or: "—"))
+                    campusMapButton
                     infoRow("备注", item.notes.nonEmpty(or: "—"))
 
                     snoozeSection
@@ -193,6 +198,17 @@ struct EventDetailSheet: View {
                     calendarID: item.calendarID,
                     eventTitle: item.title ?? ""
                 )
+            }
+            // 校园地图同样走全屏（同上：sheet 套 sheet 会被 iOS 静默忽略）。
+            .fullScreenCover(isPresented: $showCampusMap) {
+                NavigationStack {
+                    CampusMapView(focusText: item.location)
+                        .toolbar {
+                            ToolbarItem(placement: .topBarLeading) {
+                                Button("关闭") { showCampusMap = false }
+                            }
+                        }
+                }
             }
             .onChange(of: showEdit) { _, isShowing in
                 // 编辑页关掉之后，详情页的内容已经过期了：直接退出，
@@ -362,6 +378,50 @@ struct EventDetailSheet: View {
             return "提前 \(m) 分钟"
         }
         return parts.joined(separator: "、")
+    }
+
+    /// 地点能对上校园数据包里的楼时，这里多一个"去地图"的入口。
+    ///
+    /// 为什么只在**认得出来**时才显示：认不出还给一个按钮，点进去是一片
+    /// 没有高亮的地图，用户会以为"地图坏了"。认不出时宁可不出现 ——
+    /// 而"为什么认不出"的答案在「个人 → 校园地图」里，那里有相近名字的提示。
+    @ViewBuilder
+    private var campusMapButton: some View {
+        if let s = campusSplit, let b = s.building {
+            Button {
+                showCampusMap = true
+            } label: {
+                HStack(spacing: 9) {
+                    Image(systemName: "map.fill")
+                        .font(.footnote)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("在校园地图里查看")
+                            .font(.appSubheadline.weight(.medium))
+                        Text(s.room.isEmpty ? b.name : "\(b.name) · \(s.room)")
+                            .font(.appCaption2)
+                            .opacity(0.85)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2)
+                        .opacity(0.7)
+                }
+                .foregroundStyle(Theme.teal600)
+                .padding(10)
+                .frame(maxWidth: .infinity)
+                .background(Theme.teal50)
+                .clipShape(RoundedRectangle(cornerRadius: Theme.cornerSmall, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .padding(.bottom, 6)
+        }
+    }
+
+    /// 地点文字 → 校园包里的楼。认不出就是 nil。
+    private var campusSplit: NavSplit? {
+        guard nav.hasActivePack, !item.location.isEmpty else { return nil }
+        let s = nav.split(item.location)
+        return s.building == nil ? nil : s
     }
 
     private func infoRow(_ key: String, _ value: String) -> some View {
