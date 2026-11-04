@@ -41,7 +41,9 @@ struct NextClassLiveActivity: Widget {
                         Image(systemName: "book.closed.fill")
                             .font(.caption2)
                             .foregroundStyle(accent)
-                        Text(timeRange(context.state))
+                        // ⚠️ `timeRange` 返回的就是 `Text`（它做了 Text 拼接），
+                        //    再套一层 `Text(...)` 会要求 Text 符合 StringProtocol —— 编译不过。
+                        timeRange(context.state)
                             .font(.caption2)
                             .monospacedDigit()
                             .foregroundStyle(.secondary)
