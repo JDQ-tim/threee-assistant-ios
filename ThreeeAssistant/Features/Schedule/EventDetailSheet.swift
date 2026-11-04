@@ -418,9 +418,12 @@ struct EventDetailSheet: View {
     }
 
     /// 地点文字 → 校园包里的楼。认不出就是 nil。
+    ///
+    /// ⚠️ `ScheduleInstance.location` 是 `String?`（导入的 ICS 里可能根本没有
+    ///    这个字段），所以必须先解包再判空 —— 直接 `.isEmpty` 会编译不过。
     private var campusSplit: NavSplit? {
-        guard nav.hasActivePack, !item.location.isEmpty else { return nil }
-        let s = nav.split(item.location)
+        guard nav.hasActivePack, let loc = item.location, !loc.isEmpty else { return nil }
+        let s = nav.split(loc)
         return s.building == nil ? nil : s
     }
 
