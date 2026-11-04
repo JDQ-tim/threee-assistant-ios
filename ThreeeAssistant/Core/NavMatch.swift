@@ -62,6 +62,20 @@ enum NavText {
     /// 全角这一条很实际：中文输入法下打出来的是「主５」「Ａ栋」，
     /// 而标注包里存的是「主5」「A栋」—— 同一个楼，字面不同，匹配对不上。
     static func norm(_ s: String) -> String {
+        foldWidth(s).lowercased()
+    }
+
+    /// 全角转半角 + 去空白，**但不转小写**。
+    ///
+    /// 为什么要和 `norm` 分开：房号是要**显示给用户看**的，
+    /// 而 `norm` 会把「A302」变成「a302」—— 那个大小写是有意义的
+    /// （A 座 302），抹掉了用户会以为系统写错了。
+    ///
+    /// 反过来，`extractRoom` 又**必须**先过这一步：
+    /// 正则里的 `[0-9]` 只认 ASCII，中文输入法打出来的「３０２」
+    /// 一个数字都匹配不上 —— 表现是"楼认对了，房号却丢了"。
+    /// 这个 bug 是 `Tests/NavCheck` 抓出来的，不是看代码看出来的。
+    static func foldWidth(_ s: String) -> String {
         var out = ""
         for u in s.unicodeScalars {
             // ⚠️ 全角空格 U+3000 也在这里被跳过 —— 安卓端那段
@@ -73,7 +87,7 @@ enum NavText {
                 out.unicodeScalars.append(u)
             }
         }
-        return out.lowercased()
+        return out
     }
 
     /// **楼名部分**：井号（含全角）之后一律当房号，丢掉。
@@ -459,7 +473,13 @@ enum NavMatcher {
     ///
     /// `"13楼"` 如果只取 `"13"`，显示出来用户会以为是房号 13（在 1 楼），
     /// 而实际是"13 楼"。**少一个字的差别是整栋楼的差别。**
-    static func extractRoom(_ tailRaw: String) -> String {
+    ///
+    /// ⚠️ 入口处先 `foldWidth`：中文输入法打出来的是「３０２」，
+    ///    而下面的正则用的是 `[0-9]`（只认 ASCII）。不折这一步，
+    ///    全角写法的房号会**静默丢失** —— 楼认对了、房号没了，
+    ///    而界面看起来只是"这条日程没写教室"。
+    static func extractRoom(_ text: String) -> String {
+        let tailRaw = NavText.foldWidth(text)
         let ns = tailRaw as NSString
         guard ns.length > 0,
               let m = roomRegex.firstMatch(in: tailRaw, options: [],
