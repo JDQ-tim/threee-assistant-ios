@@ -17,10 +17,13 @@ import Observation
 //  ## 什么时候开、什么时候收
 //
 //  ```
-//    开：课前 30 分钟         ← 提前太多会从早占到晚
+//    开：正在上 / 2 小时内要上 / 明天第一节（今天已经没课了）
 //    收：下课 + 5 分钟        ← 由 staleDate 交给系统自动收，
 //                              不依赖 App 还活着
 //  ```
+//
+//  "挑哪一节"全部交给纯函数 `NextClassPlan` —— 它能离线跑用例，
+//  这里只负责**怎么挂**（调 ActivityKit）。理由和 `ReminderPlan` 一样。
 //
 //  ⚠️ 全程**不追求**"每秒更新"。倒计时是界面用
 //     `Text(date, style: .timer)` 让系统自己走的 ——
@@ -41,16 +44,16 @@ final class LiveActivityManager {
     private(set) var lastError: String?
 
     /// 正在显示的那条日程的标题（设置页用来回答"现在岛上是什么"）。
+    ///
+    /// ⚠️ 这个值**只在开着 App 时准**。活动挂上之后用户把 App 划掉，
+    ///    `ActivityKit` 仍然让它在锁屏上活着，而这边没人能更新了。
     private(set) var showingTitle: String?
 
-    private var activity: Activity<NextClassActivityAttributes>?
+    /// 与 `showingTitle` 同步更新的"何时开始"。设置页用它区分
+    /// 「正在上」和「还有 1 小时 20 分」—— 只说标题会让人以为是现在的事。
+    private(set) var showingStart: Date?
 
-    /// 课前多久开始显示。
-    private let leadTime: TimeInterval = 30 * 60
-    /// 只在这一段时间内找"下一节课"。再远的事现在开活动没有意义。
-    private let horizon: TimeInterval = 8 * 3600
-    /// 已经开始了的课，超过这么久就不再顶到岛上（防止一条全天文娱活动挂一整天）。
-    private let ongoingLimit: TimeInterval = 3 * 3600
+    private var activity: Activity<NextClassActivityAttributes>?
 
     init() {
         if UserDefaults.standard.object(forKey: Self.enabledKey) != nil {
@@ -67,6 +70,7 @@ final class LiveActivityManager {
             lastError = nil
         } else {
             showingTitle = nil
+            showingStart = nil
             Task { await endAll() }
         }
     }
@@ -91,25 +95,30 @@ final class LiveActivityManager {
             return
         }
 
-        guard let pick = pickTarget(instances) else {
+        guard let pick = pickTarget(instances, now: .now) else {
             lastError = nil
             await endAll()
             return
         }
 
         let state = NextClassActivityAttributes.ContentState(
-            title: pick.title.flatMap { $0.isEmpty ? nil : $0 } ?? "（无标题）",
-            location: pick.location ?? "",
+            title: pick.title.isEmpty ? "（无标题）" : pick.title,
+            location: pick.location,
             start: pick.start,
             end: pick.end
         )
-        // 下课之后再留 5 分钟就自动收。用系统时间判定，App 不在也生效。
+        // ⚠️ 下课之后再留 5 分钟就自动收。
+        //
+        //    这个时刻只是一个"建议"，系统不会因为过了它就丢掉活动 ——
+        //    真正让它消失的是下一次 `end()` 或用户手动划掉。
+        //    明天那一节也一样：挂到它下课后 5 分钟，而不是"今晚就过期"。
         let stale = max(pick.end, .now).addingTimeInterval(5 * 60)
         let content = ActivityContent(state: state, staleDate: stale)
 
         if let current = activity, current.attributes.eventID == pick.eventID {
             await current.update(content)
             showingTitle = state.title
+            showingStart = pick.start
             lastError = nil
             return
         }
@@ -122,6 +131,7 @@ final class LiveActivityManager {
                 pushType: nil
             )
             showingTitle = state.title
+            showingStart = pick.start
             lastError = nil
         } catch {
             // 常见原因：系统实时活动总开关关着、或本机不允许。
@@ -137,33 +147,54 @@ final class LiveActivityManager {
         }
         activity = nil
         showingTitle = nil
+        showingStart = nil
     }
 
     // MARK: - 选哪一条
 
     /// 挑出"现在该显示的那一节"。
     ///
-    /// 优先级：**正在上的** > 30 分钟内要开始的，各自取最近的一条。
-    private func pickTarget(_ list: [ScheduleInstance]) -> ScheduleInstance? {
-        let now = Date.now
-
-        // 待办和全天日程不进实时活动：
-        // 前者没有"什么时候下课"，后者会从零点挂到半夜。
-        let pool = list.filter { !$0.isTask && !$0.allDay && $0.end > now }
-        guard !pool.isEmpty else { return nil }
-
-        let ongoing = pool.filter {
-            $0.start <= now && $0.start > now.addingTimeInterval(-ongoingLimit)
+    /// 判断本身在 `NextClassPlan.pick`（纯函数、离线可测），
+    /// 这里只做**模型的摊平**：把 `ScheduleInstance` 里的可选字段
+    /// 收敛成 `Pick` 的非可选字段，并排除两类不该进实时活动的东西。
+    ///
+    /// ⚠️ 排除待办和全天日程：
+    ///    - 待办没有"什么时候下课"，卡片右半边会空着
+    ///    - 全天日程会从零点挂到半夜，它更适合做普通提醒
+    private func pickTarget(_ list: [ScheduleInstance], now: Date) -> NextClassPlan.Pick? {
+        let pool = list
+            .filter { !$0.isTask && !$0.allDay && $0.end > now }
+            .map {
+                NextClassPlan.Pick(
+                    eventID: $0.eventID,
+                    title: $0.title ?? "",
+                    location: $0.location ?? "",
+                    start: $0.start,
+                    end: $0.end,
+                    isUpcoming: $0.start > now,
+                    isTomorrow: false
+                )
+            }
+        guard let best = NextClassPlan.pick(items: pool, now: now) else { return nil }
+        // `isTomorrow` 由调用方真正需要的地方再算（设置页文案用）。
+        //
+        // 这里用**自然日**判而不是 `start.timeIntervalSince(now) > 12h`：
+        // 晚上 23:50 看明天 08:00 的课只差 8 小时，但它是明天的。
+        let isTomorrow: Bool
+        if let tomorrow = Calendar.current.date(byAdding: .day, value: 1,
+                                                to: Calendar.current.startOfDay(for: now)) {
+            isTomorrow = Calendar.current.isDate(best.start, inSameDayAs: tomorrow)
+        } else {
+            isTomorrow = false
         }
-        if let current = ongoing.min(by: { $0.start < $1.start }) {
-            return current
-        }
-
-        let soon = pool.filter {
-            $0.start > now
-                && $0.start <= now.addingTimeInterval(horizon)
-                && $0.start.timeIntervalSince(now) <= leadTime
-        }
-        return soon.min(by: { $0.start < $1.start })
+        return NextClassPlan.Pick(
+            eventID: best.eventID,
+            title: best.title,
+            location: best.location,
+            start: best.start,
+            end: best.end,
+            isUpcoming: best.start > now,
+            isTomorrow: isTomorrow
+        )
     }
 }

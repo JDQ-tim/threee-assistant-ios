@@ -165,14 +165,14 @@ struct NotificationSettingsView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("显示下一节课")
                         .font(.appBody)
-                    Text("课前 30 分钟出现，下课后自动收起")
+                    Text("课前 2 小时出现，下课后自动收起")
                         .font(.appCaption2)
                         .foregroundStyle(Theme.textTertiary)
                 }
             }
 
             if let t = live.showingTitle {
-                LabeledContent("正在显示", value: t)
+                LabeledContent("正在显示", value: showingDetail(t))
             }
 
             if let e = live.lastError {
@@ -184,8 +184,22 @@ struct NotificationSettingsView: View {
         } header: {
             Text("实时活动")
         } footer: {
-            Text("它和上面的「提醒」是两回事：提醒到点弹一下就走，实时活动是一条**常驻**的状态，下课才收。\n\niPhone 14 Pro 及以上会同时出现在灵动岛里；iPad 上没有灵动岛，只会显示成锁屏底部的一张卡片（需要 iPadOS 26 以上）。\n\n系统总开关在「设置 → 通知 → 学习助手 → 实时活动」。")
+            Text("它和上面的「提醒」是两回事：提醒到点弹一下就走，实时活动是一条**常驻**的状态，下课才收。\n\niPhone 14 Pro 及以上会同时出现在灵动岛里；iPad 上没有灵动岛，只会显示成锁屏底部的一张卡片（需要 iPadOS 26 以上）。\n\n**什么时候会出现**：正在上的那一节、2 小时内要上的那一节，以及今天已经没有课之后、明天第一节。期末考试周连考三天时，它会提前一晚把明天第一场挂出来。\n\n系统总开关在「设置 → 通知 → 学习助手 → 实时活动」。")
         }
+    }
+
+    /// 「正在显示」那行右边那句话。
+    ///
+    /// 只写标题是不够的 —— 用户看到「高数」两个字会以为是现在正在上的课，
+    /// 而它可能是一小时后的。**把时间关系写出来**才知道岛上是不是对的。
+    private func showingDetail(_ title: String) -> String {
+        guard let start = live.showingStart else { return title }
+        let now = Date.now
+        if start <= now { return "\(title)（正在进行）" }
+        if !Calendar.current.isDate(start, inSameDayAs: now) {
+            return "\(title)（明天 \(start.hhmm)）"
+        }
+        return "\(title)（\(start.hhmm)）"
     }
 
     private var statusFooter: String {
