@@ -33,6 +33,11 @@ import SwiftUI
 struct ScheduleView: View {
 
     @Environment(SessionStore.self) private var store
+    /// 日历色条、课块颜色要按当前外观取（深色下用亮一档那套）。
+    /// 这是**读 environment**，不是读 `AppearanceStore` ——
+    /// 后者已经被根视图翻译成 `preferredColorScheme` 了，
+    /// 视图里能拿到的 `colorScheme` 才是真正生效的那个。
+    @Environment(\.colorScheme) private var scheme
 
     @State private var mode: SubView = .agenda
     @State private var selectedDate: Date = Date.now.startOfDay
@@ -369,7 +374,10 @@ struct ScheduleView: View {
 
     /// 一行：时间（开始大字、结束小字）+ 日历色条 + 标题/地点。
     private func agendaRow(_ item: ScheduleInstance) -> some View {
-        let color = Color(hexString: store.calendarsByID[item.calendarID]?.displayColor ?? "#185FA5")
+        let color = CalendarPalette.display(
+            store.calendarsByID[item.calendarID]?.displayColor ?? CalendarPalette.defaultLight,
+            dark: scheme == .dark
+        )
         return HStack(alignment: .top, spacing: 10) {
             VStack(alignment: .trailing, spacing: 1) {
                 Text(item.allDay ? "全天" : item.start.hhmm)
@@ -611,10 +619,12 @@ struct ScheduleView: View {
                     instances: store.instances.filter { $0.calendarID == cal.id },
                     periods: periods,
                     weekStart: store.weekStart,
-                    colorHex: cal.displayColor
-                ) { item in
-                    detail = item
-                }
+                    onSelect: { item in
+                        detail = item
+                    },
+                    blockColor: CalendarPalette.display(cal.displayColor,
+                                                        dark: scheme == .dark)
+                )
                 .padding(.horizontal, -16)
             }
         } else {

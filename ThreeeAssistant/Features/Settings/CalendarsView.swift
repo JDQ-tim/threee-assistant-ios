@@ -12,6 +12,8 @@ struct CalendarsView: View {
 
     @Environment(SessionStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+    // 色点要按当前外观取色（深色下用亮一档的那套），所以要读 colorScheme。
+    @Environment(\.colorScheme) private var scheme
 
     @State private var editing: CalendarDTO?
     @State private var creating = false
@@ -111,7 +113,7 @@ struct CalendarsView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 8) {
                         Circle()
-                            .fill(Color(hexString: cal.displayColor))
+                            .fill(CalendarPalette.display(cal.displayColor, dark: scheme == .dark))
                             .frame(width: 10, height: 10)
                         Text(cal.name)
                             .font(.system(size: 16, weight: .semibold))
@@ -211,15 +213,34 @@ struct CalendarEditSheet: View {
 
     @Environment(SessionStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var scheme
 
     @State private var name = ""
-    @State private var color = "#185FA5"
+    @State private var color = CalendarPalette.defaultLight
     @State private var kind = "private"
     @State private var busy = false
     @State private var failure: String?
     @State private var loaded = false
 
+    /// 系统取色器。
+    ///
+    /// 为什么要它：色板只有 16 个，而"给每门课一个颜色"的人会用到十几种。
+    /// 安卓端也是「色板 + 自定义」两个入口。服务端字段就是自由的
+    /// `#RRGGBB`（`CalendarDTO.display_color`），不限制成枚举。
+    ///
+    /// ⚠️ 取色器给的是**存进去的那套**（浅色档），不是深色显示档 ——
+    ///    深色档是衍生的，不进服务端。见 `CalendarPalette` 文件头。
+    @State private var pickingCustom = false
+    @State private var customColor = Color.blue
+
     private var isNew: Bool { calendar == nil }
+
+    /// 当前这个颜色在色板里吗。不在就是用户自定义的。
+    private var isCustomColor: Bool {
+        !CalendarPalette.swatches.contains {
+            $0.light.caseInsensitiveCompare(color) == .orderedSame
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -248,17 +269,20 @@ struct CalendarEditSheet: View {
                             .foregroundStyle(Theme.textSecondary)
                             .padding(.leading, 2)
 
-                        // 给一组固定色板而不是完整取色器：
-                        // 日程列表里靠颜色区分日历，色板太自由反而让人选出
-                        // 一堆相近的颜色，最后分不出来
+                        // 色板 + 自定义。
+                        //
+                        // ⚠️ 色块画的是**深色档**（`swatch.dark`）而不是
+                        //    存进服务端的那一档：用户选色的时候看的就是
+                        //    深色背景上的效果，拿浅色档画会出现
+                        //    "选的时候挺亮，选了之后变暗"。
                         FlowRow(spacing: 10) {
-                            ForEach(Self.palette, id: \.self) { hex in
-                                let on = color.uppercased() == hex.uppercased()
+                            ForEach(CalendarPalette.swatches, id: \.light) { sw in
+                                let on = color.caseInsensitiveCompare(sw.light) == .orderedSame
                                 Button {
-                                    color = hex
+                                    color = sw.light
                                 } label: {
                                     Circle()
-                                        .fill(Color(hexString: hex))
+                                        .fill(CalendarPalette.display(sw.light, dark: scheme == .dark))
                                         .frame(width: 30, height: 30)
                                         .overlay(
                                             Circle()
@@ -267,15 +291,56 @@ struct CalendarEditSheet: View {
                                                 .padding(-3)
                                         )
                                         .overlay(
+                                            // 勾用深色而不是白色：深色档那些亮色块
+                                            // 上白勾几乎看不见（黄、青、草绿）
                                             Image(systemName: "checkmark")
                                                 .font(.caption.weight(.bold))
-                                                .foregroundStyle(.white)
+                                                .foregroundStyle(Color(hexString: "#1A1A18"))
                                                 .opacity(on ? 1 : 0)
                                         )
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityLabel(sw.name)
                             }
                         }
+
+                        // 自定义色：第 17 个色块，永远排在色板后面。
+                        Button {
+                            // 打开取色器时用当前值起手 —— 从随机色开始的
+                            // 取色器会让人第一眼就迷路
+                            customColor = Color(hexString: color)
+                            pickingCustom = true
+                        } label: {
+                            HStack(spacing: 7) {
+                                ZStack {
+                                    Circle()
+                                        .fill(isCustomColor
+                                              ? CalendarPalette.display(color, dark: scheme == .dark)
+                                              : Theme.surfaceAlt)
+                                        .frame(width: 22, height: 22)
+                                    Image(systemName: isCustomColor ? "checkmark" : "plus")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundStyle(isCustomColor
+                                                         ? Color(hexString: "#1A1A18")
+                                                         : Theme.textSecondary)
+                                }
+                                Text(isCustomColor ? "自定义 · \(color.uppercased())" : "自定义颜色")
+                                    .font(.appFootnote)
+                                    .foregroundStyle(Theme.blue600)
+                                Spacer(minLength: 0)
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Theme.surfaceAlt)
+                            .clipShape(RoundedRectangle(cornerRadius: Theme.cornerSmall,
+                                                        style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+
+                        Text("颜色只是给你自己分清楚哪几天是同一类事，不会同步给别人看。")
+                            .font(.caption2)
+                            .foregroundStyle(Theme.hint)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
 
                     VStack(alignment: .leading, spacing: 5) {
@@ -322,13 +387,78 @@ struct CalendarEditSheet: View {
                     kind = c.kind ?? "private"
                 }
             }
+            // 系统取色器用 sheet 挂出来，不用 navigationDestination：
+            // 它是一个"临时的选择面板"，选完就回去，不该进导航栈。
+            .sheet(isPresented: $pickingCustom) {
+                customColorSheet
+            }
         }
     }
 
-    private static let palette = [
-        "#185FA5", "#0F6E56", "#854F0B", "#A32D2D",
-        "#534AB7", "#993556", "#3B6D11", "#5F5E5A",
-    ]
+    /// 取色器面板。
+    ///
+    /// 用 SwiftUI 的 `ColorPicker`（背后是系统的 UIColor 面板），
+    /// 而不是自己画一个色轮 —— 系统那个支持取色器吸管、
+    /// 支持"从屏幕其他 App 取色"，自己画的做不到，也没必要。
+    private var customColorSheet: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 18) {
+                ColorPicker("选一个颜色", selection: $customColor, supportsOpacity: false)
+                    .font(.appBody)
+
+                HStack(spacing: 10) {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(customColor)
+                        .frame(width: 54, height: 54)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(hexString(customColor))
+                            .font(.system(.footnote, design: .monospaced))
+                            .foregroundStyle(Theme.textSecondary)
+                        Text("深色模式下会自动提亮一档，不会刺眼。")
+                            .font(.caption2)
+                            .foregroundStyle(Theme.hint)
+                    }
+                    Spacer(minLength: 0)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(20)
+            .background(Theme.background)
+            .navigationTitle("自定义颜色")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") { pickingCustom = false }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("用这个") {
+                        color = hexString(customColor)
+                        pickingCustom = false
+                    }
+                }
+            }
+        }
+    }
+
+    /// `Color` → `#RRGGBB`。
+    ///
+    /// ⚠️ 必须用 `UIColor` 拿分量，不能自己 `Color` → `Codable`。
+    ///    理由：`Color` 是个不透明的协议值，只有转成 `UIColor`
+    ///    才能保证拿到 sRGB 分量；直接反射 `components` 在
+    ///    某些色彩空间下会返回 nil。
+    ///
+    /// ⚠️ `supportsOpacity: false` 是配合这个函数的 ——
+    ///    服务端存的是 6 位 `#RRGGBB`，带 alpha 的话存进去会变成
+    ///    不是合法格式，读取时回落到默认蓝，用户会以为"选了没用"。
+    private func hexString(_ c: Color) -> String {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        guard UIColor(c).getRed(&r, green: &g, blue: &b, alpha: &a) else {
+            return CalendarPalette.defaultLight
+        }
+        func byte(_ v: CGFloat) -> Int { Int((min(max(v, 0), 1) * 255).rounded()) }
+        return String(format: "#%02X%02X%02X", byte(r), byte(g), byte(b))
+    }
 
     private func save() {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -345,7 +475,11 @@ struct CalendarEditSheet: View {
                     try await store.updateCalendar(
                         id: c.id,
                         name: trimmed != c.name ? trimmed : nil,
-                        color: color.uppercased() != c.displayColor.uppercased() ? color : nil,
+                        // ⚠️ 比较时忽略大小写：服务端回的是大写，
+                        //    而用户没动过颜色时 `color` 也是大写 ——
+                        //    但万一哪天回了小写，这里就会误判成"改过"
+                        color: color.caseInsensitiveCompare(c.displayColor) == .orderedSame
+                            ? nil : color,
                         kind: (c.canManage && kind != (c.kind ?? "private")) ? kind : nil
                     )
                 } else {

@@ -35,6 +35,8 @@ struct HomeView: View {
 
     @Environment(SessionStore.self) private var store
     @Environment(NavPackStore.self) private var nav
+    /// 今日日程的颜色按当前外观取
+    @Environment(\.colorScheme) private var scheme
 
     @State private var weather: WeatherDocDTO?
     @State private var weatherLoading = false
@@ -471,7 +473,10 @@ struct HomeView: View {
     /// 一行：左边时间（两行：开始大字、结束小字），右边标题 + 地点。
     /// 这是安卓端 `AgendaTab` 的行结构，比 iOS 原来的单行时间更省横向空间。
     private func homeRow(_ item: ScheduleInstance) -> some View {
-        let color = Color(hexString: store.calendarsByID[item.calendarID]?.displayColor ?? "#185FA5")
+        let color = CalendarPalette.display(
+            store.calendarsByID[item.calendarID]?.displayColor ?? CalendarPalette.defaultLight,
+            dark: scheme == .dark
+        )
         return HStack(alignment: .top, spacing: 10) {
             VStack(alignment: .trailing, spacing: 1) {
                 Text(item.allDay ? "全天" : item.start.hhmm)

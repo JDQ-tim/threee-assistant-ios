@@ -30,6 +30,9 @@ struct CourseTableView: View {
     /// 点某节课 → 打开详情
     @State private var detail: ScheduleInstance?
 
+    /// 课块颜色要按当前外观取（深色下用亮一档那套）
+    @Environment(\.colorScheme) private var scheme
+
     /// 这张表上的课
     private var courses: [ScheduleInstance] {
         store.instances.filter { $0.calendarID == calendar.id }
@@ -49,10 +52,12 @@ struct CourseTableView: View {
                     instances: courses,
                     periods: periods,
                     weekStart: weekStart,
-                    colorHex: calendar.displayColor
-                ) { item in
-                    detail = item
-                }
+                    onSelect: { item in
+                        detail = item
+                    },
+                    blockColor: CalendarPalette.display(calendar.displayColor,
+                                                        dark: scheme == .dark)
+                )
             }
         }
         .background(Theme.background)

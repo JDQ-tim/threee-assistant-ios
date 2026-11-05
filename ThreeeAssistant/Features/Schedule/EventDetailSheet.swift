@@ -9,6 +9,8 @@ struct EventDetailSheet: View {
     @Environment(SessionStore.self) private var store
     @Environment(NavPackStore.self) private var nav
     @Environment(\.dismiss) private var dismiss
+    /// 色条按当前外观取
+    @Environment(\.colorScheme) private var scheme
 
     @State private var confirmDelete = false
     @State private var busy = false
@@ -54,7 +56,9 @@ struct EventDetailSheet: View {
 
                     HStack(spacing: 10) {
                         RoundedRectangle(cornerRadius: 2)
-                            .fill(Color(hexString: calendar?.displayColor ?? "#185FA5"))
+                            .fill(CalendarPalette.display(
+                                calendar?.displayColor ?? CalendarPalette.defaultLight,
+                                dark: scheme == .dark))
                             .frame(width: 4, height: 30)
 
                         Text(item.title.nonEmpty(or: "（无标题）"))

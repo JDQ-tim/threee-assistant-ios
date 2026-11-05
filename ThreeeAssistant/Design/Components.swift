@@ -28,8 +28,12 @@ struct EventRowView: View {
     /// 由上层从 `store.repeatRuleByEventID` 查出来传进来。
     var repeatRule: String?
 
+    /// 色条颜色按当前外观取（深色下用亮一档那套）
+    @Environment(\.colorScheme) private var scheme
+
     private var barColor: Color {
-        Color(hexString: calendar?.displayColor ?? "#185FA5")
+        CalendarPalette.display(calendar?.displayColor ?? CalendarPalette.defaultLight,
+                                dark: scheme == .dark)
     }
 
     private var timeText: String {

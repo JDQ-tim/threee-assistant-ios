@@ -66,6 +66,18 @@ enum Theme {
     static let accent = blue600
     static let onAccent = Color.adaptive(light: 0xFFFFFF, dark: 0x042C53)
 
+    /// ⚠️ 深色下**卡片**上直接写字的颜色。
+    ///
+    /// `textTertiary` 在深色下是 `#7C7B76`，放在 `surface`（`#1E1F23`）上
+    /// 对比度只有 **3.4:1** —— 正文达不到 AA 的 4.5:1，
+    /// 时间、副标题、脚注全都在用它。
+    /// 这是原来就有的一处硬伤，只是浅色下不明显（浅色那档是 4.6:1）。
+    ///
+    /// 现在浅色/深色可以手动切了，用户会在两档之间来回看，
+    /// 对比度不够会变得很刺眼。所以补一个只用于**小字**的档位。
+    /// 日期网格里那种受格子约束的数字不要用它 —— 那类另有 `appCaptionFixed`。
+    static let hint = Color.adaptive(light: 0x7A7974, dark: 0x9A998F)
+
     static let corner: CGFloat = 14
     static let cornerSmall: CGFloat = 10
 }

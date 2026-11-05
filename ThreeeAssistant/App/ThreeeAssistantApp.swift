@@ -34,6 +34,12 @@ struct ThreeeAssistantApp: App {
     /// 退出登录时要主动收掉它，但状态本身不该跟着账号清空。
     @State private var liveActivity = LiveActivityManager()
 
+    /// 浅色 / 深色 / 跟随系统。
+    ///
+    /// 挂在 App 这一层而不是登录态里面：外观是**这台设备**的属性，
+    /// 不是账号的。没登录时登录页也要跟着变。
+    @State private var appearance = AppearanceStore()
+
     init() {
         // 通知的 delegate 必须在这里设 —— 晚于第一次投递的话，
         // 那之前前台到达的提醒会被系统直接吞掉（前台默认不展示）。
@@ -47,6 +53,7 @@ struct ThreeeAssistantApp: App {
                 .environment(store)
                 .environment(navStore)
                 .environment(liveActivity)
+                .environment(appearance)
                 .tint(Theme.accent)
         }
     }
@@ -58,14 +65,16 @@ struct RootView: View {
     @Environment(SessionStore.self) private var store
     @Environment(NavPackStore.self) private var nav
     @Environment(LiveActivityManager.self) private var live
+    // ★ 读它就是订阅它 —— 用户在「外观」里拨一下，这一层重新求值，
+    //   下面的 `preferredColorScheme` 当场换掉，整个 App 重画。
+    //   这是"专门开一个让人可以用浅色和深色变化"的落点。
+    @Environment(AppearanceStore.self) private var appearance
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         Group {
             if store.isLoggedIn {
-                // 重构后进入四 Tab 主框架，不再是单个日程页。
-                // 原来所有功能挤在日程页右上角的 sheet 里，
-                // 现在按 iOS 的信息架构拆成 日程/待办/收件箱/我的。
+                // 重构后进入五 Tab 主框架，不再是单个日程页。
                 MainTabView()
                     .transition(.opacity)
             } else {
@@ -73,6 +82,14 @@ struct RootView: View {
                     .transition(.opacity)
             }
         }
+        // ⚠️ 位置在这里，不在 `WindowGroup` 上：
+        //    `preferredColorScheme` 是 View 的修饰符，不是 Scene 的。
+        //    放在 Group 上还有个好处 —— 登录页也跟着变。
+        //
+        // ⚠️ 必须是**在根上**。挂到某一页里只会改那一页，
+        //    而 Tab 栏、导航栏、弹出的 sheet 都是系统画的，
+        //    它们跟的是"最近一个设置了 preferredColorScheme 的祖先"。
+        .preferredColorScheme(appearance.mode.colorScheme)
         .animation(.easeInOut(duration: 0.22), value: store.isLoggedIn)
         // 登录态变化时把周视图重置到今天那周，
         // 否则换账号后可能停在上一个账号翻到的月份，看起来像「数据没了」

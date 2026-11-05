@@ -23,11 +23,17 @@ struct CourseGridView: View {
     let periods: [CoursePeriod]
     /// 用哪一周来取「这周几号」。周视图的当前周。
     let weekStart: Date
-    /// 日历颜色，用来给课程块上色
-    let colorHex: String
 
     /// 点一格
     var onSelect: ((ScheduleInstance) -> Void)?
+
+    /// 课块该用什么颜色。
+    ///
+    /// ⚠️ 由**调用方**决定，不在这里读 `Theme` —— 因为颜色要按当前外观
+    ///    （`colorScheme`）取，而 `colorScheme` 是 environment 里的东西，
+    ///    只能从视图读。这里只是收一个已经算好的 `Color`，
+    ///    这样单测/自检里也能直接构造。
+    var blockColor: Color = Color(hexString: "#185FA5")
 
     /// 网格的 7 列：周一到周日
     private static let dayCount = 7
@@ -117,37 +123,43 @@ struct CourseGridView: View {
         } else {
             // 一格多课（两周排了不同课、或者一次临时调整）时只显示第一节，
             // 但标一个角标 —— 直接叠两层会看不清字
+            //
+            // ⚠️ 块里的字用**白的还是黑的**，由底色亮度决定。
+            //    原来写死白色，深色模式下那批亮色块（黄、青、草绿）
+            //    上白字几乎看不见 —— 这是"提亮色块"带来的新问题，
+            //    必须在同一处解决，不能只在色板里提亮就算完。
+            let ink: Color = CalendarPalette.readableInk(on: blockColor)
             Button {
                 if let first = hits.first { onSelect?(first) }
             } label: {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(displayTitle(hits[0]))
                         .font(.system(size: 10.5, weight: .medium))
-                        .foregroundStyle(Color(hexString: "#FFFFFF"))
+                        .foregroundStyle(ink)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                         .minimumScaleFactor(0.8)
                     if !hits[0].locationOrEmpty.isEmpty {
                         Text(hits[0].locationOrEmpty)
                             .font(.appCaption2)
-                            .foregroundStyle(Color(hexString: "#FFFFFF").opacity(0.85))
+                            .foregroundStyle(ink.opacity(0.85))
                             .lineLimit(1)
                     }
                     Spacer(minLength: 0)
                     if hits.count > 1 {
                         Text("+\(hits.count - 1)")
                             .font(.system(size: 8.5, weight: .bold))
-                            .foregroundStyle(Color(hexString: "#FFFFFF"))
+                            .foregroundStyle(ink)
                             .padding(.horizontal, 4)
                             .padding(.vertical, 1)
-                            .background(Color(hexString: "#FFFFFF").opacity(0.25))
+                            .background(ink.opacity(0.22))
                             .clipShape(Capsule())
                     }
                 }
                 .padding(.horizontal, 3)
                 .padding(.vertical, 3)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .background(Color(hexString: colorHex))
+                .background(blockColor)
             }
             .buttonStyle(.plain)
         }

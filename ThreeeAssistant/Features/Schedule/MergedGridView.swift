@@ -41,6 +41,9 @@ struct MergedGridView: View {
     var onSelect: ((ScheduleInstance) -> Void)?
     var onPickDay: ((Date) -> Void)?
 
+    /// 日历色块要按当前外观取（深色下用亮一档那套）
+    @Environment(\.colorScheme) private var scheme
+
     private let hourHeight: CGFloat = 44
     private let gutterWidth: CGFloat = 38
 
@@ -209,11 +212,11 @@ struct MergedGridView: View {
                         } label: {
                             Text(item.title.nonEmpty(or: "（无标题）"))
                                 .font(.system(size: 8.5))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(CalendarPalette.readableInk(on: blockColor(item.calendarID)))
                                 .lineLimit(1)
                                 .padding(.horizontal, 2)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(Color(hexString: colorHex(item.calendarID)))
+                                .background(blockColor(item.calendarID))
                                 .clipShape(RoundedRectangle(cornerRadius: 2))
                         }
                         .buttonStyle(.plain)
@@ -340,7 +343,7 @@ struct MergedGridView: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text(item.title.nonEmpty(or: "（无标题）"))
                     .font(.system(size: 9.5, weight: .medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(CalendarPalette.readableInk(on: blockColor(item.calendarID)))
                     .lineLimit(3)
                     .minimumScaleFactor(0.85)
                     .multilineTextAlignment(.leading)
@@ -349,7 +352,7 @@ struct MergedGridView: View {
             .padding(.horizontal, 2)
             .padding(.vertical, 2)
             .frame(width: w, height: h, alignment: .topLeading)
-            .background(Color(hexString: colorHex(item.calendarID)))
+            .background(blockColor(item.calendarID))
             .clipShape(RoundedRectangle(cornerRadius: 3))
         }
         .buttonStyle(.plain)
@@ -357,7 +360,12 @@ struct MergedGridView: View {
     }
 
     private func colorHex(_ calendarID: String) -> String {
-        calendarsByID[calendarID]?.displayColor ?? "#185FA5"
+        calendarsByID[calendarID]?.displayColor ?? CalendarPalette.defaultLight
+    }
+
+    /// 块底色（已按外观换算）。
+    private func blockColor(_ calendarID: String) -> Color {
+        CalendarPalette.display(colorHex(calendarID), dark: scheme == .dark)
     }
 
     // MARK: - 车道分配

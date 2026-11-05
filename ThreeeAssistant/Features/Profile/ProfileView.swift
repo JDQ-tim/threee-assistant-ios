@@ -44,6 +44,9 @@ struct ProfileView: View {
 
     @Environment(SessionStore.self) private var store
     @Environment(NavPackStore.self) private var nav
+    /// 「外观」那一行右边要显示当前档位，所以这里读它
+    /// （读了就是订阅：在子页改完回来，这一行立刻是新的）
+    @Environment(AppearanceStore.self) private var appearance
 
     @State private var notifyStatus: UNAuthorizationStatus = .notDetermined
     @State private var armedCount = 0
@@ -182,6 +185,13 @@ struct ProfileView: View {
 
                 Section {
                     NavigationLink {
+                        AppearanceView()
+                    } label: {
+                        row(icon: "circle.lefthalf.filled", tint: .indigo, title: "外观",
+                            detail: appearance.mode.label)
+                    }
+
+                    NavigationLink {
                         WeatherView()
                     } label: {
                         row(icon: "cloud.sun", tint: .cyan, title: "天气", detail: nil, badge: nil)
@@ -203,7 +213,7 @@ struct ProfileView: View {
                 } header: {
                     Text("外观与主页")
                 } footer: {
-                    Text("主页那张天气卡的数据来自服务器按「天气城市」取的预报，不是设备定位 —— 所以改这里就是改卡片上显示的城市。")
+                    Text("「外观」管这个 App 是浅色还是深色；「天气城市」管主页那张天气卡显示哪个城市 —— 数据来自服务器按城市取的预报，不是设备定位。")
                 }
 
                 Section {
