@@ -306,12 +306,23 @@ w("\t\t\tpath = ThreeeAssistant;")
 w("\t\t\tsourceTree = \"<group>\";")
 w("\t\t};")
 
-for g, label in ((APP_GROUP, "App"), (CORE_GROUP, "Core"), (DESIGN_GROUP, "Design"),
-                 (INTENTS_GROUP, "Intents"),
-                 (LOGIN_GROUP, "Login"), (SCHEDULE_GROUP, "Schedule"),
-                 (TASKS_GROUP, "Tasks"), (SETTINGS_GROUP, "Settings"),
-                 (PROFILE_GROUP, "Profile"), (CAMPUS_GROUP, "Campus"),
-                 (WIDGET_GROUP, "NextClassWidget")):
+# ⚠️ 新增子目录时必须同时进这个表。
+#    只往 GROUP_MAP 里加而不在这里加，group 对象就不会被写进 pbxproj，
+#    于是它的文件全部被当成"放在仓库根目录" —— 编译报
+#    `Build input files cannot be found: '/path/HomeView.swift'`。
+#    （2026-11-05 就是这么挂的。）
+SUB_GROUPS = [
+    (APP_GROUP, "App"), (CORE_GROUP, "Core"), (DESIGN_GROUP, "Design"),
+    (INTENTS_GROUP, "Intents"),
+    (LOGIN_GROUP, "Login"), (SCHEDULE_GROUP, "Schedule"),
+    (TASKS_GROUP, "Tasks"), (SETTINGS_GROUP, "Settings"),
+    (PROFILE_GROUP, "Profile"), (CAMPUS_GROUP, "Campus"),
+    (HOME_GROUP, "Home"), (AI_GROUP, "AI"), (CALENDARS_GROUP, "Calendars"),
+    (WIDGET_GROUP, "NextClassWidget"),
+]
+GROUP_LABEL = {g: l for g, l in SUB_GROUPS}
+
+for g, label in SUB_GROUPS:
     w("\t\t%s /* %s */ = {" % (g, label))
     w("\t\t\tisa = PBXGroup;")
     w("\t\t\tchildren = (")
@@ -327,12 +338,9 @@ for g, label in ((APP_GROUP, "App"), (CORE_GROUP, "Core"), (DESIGN_GROUP, "Desig
 w("\t\t%s /* Features */ = {" % FEATURES_GROUP)
 w("\t\t\tisa = PBXGroup;")
 w("\t\t\tchildren = (")
-w("\t\t\t\t%s /* Login */," % LOGIN_GROUP)
-w("\t\t\t\t%s /* Schedule */," % SCHEDULE_GROUP)
-w("\t\t\t\t%s /* Tasks */," % TASKS_GROUP)
-w("\t\t\t\t%s /* Settings */," % SETTINGS_GROUP)
-w("\t\t\t\t%s /* Profile */," % PROFILE_GROUP)
-w("\t\t\t\t%s /* Campus */," % CAMPUS_GROUP)
+# 从 group_children 里取，不再手抄一遍 —— 手抄的这份一定会漏掉新目录
+for child in group_children[FEATURES_GROUP]:
+    w("\t\t\t\t%s /* %s */," % (child, GROUP_LABEL.get(child, "")))
 w("\t\t\t);")
 w("\t\t\tpath = Features;")
 w("\t\t\tsourceTree = \"<group>\";")

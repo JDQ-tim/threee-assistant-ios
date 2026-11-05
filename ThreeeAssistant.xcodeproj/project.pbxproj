@@ -384,6 +384,30 @@
 			path = Campus;
 			sourceTree = "<group>";
 		};
+		6C6D20850000000000000010 /* Home */ = {
+			isa = PBXGroup;
+			children = (
+				F045EB4C000000000000006E /* HomeView.swift */,
+			);
+			path = Home;
+			sourceTree = "<group>";
+		};
+		EB2F749E0000000000000011 /* AI */ = {
+			isa = PBXGroup;
+			children = (
+				5874E9B90000000000000068 /* AITabView.swift */,
+			);
+			path = AI;
+			sourceTree = "<group>";
+		};
+		ABA83C2D0000000000000012 /* Calendars */ = {
+			isa = PBXGroup;
+			children = (
+				82023F67000000000000006A /* CalendarTabView.swift */,
+			);
+			path = Calendars;
+			sourceTree = "<group>";
+		};
 		3AF7E71D0000000000000022 /* NextClassWidget */ = {
 			isa = PBXGroup;
 			children = (
@@ -402,6 +426,9 @@
 				940B1924000000000000000B /* Settings */,
 				3FA5F61A000000000000000D /* Profile */,
 				D51E5A23000000000000000E /* Campus */,
+				6C6D20850000000000000010 /* Home */,
+				EB2F749E0000000000000011 /* AI */,
+				ABA83C2D0000000000000012 /* Calendars */,
 			);
 			path = Features;
 			sourceTree = "<group>";
