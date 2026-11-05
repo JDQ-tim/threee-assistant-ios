@@ -33,6 +33,15 @@ import UserNotifications
 @MainActor
 struct ProfileView: View {
 
+    /// 被别处 push 进来时为 true：不再自带 `NavigationStack`。
+    ///
+    /// 为什么需要它：主页右上角的齿轮要"推出"这一页（安卓端也是推的）。
+    /// 如果这里仍然包一层 `NavigationStack`，就会出现**条套条** ——
+    /// 两层导航栏叠在一起，返回按钮的位置和标题层级都是错的。
+    ///
+    /// 默认 false，是因为它以前是底部 Tab 的根视图，那条路上必须自带。
+    var embedded: Bool = false
+
     @Environment(SessionStore.self) private var store
     @Environment(NavPackStore.self) private var nav
 
@@ -101,8 +110,15 @@ struct ProfileView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            List {
+        if embedded {
+            settingsContent
+        } else {
+            NavigationStack { settingsContent }
+        }
+    }
+
+    private var settingsContent: some View {
+        List {
                 profileHeader
 
                 if notifyStatus == .denied || notifyStatus == .notDetermined {
@@ -313,8 +329,8 @@ struct ProfileView: View {
                 }
             }
             .listStyle(.insetGrouped)
-            .navigationTitle("我的")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationTitle(embedded ? "设置" : "我的")
+            .navigationBarTitleDisplayMode(embedded ? .inline : .large)
             .confirmationDialog("退出登录？", isPresented: $confirmingLogout, titleVisibility: .visible) {
                 Button("退出登录", role: .destructive) {
                     busy = true
@@ -330,7 +346,6 @@ struct ProfileView: View {
             .task {
                 await loadState()
             }
-        }
     }
 
     // MARK: - 头像卡片

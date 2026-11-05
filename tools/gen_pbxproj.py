@@ -88,6 +88,13 @@ CAMPUS_GROUP = oid("campusgroup")
 # 单独一个目录而不是塞进 Core：它要 `import AppIntents`，
 # 和纯数据层放一起会让「哪些文件依赖系统框架」变得不直观。
 INTENTS_GROUP = oid("intentsgroup")
+# 主页（2026-11-05）。它是底部导航正中间那个"看今天整体"的页，
+# 既不属于 Schedule（那是"这一周怎么排"）也不属于 Settings。
+HOME_GROUP = oid("homegroup")
+# AI（2026-11-05）。目前只做机器接口/API Key，聊天还没接。
+AI_GROUP = oid("aigroup")
+# 日历 / 团队（2026-11-05）。这两个在安卓端是同一页的两个子视图。
+CALENDARS_GROUP = oid("calendarsgroup")
 RESOURCES_GROUP = oid("resourcesgroup")
 CONFIG_GROUP = oid("configgroup")
 
@@ -141,13 +148,17 @@ GROUP_MAP = {
     "Features/Tasks": TASKS_GROUP,
     "Features/Profile": PROFILE_GROUP,
     "Features/Campus": CAMPUS_GROUP,
+    "Features/Home": HOME_GROUP,
+    "Features/AI": AI_GROUP,
+    "Features/Calendars": CALENDARS_GROUP,
     "Intents": INTENTS_GROUP,
     "Resources": RESOURCES_GROUP,
 }
 
 group_children = {g: [] for g in GROUP_MAP.values()}
 group_children[FEATURES_GROUP] = [
-    LOGIN_GROUP, SCHEDULE_GROUP, TASKS_GROUP, SETTINGS_GROUP, PROFILE_GROUP, CAMPUS_GROUP
+    LOGIN_GROUP, SCHEDULE_GROUP, TASKS_GROUP, SETTINGS_GROUP, PROFILE_GROUP, CAMPUS_GROUP,
+    HOME_GROUP, AI_GROUP, CALENDARS_GROUP,
 ]
 # Widget 那个组不在 GROUP_MAP 里（它的文件不在 ThreeeAssistant/ 下），单独建。
 group_children[WIDGET_GROUP] = []

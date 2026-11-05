@@ -31,6 +31,18 @@ final class APIClient: NSObject, @unchecked Sendable {
         get { stateLock.lock(); defer { stateLock.unlock() }; return _token }
     }
 
+    /// 对外只读的服务器地址。
+    ///
+    /// 存在的理由：「AI → 机器接口」那一页要把 `/api/ext` 的**完整地址**
+    /// 显示给用户复制（他会把它填进别的 AI 工具里）。
+    /// 那个地址必须和这个 App 实际在打的是同一个 —— 让界面自己拼
+    /// 一份（比如读 `store.serverText`）迟早会和真实配置分叉，
+    /// 而分叉的表现是「复制走的地址连不上」，用户根本查不出为什么。
+    ///
+    /// 登录页填的可能是 `host:8443`（没写 scheme），
+    /// `configure` 阶段已经归一过了，这里拿到的一定是完整 URL。
+    var currentBaseURL: URL? { baseURL }
+
     private lazy var session: URLSession = {
         let cfg = URLSessionConfiguration.default
         cfg.timeoutIntervalForRequest = 15

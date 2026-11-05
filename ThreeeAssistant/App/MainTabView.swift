@@ -1,30 +1,26 @@
 import SwiftUI
 
 // ============================================================
-//  主框架：四个 Tab
+//  主框架：五个 Tab（与安卓端对齐）
 //  ------------------------------------------------------------
+//  2026-11-05 按安卓端录屏重做。之前是 4 个（日程/待办/收件箱/我的），
+//  安卓端是 5 个：日历 / 日程 / **主页** / 收件箱 / AI。
 //
-//  重构前的问题：整个 App 只有一个页面（ScheduleView），
-//  所有功能都塞进右上角头像弹出的一个 sheet 里，
-//  21 个设置项平铺在一页 —— 用户找「修改密码」要滚过大半屏，
-//  而「收件箱」这种每天要看的东西藏在设置里面。
+//  ## 两处结构性变化，都是有意的
 //
-//  重构后按 iOS 的信息架构分四个一级入口：
+//  **① 主页成为落地页。**
+//  安卓端把「主页」放在正中间，它是各模块的汇总 —— 天气、今日日程、
+//  更新提示都在那儿。iOS 原来落在「日程」上，那是一个"办具体事"的页，
+//  不是"看今天整体"的页。这两种页的职责不一样。
 //
-//    日程   ← 主战场。周/月视图、新建、详情
-//    待办   ← 独立出来。原来混在日程列表里，勾完就看不见了
-//    收件箱 ← 别人投给你的日程。有未读时带角标
-//    我的   ← 账号 + 分组设置入口
+//  **② 「待办」不再是独立 Tab。**
+//  安卓端也没有这个 Tab：待办是「日程 → 列表」里的一个分组
+//  （`AgendaTab.kt:171` 的 `SectionHeader("待办")`）。理由在那边写得很清楚：
+//  待办和日程是同一份数据（`is_task` 一个布尔位），分成两个 Tab
+//  会出现"这条算日程还是待办"的二义性。
 //
-//  ⚠️ 为什么"待办"值得单独一个 Tab：
-//      待办和日程的时间语义不同 —— 日程是"某个时刻发生的事"，
-//      待办是"某天之前要做完的事"。混在一个列表里，
-//      用户翻到周三看到一条周一的未完成待办，会以为它在周三。
-//      分开之后，"过期待办"才有地方集中显示。
-//
-//  ⚠️ iPad 上 TabView 会自动变成底部条 + 适配。
-//     这里用 `.tabViewStyle(.automatic)` 保持系统默认行为，
-//     不去硬套 sidebarAdaptable（那需要 iPadOS 18）。
+//  ⚠️ 但功能不能丢。`TasksView` 保留，从「日程 → 列表」顶部的
+//     「全部待办」进去 —— 那里才有跨天的待办汇总。
 // ============================================================
 
 @MainActor
@@ -32,64 +28,60 @@ struct MainTabView: View {
 
     @Environment(SessionStore.self) private var store
 
-    /// 当前选中的 Tab。收件箱有未读时会被外层改成非 nil 去催，
-    /// 所以这里要能双向绑定。
-    @State private var selection: AppTab = .schedule
+    @State private var selection: AppTab = .home
 
     /// 收件箱未读数。显示在 Tab 角标上 ——
     /// 这是「别人给了你东西」的唯一提示，藏在设置里等于没有。
     @State private var inboxBadge = 0
 
     enum AppTab: String, Hashable, CaseIterable {
-        case schedule, tasks, inbox, me
+        case calendars, schedule, home, inbox, ai
 
         var title: String {
             switch self {
-            case .schedule: return "日程"
-            case .tasks: return "待办"
-            case .inbox: return "收件箱"
-            case .me: return "我的"
+            case .calendars: return "日历"
+            case .schedule:  return "日程"
+            case .home:      return "主页"
+            case .inbox:     return "收件箱"
+            case .ai:        return "AI"
             }
         }
 
+        /// ⚠️ 顺序必须和安卓端一致：日历 / 日程 / 主页 / 收件箱 / AI。
+        ///    主页在正中间这件事在两端都是刻意的 —— 它是"回家"的位置。
         var icon: String {
             switch self {
-            case .schedule: return "calendar"
-            case .tasks: return "checklist"
-            case .inbox: return "tray"
-            case .me: return "person.crop.circle"
-            }
-        }
-
-        var selectedIcon: String {
-            switch self {
-            case .schedule: return "calendar"
-            case .tasks: return "checklist"
-            case .inbox: return "tray.fill"
-            case .me: return "person.crop.circle.fill"
+            case .calendars: return "calendar"
+            case .schedule:  return "list.bullet.rectangle"
+            case .home:      return "house"
+            case .inbox:     return "tray"
+            case .ai:        return "sparkles"
             }
         }
     }
 
     var body: some View {
         TabView(selection: $selection) {
+            CalendarTabView()
+                .tabItem { Label(AppTab.calendars.title, systemImage: AppTab.calendars.icon) }
+                .tag(AppTab.calendars)
+
             ScheduleView()
-                .tabItem { label(for: .schedule) }
+                .tabItem { Label(AppTab.schedule.title, systemImage: AppTab.schedule.icon) }
                 .tag(AppTab.schedule)
 
-            TasksView()
-                .tabItem { label(for: .tasks) }
-                .tag(AppTab.tasks)
+            HomeView(onOpenTab: { selection = $0 })
+                .tabItem { Label(AppTab.home.title, systemImage: AppTab.home.icon) }
+                .tag(AppTab.home)
 
             InboxView()
-                .tabItem { label(for: .inbox) }
+                .tabItem { Label(AppTab.inbox.title, systemImage: AppTab.inbox.icon) }
                 .tag(AppTab.inbox)
-                // 角标是 Int 型的 `.badge`，0 会自动不显示
                 .badge(inboxBadge)
 
-            ProfileView()
-                .tabItem { label(for: .me) }
-                .tag(AppTab.me)
+            AITabView()
+                .tabItem { Label(AppTab.ai.title, systemImage: AppTab.ai.icon) }
+                .tag(AppTab.ai)
         }
         .tint(Theme.accent)
         // 每切回前台都刷一次未读数。
@@ -98,14 +90,6 @@ struct MainTabView: View {
         .task {
             await refreshInboxBadge()
         }
-    }
-
-    @ViewBuilder
-    private func label(for tab: AppTab) -> some View {
-        // SF Symbols 的 fill 变体在 TabBar 选中态里更好辨认，
-        // 但 Label 的 systemImage 只接受一个名字，
-        // 所以这里直接给未选中的名字，让系统自己处理选中态。
-        Label(tab.title, systemImage: tab.icon)
     }
 
     private func refreshInboxBadge() async {
