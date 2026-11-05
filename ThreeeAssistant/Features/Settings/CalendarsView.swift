@@ -36,32 +36,13 @@ struct CalendarsView: View {
 
             Section {
                 ForEach(store.calendars) { cal in
-                    // 课程表日历单独给一个「打开课表」入口 ——
-                    // 它和普通日历的读法完全不同（节次 × 星期网格），
-                    // 塞进日程页的周/月 Picker 里会把那三个选项变成四选一，
-                    // 而且课表自己也要翻周，两套翻页逻辑会打架。
-                    if cal.kind == "course" {
-                        NavigationLink {
-                            CourseTableView(calendar: cal)
-                        } label: {
-                            row(cal)
-                        }
-                        .swipeActions(edge: .trailing) {
-                            if cal.canManage {
-                                Button(role: .destructive) {
-                                    pendingDelete = cal
-                                } label: {
-                                    Label("删除", systemImage: "trash")
-                                }
-                            }
-                        }
-                    } else {
-                        Button {
-                            editing = cal
-                        } label: {
-                            row(cal)
-                        }
-                        .buttonStyle(.plain)
+                    calendarCard(cal)
+                        // 卡片化：把 List 自带的行底色/分隔线/内边距全部让掉，
+                        // 只借它做滚动和左滑。否则卡片外面还会套一层灰底，
+                        // 看起来像"卡片里又有一行"。
+                        .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                         .swipeActions(edge: .trailing) {
                             // 只有 owner 才有删除权。给所有人显示一个必然失败的按钮
                             // 比不显示更糟 —— 用户会以为是网络问题。
@@ -73,10 +54,11 @@ struct CalendarsView: View {
                                 }
                             }
                         }
-                    }
                 }
+            } header: {
+                Text("我的日历")
             } footer: {
-                Text("左滑可删除自己创建的日历。别人分享给你的日历不能删，只能退出。\n点「课程表」日历可直接打开课表网格。")
+                Text("点卡片上半部分改名改色。「分享」进去加人，只有你和被加的人能看。\n左滑可删除自己创建的日历；别人分享给你的不能删，只能在成员页退出。")
             }
 
             Section {
@@ -116,51 +98,72 @@ struct CalendarsView: View {
         }
     }
 
-    private func row(_ cal: CalendarDTO) -> some View {
-        HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 4, style: .continuous)
-                .fill(Color(hexString: cal.displayColor))
-                .frame(width: 14, height: 14)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(cal.name)
-                    .font(.body.weight(.medium))
-                    .foregroundStyle(Theme.textPrimary)
-                Text(subtitle(cal))
-                    .font(.caption)
-                    .foregroundStyle(Theme.textTertiary)
-            }
-
-            Spacer(minLength: 0)
-
-            // 成员入口单独一个按钮。
-            //
-            // 整行点击已经占给了「改名改色」，不能再塞一个动作进整行 ——
-            // 所以成员用行尾这个按钮进出。只有能管成员的（owner/admin）
-            // 才给入口；其他人点进去也只会看到一个只读列表，没有意义。
-            if cal.canManage || (cal.members?.count ?? 0) > 1 {
-                Button {
-                    membersOf = cal
-                } label: {
-                    HStack(spacing: 3) {
-                        Image(systemName: "person.2")
-                            .font(.appCaption)
-                        if let n = cal.members?.count, n > 0 {
-                            Text("\(n)")
-                                .font(.caption.weight(.medium))
-                        }
+    /// 一张日历卡。
+    ///
+    /// 视觉照安卓端：色点 + 名字，第二行是「私有 · 我创建的」这种身份说明，
+    /// 再下面一排动作按钮。用卡片而不是 List 行，是因为**动作要直接露出来** ——
+    /// 藏在左滑里的「改名」没人会发现，而改名是这个页面最常用的操作。
+    private func calendarCard(_ cal: CalendarDTO) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Button {
+                if cal.canManage { editing = cal }
+            } label: {
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(Color(hexString: cal.displayColor))
+                            .frame(width: 10, height: 10)
+                        Text(cal.name)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Theme.textPrimary)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
                     }
-                    .foregroundStyle(Theme.textSecondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Theme.surfaceAlt)
-                    .clipShape(Capsule())
+                    Text(subtitle(cal))
+                        .font(.appCaption)
+                        .foregroundStyle(Theme.textTertiary)
                 }
-                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                // 整块可点，但只有 owner 真有反应 —— 只读日历点了什么都不发生，
+                // 所以给个禁用态而不是静默无反应。
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .disabled(!cal.canManage)
+
+            HStack(spacing: 14) {
+                if cal.canManage {
+                    Button("改名 / 改色") { editing = cal }
+                    Button("分享") { membersOf = cal }
+                    Button("删除日历") { pendingDelete = cal }
+                        .foregroundStyle(Theme.red600)
+                } else {
+                    // 只读日历没有可做的动作，就明说为什么 ——
+                    // 留一行空白按钮会让人以为加载失败。
+                    Text(cal.ownerName.map { "只能看 · \($0) 维护" } ?? "只能看")
+                        .foregroundStyle(Theme.textTertiary)
+                }
+                Spacer(minLength: 0)
+
+                if cal.kind == "course" {
+                    NavigationLink {
+                        CourseTableView(calendar: cal)
+                    } label: {
+                        Text("打开课表")
+                            .foregroundStyle(Theme.blue600)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .font(.appFootnote)
+            .buttonStyle(.plain)
+            .foregroundStyle(Theme.blue600)
         }
-        .padding(.vertical, 2)
-        .contentShape(Rectangle())
+        .padding(14)
+        .background(Theme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.corner, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Theme.corner, style: .continuous)
+            .stroke(Theme.separator, lineWidth: 0.5))
     }
 
     private func subtitle(_ cal: CalendarDTO) -> String {

@@ -125,46 +125,14 @@ struct ProfileView: View {
                     notificationWarning
                 }
 
-                Section {
-                    NavigationLink {
-                        NotificationSettingsView()
-                    } label: {
-                        row(icon: "bell.badge", tint: .red, title: "提醒与通知",
-                            detail: notifyStatus == .authorized
-                                ? "已排 \(armedCount) 条"
-                                : notifyStatusText)
-                    }
-
-                    NavigationLink {
-                        CalendarsView()
-                    } label: {
-                        row(icon: "calendar", tint: .blue, title: "我的日历",
-                            detail: "\(store.calendars.count) 张")
-                    }
-
-                    // 系统日历是"我的日历"的自然延伸：前者是 3e 自己的日历，
-                    // 后者是把 iOS 日历搬进搬出。放在一起，用户不用猜。
-                    NavigationLink {
-                        SystemCalendarSyncView()
-                    } label: {
-                        row(icon: "arrow.triangle.2.circlepath.icloud", tint: .teal,
-                            title: "系统日历",
-                            detail: systemCalendarDetail)
-                    }
-
-                    // 校园地图：日程里写的地点 → 楼栋坐标。
-                    // 放在这里而不是做成第五个 Tab：它一学期用不了几次，
-                    // 但每次用都是"马上要迟到"的时候 —— 所以入口要短。
-                    NavigationLink {
-                        CampusMapView()
-                    } label: {
-                        row(icon: "map", tint: .indigo,
-                            title: "校园地图",
-                            detail: campusDetail)
-                    }
-                } header: {
-                    Text("常用")
-                }
+                // 分组顺序与名字照安卓端设置页来（视频里那一页）：
+                // 课程与作息 / 提醒与通知 / 外观与主页 / 账户与登录 /
+                // 同步与离线 / 数据与维护 / 校园地图 / 关于。
+                //
+                // ⚠️ 安卓端还有「模块与插件」「存储与资源」「调试台」三组，
+                //    这里**没有** —— 它们依赖插件系统（APK 安装包、
+                //    插件市场、238 个接口的调试控制台），iOS 上一个都不存在。
+                //    摆一组点进去是空的入口，比不摆更糟。
 
                 Section {
                     NavigationLink {
@@ -180,10 +148,62 @@ struct ProfileView: View {
                         row(icon: "beach.umbrella", tint: .pink, title: "节假日与调休",
                             detail: holidayDetail)
                     }
+
+                    // 节次表是全局配置，服务端 PUT 要求管理员；
+                    // 非管理员给了入口也只会在保存时吃 403。
+                    if isAdmin {
+                        NavigationLink {
+                            CoursePeriodsEditorView()
+                        } label: {
+                            row(icon: "clock.badge.checkmark", tint: .teal, title: "课程节次",
+                                detail: nil, badge: nil)
+                        }
+                    }
                 } header: {
-                    Text("学期")
+                    Text("课程与作息")
                 } footer: {
-                    Text("告诉 App「第 1 周从哪天开始」，它才能在日程页顶部显示「第 8 周 · 单周」，并让单双周日程落在正确的周次上。节假日当天的日程会自动隐藏。都只在这台设备生效。")
+                    Text("「教学周」决定第几周和单双周，「节假日」决定放假那天哪些日程不显示，「课程节次」决定课表网格有几行、每行几点。前两项只在这台设备生效。")
+                }
+
+                Section {
+                    NavigationLink {
+                        NotificationSettingsView()
+                    } label: {
+                        row(icon: "bell.badge", tint: .red, title: "提醒与通知",
+                            detail: notifyStatus == .authorized
+                                ? "已排 \(armedCount) 条"
+                                : notifyStatusText)
+                    }
+                } header: {
+                    Text("提醒与通知")
+                } footer: {
+                    Text("到点提醒、强提醒，以及锁屏/灵动岛上的「下一节课」都在这里。")
+                }
+
+                Section {
+                    NavigationLink {
+                        WeatherView()
+                    } label: {
+                        row(icon: "cloud.sun", tint: .cyan, title: "天气", detail: nil, badge: nil)
+                    }
+
+                    NavigationLink {
+                        WeatherLocationView()
+                    } label: {
+                        row(icon: "location", tint: .cyan, title: "天气城市",
+                            detail: nil, badge: nil)
+                    }
+
+                    NavigationLink {
+                        TierView()
+                    } label: {
+                        row(icon: "star.circle", tint: .yellow, title: "用户组",
+                            detail: nil, badge: nil)
+                    }
+                } header: {
+                    Text("外观与主页")
+                } footer: {
+                    Text("主页那张天气卡的数据来自服务器按「天气城市」取的预报，不是设备定位 —— 所以改这里就是改卡片上显示的城市。")
                 }
 
                 Section {
@@ -191,8 +211,7 @@ struct ProfileView: View {
                         TeamListView()
                     } label: {
                         row(icon: "person.2", tint: .green, title: "我的团队",
-                            detail: teamCount > 0 ? "\(teamCount) 个" : nil,
-                            badge: nil)
+                            detail: teamCount > 0 ? "\(teamCount) 个" : nil, badge: nil)
                     }
 
                     NavigationLink {
@@ -203,13 +222,28 @@ struct ProfileView: View {
                     }
 
                     NavigationLink {
-                        MyReportsView()
+                        ChangePasswordView()
                     } label: {
-                        row(icon: "flag", tint: .gray, title: "我的举报",
+                        row(icon: "key", tint: .gray, title: "修改密码", detail: nil, badge: nil)
+                    }
+
+                    NavigationLink {
+                        SecurityView()
+                    } label: {
+                        row(icon: "lock.shield", tint: .gray, title: "安全与证书",
                             detail: nil, badge: nil)
                     }
+
+                    if isAdmin {
+                        NavigationLink {
+                            SiteInviteView()
+                        } label: {
+                            row(icon: "person.badge.key", tint: .orange, title: "注册码",
+                                detail: nil, badge: nil)
+                        }
+                    }
                 } header: {
-                    Text("协作")
+                    Text("账户与登录")
                 } footer: {
                     Text("团队和日历邀请都是别人给你的东西。收件箱里放的是单条日程，这里放的是整张日历的共享。")
                 }
@@ -220,6 +254,13 @@ struct ProfileView: View {
                     } label: {
                         row(icon: "arrow.triangle.2.circlepath", tint: .blue, title: "同步",
                             detail: store.syncCursor > 0 ? "游标 \(store.syncCursor)" : "未同步")
+                    }
+
+                    NavigationLink {
+                        SystemCalendarSyncView()
+                    } label: {
+                        row(icon: "arrow.triangle.2.circlepath.icloud", tint: .teal,
+                            title: "系统日历", detail: systemCalendarDetail)
                     }
 
                     NavigationLink {
@@ -237,54 +278,40 @@ struct ProfileView: View {
                             badge: pendingConflicts > 0 ? pendingConflicts : nil)
                     }
                 } header: {
-                    Text("数据与同步")
+                    Text("同步与离线")
                 } footer: {
                     Text("背词是另一个端口上的独立服务（8446），和日程同步（8443）互不影响。修改冲突指多人同时改同一条时被拦下的字段，不处理会一直显示旧值。")
                 }
 
                 Section {
                     NavigationLink {
-                        WeatherView()
+                        CampusMapView()
                     } label: {
-                        row(icon: "cloud.sun", tint: .cyan, title: "天气",
-                            detail: nil, badge: nil)
-                    }
-
-                    NavigationLink {
-                        WeatherLocationView()
-                    } label: {
-                        row(icon: "location", tint: .cyan, title: "天气城市",
-                            detail: nil, badge: nil)
-                    }
-
-                    NavigationLink {
-                        TierView()
-                    } label: {
-                        row(icon: "star.circle", tint: .yellow, title: "用户组",
-                            detail: nil, badge: nil)
+                        row(icon: "map", tint: .indigo, title: "校园地图", detail: campusDetail)
                     }
                 } header: {
-                    Text("偏好")
+                    Text("校园地图")
                 } footer: {
-                    Text("天气是服务器按配置的坐标取预报，不是设备定位。改「天气城市」就是改那个坐标。")
+                    Text("在「我的」→「校园地图」里导入学校的导航数据包后，日程里写的地点就能一键定位到楼栋。")
                 }
 
                 Section {
                     NavigationLink {
-                        ChangePasswordView()
+                        MyReportsView()
                     } label: {
-                        row(icon: "key", tint: .gray, title: "修改密码",
-                            detail: nil, badge: nil)
+                        row(icon: "flag", tint: .gray, title: "我的举报", detail: nil, badge: nil)
                     }
 
-                    NavigationLink {
-                        SecurityView()
-                    } label: {
-                        row(icon: "lock.shield", tint: .gray, title: "安全与证书",
-                            detail: nil, badge: nil)
+                    if isAdmin {
+                        NavigationLink {
+                            DataIntegrityView()
+                        } label: {
+                            row(icon: "stethoscope", tint: .orange, title: "数据自检",
+                                detail: nil, badge: nil)
+                        }
                     }
                 } header: {
-                    Text("安全")
+                    Text("数据与维护")
                 }
 
                 Section {
@@ -293,22 +320,6 @@ struct ProfileView: View {
                     } label: {
                         row(icon: "info.circle", tint: .gray, title: "关于",
                             detail: "0.1 (1)")
-                    }
-
-                    if isAdmin {
-                        NavigationLink {
-                            SiteInviteView()
-                        } label: {
-                            row(icon: "person.badge.key", tint: .orange, title: "注册码",
-                                detail: nil, badge: nil)
-                        }
-
-                        NavigationLink {
-                            DataIntegrityView()
-                        } label: {
-                            row(icon: "stethoscope", tint: .orange, title: "数据自检",
-                                detail: nil, badge: nil)
-                        }
                     }
                 } header: {
                     Text("关于")

@@ -363,8 +363,12 @@ struct HomeView: View {
     }
 
     private func dailyRows(_ d: WeatherDocDTO) -> some View {
-        VStack(spacing: 0) {
-            ForEach(Array(d.days.prefix(5).enumerated()), id: \.element.id) { i, day in
+        // 直接遍历元素，不用 `enumerated()` 取下标 ——
+        // 分隔线只需要判断"是不是最后一条"，而这个判断用 `id` 就能做，
+        // 多一个下标变量只会多一处可能算错的地方。
+        let shown = Array(d.days.prefix(5))
+        return VStack(spacing: 0) {
+            ForEach(shown) { day in
                 HStack(spacing: 10) {
                     Text(Self.dayLabel(day.date))
                         .font(.appCaption)
@@ -380,7 +384,7 @@ struct HomeView: View {
                         .foregroundStyle(Theme.textSecondary)
                 }
                 .padding(.vertical, 4)
-                if i < min(d.days.count, 5) - 1 {
+                if day.id != shown.last?.id {
                     Divider().overlay(Theme.separator)
                 }
             }
