@@ -199,6 +199,48 @@ bash tools/push_to_github.sh 你的GitHub用户名 threee-assistant-ios
 - **设置页分组名照安卓端**：课程与作息 / 提醒与通知 / 外观与主页 /
   账户与登录 / 同步与离线 / 校园地图 / 数据与维护 / 关于。
 
+#### 底栏是自绘的，不是系统 TabView
+
+`MainTabView.swift` 里的 `AndroidStyleTabBar`。
+
+iOS 26 起 `TabView` 的底栏变成**悬浮的液体玻璃胶囊**（左右留白、圆角、
+和屏幕底边有一条缝、滚动时收缩），而安卓端是**贴着底边的一整条实底**。
+用户要求「和安卓端一模一样」，这个差别调参数调不出来，只能自己画。
+
+- 挂在 `safeAreaInset(edge: .bottom)` 上，不是塞进 `VStack` ——
+  后者会让列表把最后一条内容滚到底栏**下面**去
+- 五页用 `ZStack + opacity` 叠着，不是 `switch`：每页自带 `NavigationStack`，
+  用 switch 换的是另一个视图实例，切回来就回到根页面（翻到哪一周忘了）
+- 选中态用实心图标 + 主色，未选中用 `textSecondary`（不是三等灰 ——
+  深色底上几乎看不见，会被误认为"禁用"）
+- VoiceOver 用 `.isSelected` + 「收件箱，N 条未读」补回来
+
+#### 外观：浅色 / 深色 / 跟随系统
+
+`Core/Appearance.swift`（`AppearanceStore` + `AppearanceMode`）、
+`Features/Profile/AppearanceView.swift`。
+
+- 默认**跟随系统**（用户第一句话就是"跟随系统变化"）
+- 落点只有一个：`RootView` 上的 `.preferredColorScheme(appearance.mode.colorScheme)`
+- `nil` 表示"由系统决定"，不是"没设置"；默认写成 `.light` 的话，
+  系统是深色而 App 是白的，看起来像深色坏了
+- 不用 `@AppStorage`：它只在 View 里有效，而且三态没有类型安全
+- `init` 里就读盘（不惰性）：否则第一帧会用默认值渲染，深色用户启动时白一下
+
+#### 日程颜色：16 色 + 系统取色器
+
+`Design/CalendarPalette.swift`、`Features/Settings/CalendarsView.swift`。
+
+- 每个色块两套值：`light`（**存服务端的**）和 `dark`（只在深色下用于显示）
+- **深色下不写回服务端。** 服务端只有一个 `#RRGGBB` 字段，全端共用；
+  存成亮色的话，同一个账号在网页端/安卓端（浅色）会看到一片荧光色。
+  这是"节假日只改显示不回写"的同一条纪律 —— 外观是**这台设备**的属性
+- 前 8 个色块的 `light` **一个字节都不能改**：已有日历存的就是这 8 个值
+- 块内文字色由底色亮度决定（`readableInk`），不是写死白色。
+  单阈值（"亮度 > 0.55 用黑字"）在明亮色块上会判反，实测白字只有 2:1
+- `tools/check_palette.py` 离线验 16 项对比度/去重，含检查器自身的自检
+  和两条负向自检；CI 里**只报告不拦发**（好看不好看，不是能不能用）
+
 ### 独立模块
 
 | 模块 | 状态 |
