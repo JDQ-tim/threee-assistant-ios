@@ -92,6 +92,98 @@ for rel in re.findall(r"path = ([^;]+);", src):
     if "/" in rel and not os.path.exists(os.path.join(ROOT, rel)):
         errors.append("path 指向不存在的文件: %s" % rel)
 
+# 5b. 每个文件引用能否**沿 PBXGroup 的 path 链解析到真实文件**
+#
+#     ⚠️ 2026-11-05 踩的坑：新增 Features/Home 时 group 对象没写进 pbxproj，
+#        文件引用是 `path = HomeView.swift; sourceTree = "<group>"`，
+#        而父链里没有 Home 这一层 —— Xcode 就去**仓库根目录**找 HomeView.swift，
+#        报 `Build input files cannot be found: '/path/HomeView.swift'`。
+#
+#     上面第 5 条只检查"含 / 的路径"，恰好把这种裸文件名全跳过了 ——
+#     所以需要一个真正的解析：从 mainGroup 往下走，把每层 path 拼起来。
+# ⚠️ 不能用一条正则抓对象块：PBXFileReference 是**单行**的
+#    （`ID /* x.swift */ = {isa = PBXFileReference; ...; };`），
+#    而 PBXGroup 是多行的。按行扫 + 花括号配平，两种都能吃。
+_objs = {}
+_lines = src.split("\n")
+_i = 0
+while _i < len(_lines):
+    _m = re.match(r"^\t\t([0-9A-F]{24})(?: /\* (.*?) \*/)? = \{(.*)$", _lines[_i])
+    if not _m:
+        _i += 1
+        continue
+    _id = _m.group(1)
+    _head = _m.group(3)
+    _i += 1
+    if _head.rstrip().endswith("};"):
+        # 单行对象
+        _objs[_id] = _head
+        continue
+    _depth = 1 + _head.count("{") - _head.count("}")
+    _buf = [_head]
+    while _i < len(_lines) and _depth > 0:
+        _buf.append(_lines[_i])
+        _depth += _lines[_i].count("{") - _lines[_i].count("}")
+        _i += 1
+    _objs[_id] = "\n".join(_buf)
+
+_groups = {}
+_frefs = {}
+for _id, _body in _objs.items():
+    if "isa = PBXGroup" in _body:
+        _m = re.search(r"children = \((.*?)\);", _body, re.S)
+        _kids = re.findall(r"([0-9A-F]{24})", _m.group(1)) if _m else []
+        _p = re.search(r"path = ([^;]+);", _body)
+        _st = re.search(r"sourceTree = ([^;]+);", _body)
+        _groups[_id] = {
+            "children": _kids,
+            "path": _p.group(1).strip().strip('"') if _p else None,
+            "sourceTree": _st.group(1).strip().strip('"') if _st else "<group>",
+        }
+    elif "isa = PBXFileReference" in _body:
+        _p = re.search(r"path = ([^;]+);", _body)
+        _st = re.search(r"sourceTree = ([^;]+);", _body)
+        _frefs[_id] = {
+            "path": _p.group(1).strip().strip('"') if _p else None,
+            "sourceTree": _st.group(1).strip().strip('"') if _st else "<group>",
+        }
+
+resolved_files = []
+if _groups:
+    _all_kids = set()
+    for _g in _groups.values():
+        _all_kids.update(_g["children"])
+    _roots = [i for i in _groups if i not in _all_kids]
+
+    def _walk(gid, prefix):
+        g = _groups[gid]
+        base = prefix
+        if g["path"] and g["sourceTree"] == "<group>":
+            base = os.path.join(prefix, g["path"]) if prefix else g["path"]
+        for c in g["children"]:
+            if c in _groups:
+                _walk(c, base)
+            elif c in _frefs:
+                fr = _frefs[c]
+                p = fr["path"]
+                if not p:
+                    continue
+                st = fr["sourceTree"]
+                if st == "SOURCE_ROOT":
+                    full = p
+                elif st in ("BUILT_PRODUCTS_DIR", "<absolute>"):
+                    continue
+                else:
+                    full = os.path.join(base, p) if base else p
+                resolved_files.append(full)
+                if not os.path.exists(os.path.join(ROOT, full)):
+                    errors.append(
+                        "文件引用解析不到真实文件: %s"
+                        "（Xcode 会报 Build input files cannot be found）" % full)
+
+    for _r in _roots:
+        _walk(_r, "")
+
 # 6. objectVersion / compatibilityVersion 一致性
 if "objectVersion = 56" not in src:
     warns.append("objectVersion 不是 56")
@@ -107,6 +199,7 @@ print("=" * 52)
 print("Swift 文件数     : %d" % len(swift_files))
 print("定义对象数       : %d" % len(defined))
 print("引用 ID 数       : %d" % len(referenced))
+print("解析到真实文件   : %d" % len(resolved_files))
 print("-" * 52)
 for e in errors:
     print("[错误] " + e)
